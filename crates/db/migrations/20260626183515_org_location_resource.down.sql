@@ -1,0 +1,21 @@
+-- Reverse of org_location_resource.up.sql, in reverse dependency order.
+DROP TABLE IF EXISTS favorite_resources;
+DROP TABLE IF EXISTS blackouts;
+DROP TABLE IF EXISTS permanent_assignments;
+DROP TABLE IF EXISTS resource_rules;
+DROP TABLE IF EXISTS resource_tag_map;
+DROP TABLE IF EXISTS resource_tags;
+DROP TABLE IF EXISTS resource_positions;
+DROP TABLE IF EXISTS resources;
+DROP TABLE IF EXISTS floor_zones;
+DROP TABLE IF EXISTS resource_categories;
+DROP TABLE IF EXISTS floor_plans;
+DROP TABLE IF EXISTS role_grants;
+DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS assets;
+DROP TABLE IF EXISTS booking_delegates;
+DROP TABLE IF EXISTS memberships;
+DROP TABLE IF EXISTS role_permissions;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS teams;
+DROP TABLE IF EXISTS organizations;

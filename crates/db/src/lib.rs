@@ -1,6 +1,7 @@
 //! PostgreSQL access and migrations (sqlx), behind a thin facade.
 
 use secrecy::{ExposeSecret, SecretString};
+use sqlx::error::ErrorKind;
 use sqlx::postgres::PgPoolOptions;
 
 /// Connection pool handle. Clone-cheap (`Arc` inside); share into app state and the worker.
@@ -47,15 +48,18 @@ pub async fn ping(db: &Db) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Classify a raw sqlx error into a typed [`DbError`], mapping the Postgres
-/// SQLSTATEs the application reacts to. Used at query call sites in later phases.
+/// Classify a raw sqlx error into a typed [`DbError`], mapping the cases the
+/// application reacts to: an exclusion-constraint violation (the no-double-booking
+/// guarantee) becomes [`DbError::Conflict`]; a serialization failure becomes
+/// [`DbError::Retryable`]. Used at query call sites.
 #[must_use]
 pub fn classify(err: sqlx::Error) -> DbError {
-    if let sqlx::Error::Database(ref db_err) = err {
-        match db_err.code().as_deref() {
-            Some("23P01") => return DbError::Conflict,
-            Some("40001") => return DbError::Retryable,
-            _ => {}
+    if let Some(db_err) = err.as_database_error() {
+        if matches!(db_err.kind(), ErrorKind::ExclusionViolation) {
+            return DbError::Conflict;
+        }
+        if db_err.code().as_deref() == Some("40001") {
+            return DbError::Retryable;
         }
     }
     DbError::Sqlx(err)
@@ -64,6 +68,10 @@ pub fn classify(err: sqlx::Error) -> DbError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::{DateTime, TimeZone as _, Utc};
+    use proptest::prelude::*;
+    use sqlx::postgres::types::PgRange;
+    use uuid::Uuid;
 
     #[sqlx::test(migrations = false)]
     async fn migrations_apply_with_extensions_then_revert(pool: Db) -> Result<(), DbError> {
@@ -82,5 +90,105 @@ mod tests {
         // Roll all migrations back down to version 0.
         MIGRATOR.undo(&pool, 0).await?;
         Ok(())
+    }
+
+    /// Seed the minimal FK chain (org → floor → desk) and return the resource id.
+    async fn seed_resource(pool: &Db) -> Uuid {
+        let tag = Uuid::new_v4().simple().to_string();
+        let org: Uuid = sqlx::query_scalar(
+            "INSERT INTO organizations (name, slug) VALUES ($1, $1) RETURNING id",
+        )
+        .bind(&tag)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        let location: Uuid = sqlx::query_scalar(
+            "INSERT INTO locations (kind, name, path, depth, organization_id) \
+             VALUES ('floor', 'Floor 1', '/f1', 0, $1) RETURNING id",
+        )
+        .bind(org)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        sqlx::query_scalar(
+            "INSERT INTO resources (location_id, kind, name) VALUES ($1, 'desk', 'Desk 1') RETURNING id",
+        )
+        .bind(location)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    }
+
+    /// A half-open `[start, end)` period on 2026-07-01 between the given hours.
+    fn period(start_hour: u32, end_hour: u32) -> PgRange<DateTime<Utc>> {
+        let start = Utc.with_ymd_and_hms(2026, 7, 1, start_hour, 0, 0).unwrap();
+        let end = Utc.with_ymd_and_hms(2026, 7, 1, end_hour, 0, 0).unwrap();
+        PgRange::from(start..end)
+    }
+
+    /// Insert a system block (a `blackout` occurrence with no parent booking) — exercises
+    /// the no-double-booking exclusion constraint and the unified-block guarantee.
+    async fn insert_block(
+        pool: &Db,
+        resource: Uuid,
+        period: PgRange<DateTime<Utc>>,
+    ) -> Result<(), DbError> {
+        sqlx::query(
+            "INSERT INTO booking_occurrences (occurrence_kind, resource_id, period, status) \
+             VALUES ('blackout', $1, $2, 'booked')",
+        )
+        .bind(resource)
+        .bind(period)
+        .execute(pool)
+        .await
+        .map(|_| ())
+        .map_err(classify)
+    }
+
+    #[sqlx::test]
+    async fn overlapping_periods_rejected_as_conflict(pool: Db) {
+        let resource = seed_resource(&pool).await;
+        insert_block(&pool, resource, period(9, 11)).await.unwrap();
+        let err = insert_block(&pool, resource, period(10, 12))
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, DbError::Conflict),
+            "expected Conflict, got {err:?}"
+        );
+    }
+
+    #[sqlx::test]
+    async fn adjacent_periods_allowed(pool: Db) {
+        let resource = seed_resource(&pool).await;
+        insert_block(&pool, resource, period(9, 10)).await.unwrap();
+        // Half-open [9,10) and [10,11) touch but do not overlap.
+        insert_block(&pool, resource, period(10, 11)).await.unwrap();
+    }
+
+    #[sqlx::test]
+    async fn different_resources_do_not_conflict(pool: Db) {
+        let a = seed_resource(&pool).await;
+        let b = seed_resource(&pool).await;
+        insert_block(&pool, a, period(9, 11)).await.unwrap();
+        insert_block(&pool, b, period(9, 11)).await.unwrap();
+    }
+
+    /// The pure half-open overlap predicate the exclusion constraint enforces.
+    fn periods_overlap(a: (i64, i64), b: (i64, i64)) -> bool {
+        a.0 < b.1 && b.0 < a.1
+    }
+
+    proptest! {
+        #[test]
+        fn overlap_predicate_is_halfopen_and_symmetric(
+            a0 in 0i64..1_000, len_a in 1i64..500, b0 in 0i64..1_000, len_b in 1i64..500,
+        ) {
+            let a = (a0, a0 + len_a);
+            let b = (b0, b0 + len_b);
+            prop_assert_eq!(periods_overlap(a, b), periods_overlap(b, a));
+            // Touching ranges [x,y)+[y,z) never overlap (half-open).
+            prop_assert!(!periods_overlap(a, (a.1, a.1 + 5)));
+        }
     }
 }
