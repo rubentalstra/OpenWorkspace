@@ -62,3 +62,19 @@ uuid_newtype!(
     /// Identifies an `organizations` row.
     OrganizationId
 );
+uuid_newtype!(
+    /// Identifies a `teams` row.
+    TeamId
+);
+uuid_newtype!(
+    /// Identifies a `locations` row.
+    LocationId
+);
+uuid_newtype!(
+    /// Identifies a `roles` row.
+    RoleId
+);
+uuid_newtype!(
+    /// Identifies a `floor_zones` row.
+    FloorZoneId
+);

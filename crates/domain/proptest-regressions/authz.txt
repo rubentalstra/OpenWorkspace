@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9d94b946ccf2a96be19e0081717530c3dc58278ddec65cace9d5f895e603f53d # shrinks to actor = AuthzContext { user: UserId(00000000-0000-0000-0000-000000000001), is_instance_admin: false, memberships: [], team_ids: {}, grants: [] }, principal = AuthzContext { user: UserId(00000000-0000-0000-0000-000000000001), is_instance_admin: true, memberships: [], team_ids: {}, grants: [] }, action = ResourceManage, t = ManagementTarget { location: None, organization: None }, now = 0, win = ValidityWindow { from: None, to: None }
+cc ba4168107d5c25c3da3c84e402c6f0a71f4457962c6c2c4943bf93387f56c251 # shrinks to target = LocationNode { id: LocationId(00000000-0000-0000-0000-000000000000), path: "/r" }, sep = "/"
+cc 80332b1230e23d845e6fbf30f1294437f4357ba9e1d6867eff6d9872df99c8d0 # shrinks to node = LocationNode { id: LocationId(00000000-0000-0000-0000-000000000000), path: "" }, target = LocationNode { id: LocationId(00000000-0000-0000-0000-000000000000), path: "" }, sep = "/"

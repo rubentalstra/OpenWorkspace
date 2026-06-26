@@ -74,6 +74,21 @@ pub enum ResourceKind {
     Equipment,
 }
 
+/// How a resource's organization/team binding restricts its visibility
+/// (`segmentation_mode`).
+///
+/// Drives [`crate::segmentation::visible`]. `db` owns the `sqlx` mapping.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SegmentationMode {
+    /// No restriction: every viewer sees the resource.
+    Open,
+    /// Visible only to viewers in the resource's effective organization.
+    ByOrganization,
+    /// Visible only to viewers in the effective organization, and (when the
+    /// resource carries an effective team) only to viewers in that team.
+    ByOrganizationAndTeam,
+}
+
 /// Channel a booking was created through (`booking_source`).
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum BookingSource {

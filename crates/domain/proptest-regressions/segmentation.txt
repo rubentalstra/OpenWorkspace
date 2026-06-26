@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 496613a5b7b5d865abc335c0dbc0ac83fbd0916aa47ca73414ab6cfa28ba0d27 # shrinks to e = EffectiveSegmentation { organization: Some(OrganizationId(00000000-0000-0000-0000-000000000003)), team: Some((OrganizationId(00000000-0000-0000-0000-000000000000), TeamId(00000000-0000-0000-0000-000000000003))) }, v = ViewerSegmentation { is_instance_admin: false, orgs: {OrganizationId(00000000-0000-0000-0000-000000000003)}, teams: {TeamId(00000000-0000-0000-0000-000000000003)} }
