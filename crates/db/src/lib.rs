@@ -1,5 +1,12 @@
 //! PostgreSQL access and migrations (sqlx), behind a thin facade.
 
+mod bookings;
+
+pub use bookings::{
+    Booking, BookingSourceRow, BookingStatusRow, BookingVisibilityRow, CreatedBooking, NewBooking,
+    OccurrenceKindRow, apply_transition, auto_release, cancel, check_in, check_out, create_booking,
+};
+
 use secrecy::{ExposeSecret, SecretString};
 use sqlx::error::ErrorKind;
 use sqlx::postgres::PgPoolOptions;
@@ -20,6 +27,19 @@ pub enum DbError {
     /// A serialization failure (`40001`); the operation may be retried.
     #[error("transaction conflict; retry")]
     Retryable,
+    /// `create_booking` was called with an empty expansion (zero occurrences),
+    /// which would persist an orphan header. Rejected before any write.
+    #[error("cannot create a booking with zero occurrences")]
+    EmptyExpansion,
+    /// A structurally invalid occurrence period (empty or inverted, i.e. not
+    /// `start < end`) was supplied. Rejected before any write.
+    #[error("occurrence period is empty or inverted")]
+    InvalidPeriod,
+    /// A transition was applied to an occurrence whose status no longer matches
+    /// the expected from-status (a lost update / stale read). The caller should
+    /// re-read and recompute the transition.
+    #[error("occurrence is in an unexpected state; re-read and retry")]
+    StaleState,
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
     #[error(transparent)]
@@ -58,8 +78,18 @@ pub fn classify(err: sqlx::Error) -> DbError {
         if matches!(db_err.kind(), ErrorKind::ExclusionViolation) {
             return DbError::Conflict;
         }
-        if db_err.code().as_deref() == Some("40001") {
-            return DbError::Retryable;
+        match db_err.code().as_deref() {
+            // Serialization failure: retryable.
+            Some("40001") => return DbError::Retryable,
+            // check_violation — e.g. an empty/inverted period reaching the
+            // booking_occurrences_period_bounded_check. Defense in depth: the
+            // write paths reject malformed periods structurally before BEGIN.
+            Some("23514") => return DbError::InvalidPeriod,
+            // unique_violation — e.g. a duplicate (booking_id, recurrence_id) on
+            // booking_occurrences_instance_uq. Defense in depth: expand_series
+            // dedups identical UTC start instants before persistence.
+            Some("23505") => return DbError::Conflict,
+            _ => {}
         }
     }
     DbError::Sqlx(err)
