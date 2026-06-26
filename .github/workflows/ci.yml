@@ -70,4 +70,6 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-leptos
-      - run: cargo leptos build --release
+      # Debug build validates the full ssr+wasm compile fast; the release build is
+      # exercised by the container image (deploy/containers/Containerfile.web).
+      - run: cargo leptos build
