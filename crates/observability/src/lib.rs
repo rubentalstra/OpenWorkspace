@@ -87,7 +87,8 @@ pub fn init(opts: &Options) -> anyhow::Result<TelemetryGuard> {
 
     if opts.metrics_enabled {
         let handle = PrometheusBuilder::new().install_recorder()?;
-        let _ = METRICS.set(handle.clone());
+        // First init wins; store the handle so render_metrics() can reach it.
+        METRICS.get_or_init(|| handle.clone());
         // We expose /metrics ourselves, so maintain histograms/idle series on a timer.
         tokio::spawn(async move {
             let mut ticker = tokio::time::interval(Duration::from_secs(5));
