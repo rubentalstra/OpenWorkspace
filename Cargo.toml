@@ -78,20 +78,62 @@ bin-default-features = false
 lib-features = []
 lib-default-features = false
 
+# Lint policy — see docs/rust-style.md. Groups are denied; pedantic is warn-level.
+# CI runs clippy with -D warnings, so "warn" == must-fix. Suppress only with
+# #[expect(..., reason = "…")] (allow_attributes* below forbid bare/unexplained allows).
 [workspace.lints.rust]
-# `deny` (not `forbid`) so the wasm `frontend` crate can opt out for the
-# `#[wasm_bindgen]` entry point via a documented crate-level `#![allow]`.
+# `deny` (not `forbid`) so a crate could opt out with a documented #[expect] if
+# ever needed — none currently does (wasm-bindgen no longer requires it).
 unsafe_code = "deny"
 unused_must_use = "deny"
+unreachable_pub = "deny"
+unused_qualifications = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
+private_intra_doc_links = "warn"
 
 [workspace.lints.clippy]
-all = { level = "warn", priority = -1 }
+# Groups (priority -1 so the specific lints below override them).
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+complexity = { level = "deny", priority = -1 }
+perf = { level = "deny", priority = -1 }
+style = { level = "deny", priority = -1 }
+all = { level = "deny", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
+# No panics / placeholders / ad-hoc output in committed code (tests/bins relaxed via clippy.toml).
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+unwrap_in_result = "deny"
+panic_in_result_fn = "deny"
+get_unwrap = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+# No silent drops.
+let_underscore_must_use = "deny"
+let_underscore_future = "deny"
+mem_forget = "deny"
+# Hygiene.
+clone_on_ref_ptr = "deny"
+undocumented_unsafe_blocks = "deny"
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+# Deliberately allowed (noisy / low-signal here); ratchet revisited later.
 module_name_repetitions = "allow"
-must_use_candidate = "allow"     # noisy for Leptos components returning `impl IntoView`
+must_use_candidate = "allow"
 similar_names = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
-unwrap_used = "warn"
-expect_used = "warn"
-panic = "warn"
+map_unwrap_or = "allow"
+default_trait_access = "allow"
+struct_excessive_bools = "allow"
+cast_precision_loss = "allow"
