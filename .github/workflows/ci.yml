@@ -30,6 +30,10 @@ jobs:
   clippy:
     name: clippy
     runs-on: ubuntu-latest
+    # No database in this job: the committed .sqlx offline cache backs the
+    # compile-time query!/query_as! checks.
+    env:
+      SQLX_OFFLINE: "true"
     steps:
       - uses: actions/checkout@v7
       - run: rustup show
@@ -63,6 +67,14 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest
+      # sqlx-cli pinned to the crate version; installed WITHOUT --locked so it
+      # resolves against the current registry.
+      - run: cargo install sqlx-cli --version 0.9.0 --no-default-features --features rustls,postgres
+      - name: Apply migrations
+        run: cargo sqlx migrate run --source crates/db/migrations
+      # Fail the build on a stale offline cache (the committed .sqlx must match
+      # the live schema + queries).
+      - run: cargo sqlx prepare --workspace --check
       - run: cargo nextest run --workspace
 
   supply-chain:
@@ -79,6 +91,10 @@ jobs:
   build:
     name: leptos build
     runs-on: ubuntu-latest
+    # No database in this job: the committed .sqlx offline cache backs the
+    # compile-time query!/query_as! checks.
+    env:
+      SQLX_OFFLINE: "true"
     steps:
       - uses: actions/checkout@v7
       - run: rustup show

@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE booking_occurrences\n        SET status           = $2,\n            check_in_at      = COALESCE($3, check_in_at),\n            checked_out_at   = COALESCE($4, checked_out_at),\n            cancelled_at     = COALESCE($5, cancelled_at),\n            auto_released_at = COALESCE($6, auto_released_at),\n            period = CASE\n                WHEN $7::timestamptz IS NULL THEN period\n                ELSE tstzrange(lower(period), $7::timestamptz, '[)')\n            END\n        WHERE id = $1 AND status = $8\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "booking_status",
+            "kind": {
+              "Enum": [
+                "booked",
+                "checked_in",
+                "checked_out",
+                "released",
+                "no_show",
+                "cancelled"
+              ]
+            }
+          }
+        },
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        {
+          "Custom": {
+            "name": "booking_status",
+            "kind": {
+              "Enum": [
+                "booked",
+                "checked_in",
+                "checked_out",
+                "released",
+                "no_show",
+                "cancelled"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7af0adbe0711485e845e895e96d1752174fed7d43668c71c95f98cae7361d5c2"
+}
