@@ -54,11 +54,12 @@ Pair with `clippy.toml`: `allow-unwrap-in-tests`/`allow-expect-in-tests = true`,
 
 ## Commands
 
+Required CLIs, dev services (podman), migrations and the full gate list: **[`docs/development.md`](docs/development.md)**.
+
+Quick gate (run before pushing — CI runs the same):
+
 ```
-leptosfmt . && cargo clippy --all-targets --all-features && cargo nextest run
-cargo deny check && cargo audit
-cargo sqlx prepare --workspace   # after changing any query! ; commit .sqlx
-cargo leptos watch               # run at 127.0.0.1:3000
+cargo fmt --all --check && leptosfmt --check apps crates && cargo clippy --workspace --all-targets -- -D warnings && cargo nextest run --workspace && cargo deny check && cargo audit && cargo leptos build
 ```
 
 ## Reference docs
