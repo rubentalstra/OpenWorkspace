@@ -1,0 +1,12 @@
+# Dev-only SeaweedFS signing key. Provides the STS service its signing key so the
+# S3 gateway stops logging "no signing key found for STS service". NOT for production.
+[jwt.filer_signing]
+key = "openworkspace-dev-filer-signing-key"
+
+[jwt.filer_signing.read]
+key = "openworkspace-dev-filer-signing-key"
+
+# Suppresses the "KEK stored in plaintext" warning by giving the KEK a passphrase.
+# (Full SSE-S3 encryption-at-rest is deferred — tracked for later.) Dev-only.
+[s3.sse.kek]
+passphrase = "openworkspace-dev-sse-kek"

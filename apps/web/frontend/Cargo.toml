@@ -1,0 +1,25 @@
+[package]
+name = "frontend"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+app = { path = "../app", version = "0.1.0", default-features = false, features = ["hydrate"] }
+leptos = { workspace = true, features = ["hydrate"] }
+
+console_error_panic_hook.workspace = true
+console_log.workspace = true
+log.workspace = true
+wasm-bindgen.workspace = true
+# getrandom is transitive to the Leptos stack, which pins the 0.3 line. Enabling
+# `wasm_js` here (via feature unification) + the cfg in .cargo/config.toml gives
+# the 0.3.4 copy a browser RNG backend on wasm. Drop this once Leptos moves to 0.4.
+getrandom = { version = "0.3", features = ["wasm_js"] }
+
+[lints]
+workspace = true

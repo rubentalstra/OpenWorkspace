@@ -1,0 +1,59 @@
+# Local dev services. Start with:
+#   podman compose -f deploy/dev/compose.yaml up -d
+# PostgreSQL 18 is a hard requirement; btree_gist/pg_trgm/citext are enabled in migrations.
+name: openworkspace-dev
+
+services:
+  postgres:
+    # Debian-based (not -alpine): glibc has system locales, so no "no usable
+    # system locales" warning and stable collation for citext/i18n sorting.
+    image: docker.io/library/postgres:18.4
+    environment:
+      POSTGRES_USER: openworkspace
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: openworkspace
+    ports:
+      - "5432:5432"
+    volumes:
+      # PostgreSQL 18+ stores data in a major-version subdirectory, so the mount
+      # goes at /var/lib/postgresql (not /var/lib/postgresql/data).
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openworkspace"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.3
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+
+  seaweedfs:
+    image: docker.io/chrislusf/seaweedfs:4.36
+    command: ["server", "-s3", "-dir=/data"]
+    environment:
+      WEED_S3_SSE_KEK_PASSPHRASE: "openworkspace-dev-sse-kek"
+    ports:
+      - "8333:8333"
+      - "9333:9333"
+    volumes:
+      - seaweeddata:/data
+      - ./seaweedfs/security.toml:/etc/seaweedfs/security.toml:ro
+      - ./seaweedfs/filer.toml:/etc/seaweedfs/filer.toml:ro
+
+  mailpit:
+    image: docker.io/axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  pgdata:
+  seaweeddata:

@@ -1,7 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="EMPTY_MODULE" version="4">
   <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/apps/web/app/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/web/frontend/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/web/server/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/worker/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/auth/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/config/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/crypto/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/db/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/domain/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/floorplan/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/jobs/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/notify/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ui/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

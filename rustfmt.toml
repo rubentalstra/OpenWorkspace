@@ -1,0 +1,6 @@
+# Only stable rustfmt options. Nightly-only keys (imports_granularity,
+# group_imports, wrap_comments, …) are intentionally omitted — they silently
+# no-op on stable. Edition 2024 is inherited per-crate from Cargo.toml; set here
+# so direct `rustfmt`/`leptosfmt` invocations use the same edition.
+edition = "2024"
+style_edition = "2024"

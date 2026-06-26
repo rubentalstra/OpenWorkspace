@@ -27,7 +27,7 @@ Self-hosted, MIT, multi-site workspace-booking platform in Rust on Leptos (SSR) 
 
 **API** — RFC 430 casing, acronyms as one word (`Uuid`, not `UUID`). Prefix conversions by cost/ownership: `as_` / `to_` / `into_`. Implement `From`/`TryFrom`/`AsRef`, never `Into`/`TryInto`; derive common traits eagerly and `Debug` on every public type. Keep struct fields private; seal extension traits with a private supertrait.
 
-**Async / safety** — Never block in async: short blocking work → `spawn_blocking`, CPU work → rayon, cap concurrency with a `Semaphore`. Never hold a `std::sync::Mutex` guard across `.await` (drop it first); share state via `Arc`. In `select!` call only cancellation-safe futures; hoist non-cancel-safe ops out of the loop. `unsafe_code` is `forbid` workspace-wide.
+**Async / safety** — Never block in async: short blocking work → `spawn_blocking`, CPU work → rayon, cap concurrency with a `Semaphore`. Never hold a `std::sync::Mutex` guard across `.await` (drop it first); share state via `Arc`. In `select!` call only cancellation-safe futures; hoist non-cancel-safe ops out of the loop. `unsafe_code` is `deny` workspace-wide — the only exception is the wasm hydration entry crate (`apps/web/frontend`), which carries a documented `#![allow(unsafe_code)]` for the `#[wasm_bindgen]` glue.
 
 **Stack** — Treat every `#[server]` fn as a public endpoint: validate inputs and enforce auth inside; return `Result<T, E: FromServerFnError>`. Keep server-fn args serializable with fixed-width ints (`i32`/`i64`), never `usize`; load async data via `Resource` under `<Suspense/>`. Emit identical server/client HTML (don't branch on `cfg!(target_arch)`); browser-only code goes in `Effect::new`; gate server deps behind the `ssr` feature. Use compile-time `query!`/`query_as!`; regenerate `.sqlx` with `cargo sqlx prepare --workspace` and commit it; CI runs with `SQLX_OFFLINE=true`. Axum handlers return `Result<T, E: IntoResponse>`; one `Clone` `AppState` via `.with_state` with `FromRef` substates; `State` before body extractors.
 
@@ -35,20 +35,22 @@ Self-hosted, MIT, multi-site workspace-booking platform in Rust on Leptos (SSR) 
 
 ```toml
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"      # wasm `frontend` crate opts out via a documented #![allow]
 unused_must_use = "deny"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }      # correctness stays deny
 pedantic = { level = "warn", priority = -1 }
 module_name_repetitions = "allow"
+must_use_candidate = "allow"     # noisy for Leptos components (`impl IntoView`)
+similar_names = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 unwrap_used = "warn"
 expect_used = "warn"
 panic = "warn"
 ```
-Pair with `clippy.toml`: `allow-unwrap-in-tests = true`, `allow-expect-in-tests = true`.
+Pair with `clippy.toml`: `allow-unwrap-in-tests`/`allow-expect-in-tests = true`, and `doc-valid-idents` for project nouns (OpenWorkspace, PostgreSQL, OIDC, …). Run clippy without `--all-features` (ssr+hydrate conflict).
 
 ## Commands
 

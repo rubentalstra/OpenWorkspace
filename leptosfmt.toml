@@ -1,0 +1,4 @@
+# Formatting for the Leptos view! macro (leptosfmt). Kept in step with rustfmt:
+# 100-column width, 4-space indent.
+max_width = 100
+tab_spaces = 4

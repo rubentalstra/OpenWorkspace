@@ -1,0 +1,52 @@
+# cargo-deny policy — https://embarkstudios.github.io/cargo-deny/
+# Permissive licences only: GPL/AGPL and other copyleft are rejected by being
+# absent from the allow-list. Duplicate versions are warned (they are transitive
+# and ecosystem-driven, e.g. getrandom 0.2/0.3/0.4 across the Leptos tree).
+
+[graph]
+all-features = false
+
+[advisories]
+# RustSec advisories. Only `unmaintained` notices on transitive Leptos deps are
+# ignored (not vulnerabilities, and not removable until Leptos drops them).
+ignore = [
+    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained (not vulnerable); transitive via leptos -> either_of" },
+    { id = "RUSTSEC-2026-0173", reason = "proc-macro-error2: unmaintained (not vulnerable); transitive via leptos_macro" },
+]
+
+[licenses]
+confidence-threshold = 0.8
+# Add a licence here only once a dependency actually uses it (cargo-deny warns on
+# unused allowances). E.g. ISC arrives with the rustls/crypto stack in a later phase.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Unicode-3.0",
+    "Zlib",
+    "BSL-1.0",
+    "Unlicense",
+    "CC0-1.0",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Workspace path deps (app = { path = "../app" }) have no version = looks like `*`.
+allow-wildcard-paths = true
+# Known transitive duplicates we don't control (Leptos / getrandom ecosystem).
+# New duplicates in other crates still warn.
+skip = [
+    "convert_case",
+    "getrandom",
+    "r-efi",
+    "thiserror",
+    "thiserror-impl",
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

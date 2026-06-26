@@ -1,0 +1,4 @@
+# cargo-audit config. Ignore the same unmaintained (non-vulnerable) transitive
+# advisories as deny.toml — they come from the Leptos tree and aren't removable by us.
+[advisories]
+ignore = ["RUSTSEC-2024-0436", "RUSTSEC-2026-0173"]
