@@ -1,0 +1,25 @@
+# Worker tier: apalis background processor. Rootless multi-stage build with cargo-chef.
+# Build from the repo root:
+#   podman build -f deploy/containers/Containerfile.worker -t openworkspace-worker .
+ARG RUST_VERSION=1.96.0
+
+FROM docker.io/library/rust:${RUST_VERSION}-bookworm AS chef
+WORKDIR /app
+RUN cargo install --locked cargo-chef
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+RUN cargo build --release --bin worker
+
+FROM docker.io/library/debian:bookworm-slim AS runtime
+WORKDIR /app
+RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --no-create-home app
+COPY --from=builder /app/target/release/worker /app/worker
+USER app
+CMD ["/app/worker"]

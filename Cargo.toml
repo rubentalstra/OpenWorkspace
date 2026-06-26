@@ -1,0 +1,91 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/web/app",
+    "apps/web/frontend",
+    "apps/web/server",
+    "apps/worker",
+    "crates/domain",
+    "crates/db",
+    "crates/auth",
+    "crates/floorplan",
+    "crates/crypto",
+    "crates/notify",
+    "crates/jobs",
+    "crates/ui",
+    "crates/config",
+]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.96"
+version = "0.1.0"
+license = "MIT"
+repository = "https://github.com/rubentalstra/OpenWorkspace"
+
+# Applies to the wasm (hydrate) build.
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 'z'
+
+[workspace.dependencies]
+# Leptos (each companion crate tracks its own patch level on the 0.8 line).
+leptos = "0.8.20"
+leptos_meta = "0.8.6"
+leptos_router = "0.8.14"
+leptos_axum = "0.8.10"
+
+# Server stack.
+axum = "0.8.9"
+tokio = { version = "1.52.3", features = ["full"] }
+tower = { version = "0.5.2", features = ["full"] }
+tower-http = { version = "0.6.4", features = ["full"] }
+http = "1.3.1"
+
+# Errors, logging, wasm glue.
+anyhow = "1.0.103"
+thiserror = "2.0.18"
+tracing = "0.1.44"
+log = "0.4.27"
+cfg-if = "1.0.0"
+console_error_panic_hook = "0.1.7"
+console_log = "1.0.0"
+wasm-bindgen = "0.2.106"
+
+# cargo-leptos configuration (array-of-tables form; one entry per Leptos project).
+[[workspace.metadata.leptos]]
+name = "openworkspace"
+bin-package = "server"
+lib-package = "frontend"
+site-root = "target/site"
+site-pkg-dir = "pkg"
+style-file = "apps/web/style/main.scss"
+assets-dir = "apps/web/public"
+site-addr = "127.0.0.1:3000"
+reload-port = 3001
+end2end-cmd = "npx playwright test"
+end2end-dir = "end2end"
+browserquery = "defaults"
+bin-features = []
+bin-default-features = false
+lib-features = []
+lib-default-features = false
+
+[workspace.lints.rust]
+# `deny` (not `forbid`) so the wasm `frontend` crate can opt out for the
+# `#[wasm_bindgen]` entry point via a documented crate-level `#![allow]`.
+unsafe_code = "deny"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"     # noisy for Leptos components returning `impl IntoView`
+similar_names = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"

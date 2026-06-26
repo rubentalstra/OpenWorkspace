@@ -1,0 +1,7 @@
+apiVersion: v2
+name: openworkspace
+description: Self-hosted workspace booking platform (web tier + background worker).
+type: application
+# Chart version and app version both follow SemVer; bump per release.
+version: 0.1.0
+appVersion: "0.1.0"

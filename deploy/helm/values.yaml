@@ -1,0 +1,18 @@
+image:
+  pullPolicy: IfNotPresent
+
+web:
+  image: ghcr.io/rubentalstra/openworkspace-web
+  tag: "" # defaults to .Chart.AppVersion
+  replicaCount: 2 # stateless: scale to N
+  port: 3000
+  resources: {}
+  service:
+    type: ClusterIP
+    port: 80
+
+worker:
+  image: ghcr.io/rubentalstra/openworkspace-worker
+  tag: ""
+  replicaCount: 1 # singleton; advisory locks + Recreate keep it safe
+  resources: {}

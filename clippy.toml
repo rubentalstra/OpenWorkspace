@@ -1,0 +1,20 @@
+# Project-specific proper nouns and acronyms that clippy::doc_markdown would
+# otherwise flag. ".." keeps clippy's built-in default list.
+doc-valid-idents = [
+    "..",
+    "OpenWorkspace",
+    "PostgreSQL",
+    "OIDC",
+    "SSO",
+    "TOTP",
+    "WebAuthn",
+    "SVG",
+    "PQC",
+    "KMS",
+    "CBOM",
+    "RRULE",
+]
+
+# unwrap/expect are warned in production code but fine in tests.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

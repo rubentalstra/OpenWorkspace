@@ -1,0 +1,5 @@
+# Dev filer store: explicit leveldb2 so SeaweedFS doesn't log
+# "skipping default store dir". Persisted on the seaweeddata volume.
+[leveldb2]
+enabled = true
+dir = "/data/filerldb2"
