@@ -1,0 +1,19 @@
+# Profile-nested configuration (figment `.nested()`): each top-level table is a
+# profile, selected via APP_PROFILE (default "dev"). Production secrets come from
+# APP_* environment variables (e.g. APP_DATABASE__URL), never from this file.
+
+[dev.server]
+addr = "127.0.0.1:3000"
+
+[dev.database]
+url = "postgres://openworkspace:dev@localhost:5432/openworkspace"
+max_connections = 5
+
+[dev.observability]
+service_name = "openworkspace-dev"
+log_filter = "info,openworkspace=debug,sqlx=warn"
+metrics_enabled = true
+
+[prod.observability]
+service_name = "openworkspace"
+log_filter = "info"

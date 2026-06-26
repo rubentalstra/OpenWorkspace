@@ -40,6 +40,22 @@ jobs:
   test:
     name: nextest
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: openworkspace
+          POSTGRES_PASSWORD: dev
+          POSTGRES_DB: openworkspace
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U openworkspace"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://openworkspace:dev@localhost:5432/openworkspace
     steps:
       - uses: actions/checkout@v7
       - run: rustup show
@@ -47,7 +63,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest
-      - run: cargo nextest run --workspace --no-tests=pass
+      - run: cargo nextest run --workspace
 
   supply-chain:
     name: cargo-deny + cargo-audit
