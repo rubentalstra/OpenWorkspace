@@ -41,6 +41,14 @@ base64 = { version = "0.22", optional = true }
 subtle = { version = "2.6", optional = true }
 time = { version = "0.3", optional = true }
 form_urlencoded = { version = "1.2", optional = true }
+# WebAuthn passkeys. `conditional-ui` unlocks the discoverable (usernameless)
+# ceremony; `danger-allow-state-serialisation` lets the in-progress ceremony
+# state be persisted — we store it server-side in the tower-sessions row, the
+# documented-safe location, never in a client cookie.
+webauthn-rs = { version = "0.5.5", features = ["danger-allow-state-serialisation", "conditional-ui"], optional = true }
+# TOTP second factor. `qr` (which pulls in `otpauth`) renders the enrolment QR
+# and otpauth URL; `gen_secret` generates the shared secret; `zeroize` wipes it.
+totp-rs = { version = "5.7.2", features = ["qr", "gen_secret", "zeroize"], optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
@@ -64,6 +72,9 @@ serde_json = "1"
 time = { version = "0.3", features = ["std"] }
 # Bootstrap test captures tracing output to assert no secret is logged.
 tracing-subscriber = { version = "0.3.23", features = ["fmt"] }
+# Software authenticator that drives the WebAuthn register/authenticate
+# ceremonies in-process (the P6 "virtual authenticator" the spec asks for).
+webauthn-authenticator-rs = { version = "0.5.5", features = ["softpasskey"] }
 
 [features]
 ssr = [
@@ -80,6 +91,8 @@ ssr = [
     "dep:subtle",
     "dep:time",
     "dep:form_urlencoded",
+    "dep:webauthn-rs",
+    "dep:totp-rs",
 ]
 
 [lints]

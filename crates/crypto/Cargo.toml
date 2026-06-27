@@ -7,8 +7,13 @@ license.workspace = true
 
 [dependencies]
 argon2 = { version = "0.5.3", features = ["std", "zeroize"] }
+# AEAD field encryption + token hashing. Already in the tree via sqlx's
+# `tls-rustls-aws-lc-rs` backend, so this direct dep adds no new vendored C lib.
+aws-lc-rs = "1.17.0"
 secrecy.workspace = true
 thiserror.workspace = true
+# Zeroes key material (DataKey / RootKey) on drop.
+zeroize = { version = "1.9.0", features = ["derive"] }
 
 [lints]
 workspace = true
