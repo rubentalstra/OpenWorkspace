@@ -19,7 +19,8 @@ use webauthn_rs::{Webauthn, WebauthnBuilder};
 // Re-exported ceremony surface (W3C wire DTOs + opaque server-side state).
 pub use webauthn_rs::prelude::{
     CreationChallengeResponse, DiscoverableAuthentication, PasskeyAuthentication,
-    PasskeyRegistration, PublicKeyCredential, RegisterPublicKeyCredential, RequestChallengeResponse,
+    PasskeyRegistration, PublicKeyCredential, RegisterPublicKeyCredential,
+    RequestChallengeResponse,
 };
 
 use crate::AuthError;
@@ -181,7 +182,10 @@ impl WebauthnService {
     /// # Errors
     ///
     /// [`AuthError::Webauthn`] if the response cannot be pre-processed.
-    pub fn identify_discoverable(&self, credential: &PublicKeyCredential) -> Result<Uuid, AuthError> {
+    pub fn identify_discoverable(
+        &self,
+        credential: &PublicKeyCredential,
+    ) -> Result<Uuid, AuthError> {
         let (user_handle, _cred_id) = self
             .webauthn
             .identify_discoverable_authentication(credential)
@@ -294,14 +298,19 @@ mod tests {
         let candidate = register(&svc, &mut wa, Uuid::new_v4());
         assert!(!candidate.credential_id.is_empty());
 
-        let (rcr, state) = svc.start_authentication(std::slice::from_ref(&candidate)).unwrap();
+        let (rcr, state) = svc
+            .start_authentication(std::slice::from_ref(&candidate))
+            .unwrap();
         let assertion = wa.do_authentication(origin(), rcr).unwrap();
         let outcome = svc
             .finish_authentication(&assertion, &state, std::slice::from_ref(&candidate))
             .unwrap();
 
         assert_eq!(outcome.credential_id, candidate.credential_id);
-        assert!(outcome.user_verified, "soft authenticator asserts user verification");
+        assert!(
+            outcome.user_verified,
+            "soft authenticator asserts user verification"
+        );
         // The signature counter advanced past the stored value and is returned to persist.
         assert!(outcome.new_sign_count > candidate.sign_count);
     }
@@ -318,7 +327,9 @@ mod tests {
             sign_count: i64::MAX,
             ..candidate.clone()
         };
-        let (rcr, state) = svc.start_authentication(std::slice::from_ref(&candidate)).unwrap();
+        let (rcr, state) = svc
+            .start_authentication(std::slice::from_ref(&candidate))
+            .unwrap();
         let assertion = wa.do_authentication(origin(), rcr).unwrap();
         let err = svc
             .finish_authentication(&assertion, &state, std::slice::from_ref(&stale))
@@ -333,9 +344,13 @@ mod tests {
         let mut wa = WebauthnAuthenticator::new(SoftPasskey::new(true));
         let candidate = register(&svc, &mut wa, Uuid::new_v4());
 
-        let (rcr, state) = svc.start_authentication(std::slice::from_ref(&candidate)).unwrap();
+        let (rcr, state) = svc
+            .start_authentication(std::slice::from_ref(&candidate))
+            .unwrap();
         let assertion = wa.do_authentication(origin(), rcr).unwrap();
-        let err = svc.finish_authentication(&assertion, &state, &[]).unwrap_err();
+        let err = svc
+            .finish_authentication(&assertion, &state, &[])
+            .unwrap_err();
         assert!(matches!(err, AuthError::Webauthn));
     }
 

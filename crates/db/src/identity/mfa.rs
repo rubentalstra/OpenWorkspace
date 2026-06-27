@@ -456,9 +456,12 @@ pub async fn totp_is_confirmed(pool: &Db, user_id: Uuid) -> Result<bool, DbError
 ///
 /// [`DbError::Sqlx`] on any database error.
 pub async fn delete_totp(pool: &Db, user_id: Uuid) -> Result<(), DbError> {
-    sqlx::query!(r#"DELETE FROM totp_credentials WHERE user_id = $1"#, user_id)
-        .execute(pool)
-        .await?;
+    sqlx::query!(
+        r#"DELETE FROM totp_credentials WHERE user_id = $1"#,
+        user_id
+    )
+    .execute(pool)
+    .await?;
     Ok(())
 }
 
@@ -536,17 +539,16 @@ pub async fn count_unused_recovery_codes(pool: &Db, user_id: Uuid) -> Result<i64
 mod tests {
     use super::*;
 
+    // Runtime (non-macro) query: test-only seed data stays out of the offline
+    // `.sqlx` cache, which `cargo sqlx prepare` builds from non-test targets only.
     async fn seed_user(pool: &Db, handle: &[u8]) -> Uuid {
         let email = format!("u{}@example.test", Uuid::new_v4().simple());
-        sqlx::query_scalar!(
-            r#"
-            INSERT INTO users (email, display_name, webauthn_user_handle)
-            VALUES ($1::citext, 'Test User', $2)
-            RETURNING id
-            "#,
-            email,
-            handle,
+        sqlx::query_scalar(
+            "INSERT INTO users (email, display_name, webauthn_user_handle) \
+             VALUES ($1::citext, 'Test User', $2) RETURNING id",
         )
+        .bind(email)
+        .bind(handle)
         .fetch_one(pool)
         .await
         .unwrap()
@@ -581,7 +583,9 @@ mod tests {
         assert_eq!(by_cred.id, id);
 
         update_passkey_after_auth(&pool, id, &serde_json::json!({"cred": "v2"}), 5).await?;
-        let bumped = load_passkey_by_credential_id(&pool, b"cred-1").await?.unwrap();
+        let bumped = load_passkey_by_credential_id(&pool, b"cred-1")
+            .await?
+            .unwrap();
         assert_eq!(bumped.sign_count, 5);
 
         assert_eq!(count_passkeys(&pool, user).await?, 1);
@@ -601,7 +605,10 @@ mod tests {
         let err = insert_passkey(&pool, &sample_passkey(b, b"shared-cred"))
             .await
             .unwrap_err();
-        assert!(matches!(err, DbError::Conflict), "global credential id must be unique");
+        assert!(
+            matches!(err, DbError::Conflict),
+            "global credential id must be unique"
+        );
         Ok(())
     }
 
@@ -609,10 +616,18 @@ mod tests {
     async fn discoverable_handle_resolves_user(pool: Db) -> Result<(), DbError> {
         let handle = b"handle-disco-00001";
         let user = seed_user(&pool, handle).await;
-        assert_eq!(load_user_id_by_webauthn_handle(&pool, handle).await?, Some(user));
-        assert_eq!(load_user_id_by_webauthn_handle(&pool, b"absent").await?, None);
+        assert_eq!(
+            load_user_id_by_webauthn_handle(&pool, handle).await?,
+            Some(user)
+        );
+        assert_eq!(
+            load_user_id_by_webauthn_handle(&pool, b"absent").await?,
+            None
+        );
 
-        let ident = load_webauthn_identity(&pool, user).await?.expect("identity");
+        let ident = load_webauthn_identity(&pool, user)
+            .await?
+            .expect("identity");
         assert_eq!(ident.webauthn_user_handle, handle);
         assert!(ident.email.contains('@'));
         Ok(())
@@ -628,7 +643,10 @@ mod tests {
         assert!(load_totp(&pool, user).await?.is_some());
 
         assert!(confirm_totp(&pool, user).await?);
-        assert!(!confirm_totp(&pool, user).await?, "second confirm is a no-op");
+        assert!(
+            !confirm_totp(&pool, user).await?,
+            "second confirm is a no-op"
+        );
         assert!(totp_is_confirmed(&pool, user).await?);
 
         let confirmed = load_confirmed_totp(&pool, user).await?.expect("confirmed");
@@ -648,8 +666,14 @@ mod tests {
         assert_eq!(count_unused_recovery_codes(&pool, user).await?, 3);
 
         assert!(consume_recovery_code(&pool, user, &[2u8; 32]).await?);
-        assert!(!consume_recovery_code(&pool, user, &[2u8; 32]).await?, "single use");
-        assert!(!consume_recovery_code(&pool, user, &[9u8; 32]).await?, "unknown code");
+        assert!(
+            !consume_recovery_code(&pool, user, &[2u8; 32]).await?,
+            "single use"
+        );
+        assert!(
+            !consume_recovery_code(&pool, user, &[9u8; 32]).await?,
+            "unknown code"
+        );
         assert_eq!(count_unused_recovery_codes(&pool, user).await?, 2);
 
         // Re-issuing replaces the prior set wholesale.
@@ -666,7 +690,10 @@ mod tests {
         let err = replace_recovery_codes(&pool, b, &[vec![5u8; 32]])
             .await
             .unwrap_err();
-        assert!(matches!(err, DbError::Conflict), "code_hash unique index must hold");
+        assert!(
+            matches!(err, DbError::Conflict),
+            "code_hash unique index must hold"
+        );
         Ok(())
     }
 

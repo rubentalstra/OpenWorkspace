@@ -89,9 +89,14 @@ mod tests {
 
     #[sqlx::test]
     async fn insert_then_load_active(pool: Db) -> Result<(), DbError> {
-        let inserted =
-            insert_crypto_key(&pool, "totp_secret", "aead:aes256-gcm:v1", &[1, 2, 3], Some("root"))
-                .await?;
+        let inserted = insert_crypto_key(
+            &pool,
+            "totp_secret",
+            "aead:aes256-gcm:v1",
+            &[1, 2, 3],
+            Some("root"),
+        )
+        .await?;
         let loaded = load_active_crypto_key(&pool, "totp_secret")
             .await?
             .expect("active key present");
@@ -107,7 +112,10 @@ mod tests {
         let err = insert_crypto_key(&pool, "totp_secret", "s", &[2], None)
             .await
             .unwrap_err();
-        assert!(matches!(err, DbError::Conflict), "expected Conflict, got {err:?}");
+        assert!(
+            matches!(err, DbError::Conflict),
+            "expected Conflict, got {err:?}"
+        );
         Ok(())
     }
 

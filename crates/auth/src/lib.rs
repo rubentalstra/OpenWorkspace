@@ -121,56 +121,42 @@ impl From<db::CredentialRow> for User {
     }
 }
 
-mod policy;
-
-pub use policy::{MIN_PASSWORD_LENGTH, PasswordPolicyError, validate_password};
-
-#[cfg(feature = "ssr")]
-mod backend;
-#[cfg(feature = "ssr")]
-mod bootstrap;
-#[cfg(feature = "ssr")]
-mod csrf;
-#[cfg(feature = "ssr")]
-mod keyring;
-#[cfg(feature = "ssr")]
-mod layer;
+// Submodule groups — see CLAUDE.md "Module layout". `password` carries the
+// always-available policy plus the ssr-only backend/bootstrap; `session` and
+// `mfa` are ssr-only. The public surface is re-exported flat at the crate root.
 #[cfg(feature = "ssr")]
 mod mfa;
+mod password;
 #[cfg(feature = "ssr")]
-mod recovery;
-#[cfg(feature = "ssr")]
-mod store;
-#[cfg(feature = "ssr")]
-mod totp;
-#[cfg(feature = "ssr")]
-mod webauthn;
+mod session;
+
+pub use password::policy::{MIN_PASSWORD_LENGTH, PasswordPolicyError, validate_password};
 
 #[cfg(feature = "ssr")]
-pub use backend::{AuthError, Backend};
+pub use mfa::keyring::FieldKeyring;
 #[cfg(feature = "ssr")]
-pub use bootstrap::bootstrap_admin;
-#[cfg(feature = "ssr")]
-pub use csrf::{CsrfError, CsrfToken, csrf_layer, hidden_field, rotate_csrf_token};
-#[cfg(feature = "ssr")]
-pub use keyring::FieldKeyring;
-#[cfg(feature = "ssr")]
-pub use layer::{
-    AuthSession, ReauthError, build_auth_layer, cycle_session_id, rebind_after_password_change,
-};
-#[cfg(feature = "ssr")]
-pub use mfa::{MfaSession, PendingMfa, second_factor_required};
-#[cfg(feature = "ssr")]
-pub use recovery::{
+pub use mfa::recovery::{
     RECOVERY_CODE_COUNT, RecoveryCodes, generate_recovery_codes, hash_submitted_code,
 };
 #[cfg(feature = "ssr")]
-pub use store::{PgSessionStore, spawn_session_reaper};
+pub use mfa::state::{MfaSession, PendingMfa, second_factor_required};
 #[cfg(feature = "ssr")]
-pub use totp::{StoredTotp, TotpEnrollment, TotpService};
+pub use mfa::totp::{StoredTotp, TotpEnrollment, TotpService};
 #[cfg(feature = "ssr")]
-pub use webauthn::{
+pub use mfa::webauthn::{
     AuthOutcome, CreationChallengeResponse, DiscoverableAuthentication, PasskeyAuthentication,
     PasskeyCandidate, PasskeyRegistration, PublicKeyCredential, RegisterPublicKeyCredential,
     RegisteredPasskey, RequestChallengeResponse, WebauthnService,
 };
+#[cfg(feature = "ssr")]
+pub use password::backend::{AuthError, Backend};
+#[cfg(feature = "ssr")]
+pub use password::bootstrap::bootstrap_admin;
+#[cfg(feature = "ssr")]
+pub use session::csrf::{CsrfError, CsrfToken, csrf_layer, hidden_field, rotate_csrf_token};
+#[cfg(feature = "ssr")]
+pub use session::layer::{
+    AuthSession, ReauthError, build_auth_layer, cycle_session_id, rebind_after_password_change,
+};
+#[cfg(feature = "ssr")]
+pub use session::store::{PgSessionStore, spawn_session_reaper};

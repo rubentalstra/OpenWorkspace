@@ -13,8 +13,7 @@ use serde::{Deserialize, Serialize};
 use tower_sessions::Session;
 use uuid::Uuid;
 
-use crate::AuthError;
-use crate::webauthn::{DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration};
+use crate::{AuthError, DiscoverableAuthentication, PasskeyAuthentication, PasskeyRegistration};
 
 const KEY_PENDING_MFA: &str = "mfa.pending";
 const KEY_PASSKEY_REG: &str = "mfa.passkey_reg";
@@ -138,9 +137,7 @@ impl MfaSession {
     /// # Errors
     ///
     /// [`AuthError::CeremonyState`] if the session cannot be written.
-    pub async fn take_discoverable(
-        &self,
-    ) -> Result<Option<DiscoverableAuthentication>, AuthError> {
+    pub async fn take_discoverable(&self) -> Result<Option<DiscoverableAuthentication>, AuthError> {
         self.remove(KEY_DISCOVERABLE).await
     }
 

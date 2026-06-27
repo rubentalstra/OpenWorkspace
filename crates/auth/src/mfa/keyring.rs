@@ -58,7 +58,8 @@ async fn load_or_create_dek(db: &Db, kek: &RootKey, purpose: &str) -> Result<Dat
 
     let dek = crypto::generate_data_key()?;
     let wrapped = crypto::wrap_key(kek, &dek)?;
-    match db::insert_crypto_key(db, purpose, crypto::SUITE_ID_AES_256_GCM_V1, &wrapped, None).await {
+    match db::insert_crypto_key(db, purpose, crypto::SUITE_ID_AES_256_GCM_V1, &wrapped, None).await
+    {
         Ok(_) => Ok(dek),
         Err(db::DbError::Conflict) => {
             // A concurrent replica created the key first; adopt the winner.

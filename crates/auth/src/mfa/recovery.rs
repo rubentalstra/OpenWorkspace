@@ -105,6 +105,9 @@ mod tests {
 
     #[test]
     fn distinct_codes_hash_differently() {
-        assert_ne!(hash_submitted_code("AAAAA-BBBBB"), hash_submitted_code("AAAAA-BBBBC"));
+        assert_ne!(
+            hash_submitted_code("AAAAA-BBBBB"),
+            hash_submitted_code("AAAAA-BBBBC")
+        );
     }
 }

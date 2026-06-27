@@ -177,7 +177,10 @@ mod tests {
     use super::*;
 
     fn service() -> TotpService {
-        TotpService::new("OpenWorkspace".to_owned(), crypto::generate_data_key().unwrap())
+        TotpService::new(
+            "OpenWorkspace".to_owned(),
+            crypto::generate_data_key().unwrap(),
+        )
     }
 
     #[test]
