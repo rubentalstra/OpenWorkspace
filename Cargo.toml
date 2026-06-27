@@ -10,6 +10,7 @@ members = [
     "crates/auth",
     "crates/floorplan",
     "crates/crypto",
+    "crates/i18n",
     "crates/notify",
     "crates/jobs",
     "crates/ui",
@@ -36,6 +37,12 @@ leptos = "0.8.20"
 leptos_meta = "0.8.6"
 leptos_router = "0.8.14"
 leptos_axum = "0.8.10"
+
+# Internationalisation (Mozilla Fluent). `fluent-templates`/`unic-langid` are pinned
+# to the versions `leptos-fluent` resolves so `i18n` and `notify` share one copy.
+leptos-fluent = "0.3.1"
+fluent-templates = "0.14.0"
+unic-langid = "0.9.6"
 
 # Server stack.
 axum = "0.8.9"
@@ -66,6 +73,7 @@ bin-package = "server"
 lib-package = "frontend"
 site-root = "target/site"
 site-pkg-dir = "pkg"
+watch-additional-files = ["locales"]
 style-file = "apps/web/style/main.css"
 assets-dir = "apps/web/public"
 site-addr = "127.0.0.1:3000"

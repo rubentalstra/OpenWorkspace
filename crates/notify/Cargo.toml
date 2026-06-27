@@ -6,6 +6,9 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+fluent-templates.workspace = true
+unic-langid.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true

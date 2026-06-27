@@ -11,6 +11,12 @@ leptos_meta.workspace = true
 leptos_router.workspace = true
 leptos_axum = { workspace = true, optional = true }
 
+i18n = { path = "../../../crates/i18n", version = "0.1.0", default-features = false }
+# `tr!`/`move_tr!` are imported here directly: leptos-fluent's compile-time
+# `check_translations` forbids re-exporting them, so the macros are the one vendor
+# touchpoint in app code (provider + config stay behind the `i18n` facade).
+leptos-fluent.workspace = true
+
 http.workspace = true
 cfg-if.workspace = true
 thiserror.workspace = true
@@ -40,6 +46,7 @@ default = []
 hydrate = [
     "leptos/hydrate",
     "leptos/nonce",
+    "i18n/hydrate",
     "dep:server_fn",
     "dep:wasm-bindgen",
     "dep:web-sys",
@@ -55,6 +62,7 @@ ssr = [
     "leptos/rustls",
     "leptos_meta/ssr",
     "leptos_router/ssr",
+    "i18n/ssr",
     "dep:leptos_axum",
 ]
 
