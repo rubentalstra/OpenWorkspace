@@ -17,6 +17,7 @@ Self-hosted, MIT, multi-site workspace-booking platform in Rust on Leptos (SSR) 
 - **Commits** — Conventional Commits 1.0.0: `type(scope): subject`. Types: `feat` `fix` `docs` `style` `refactor` `perf` `test` `build` `ci` `chore`. Scope = crate/app (e.g. `feat(booking):`, `fix(auth):`). Subject imperative, ≤50 chars, no trailing period.
 - **Breaking change** — append `!` after type/scope and/or a `BREAKING CHANGE:` footer.
 - **PRs** — title is a Conventional-Commit summary; body states what changed and why, links the phase/issue, and lists how it was verified. Branch off `main`; never commit to `main` directly. Open with `gh`.
+- **Merge** — once every check is green, squash-merge and clean up in one step: `gh pr merge <n> --squash --delete-branch` (removes the local and remote branch and returns you to `main`), then `git checkout main && git pull --ff-only` to sync. The squash keeps one Conventional-Commit per PR on `main`.
 - **SemVer 2.0.0** — `fix` → PATCH, `feat` → MINOR, breaking → MAJOR. Pre-V1 the crate is `0.y.z`: breaking changes bump MINOR, everything else PATCH. Follow Cargo's SemVer rules for what counts as breaking.
 
 ## Rust practices
