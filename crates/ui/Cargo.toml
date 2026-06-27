@@ -6,6 +6,43 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+# Leptos drives the components; ssr/hydrate are forwarded from apps/web/app so the
+# kit emits identical server/client HTML.
+leptos = { workspace = true }
+# The vendored `variants!` macro emits leptos_router::* for its link/anchor variant.
+leptos_router = { workspace = true }
+# STABLE styling stack — the rust-ui registry's `icons`/`leptos_ui` force
+# `leptos/nightly` and are NOT used; tw_merge gives the same cn()/variants! API on
+# stable, and leptos_icons+icondata provide Lucide on stable Leptos 0.8.
+tw_merge = { workspace = true }
+leptos_icons = { workspace = true }
+icondata = { workspace = true }
+strum.workspace = true
+serde.workspace = true
+validator.workspace = true
+serde_json.workspace = true
+paste.workspace = true
+time.workspace = true
+# Browser APIs used by the interactive components/hooks (media query, clipboard,
+# scroll lock, key handling). Compiled for both targets; the JS calls run only on
+# the client (inside Effect/event handlers).
+wasm-bindgen = { workspace = true }
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "CustomEvent", "Document", "Event", "HtmlElement", "HtmlInputElement",
+    "KeyboardEvent", "MouseEvent", "Node", "NodeList", "Storage", "Window",
+] }
+
+[features]
+ssr = ["leptos/ssr"]
+hydrate = ["leptos/hydrate"]
+
+# Read by the rust-ui CLI (`ui init`/`ui add`) so it targets this crate and knows
+# where to write the theme CSS. cargo-leptos itself uses the workspace-level
+# [[workspace.metadata.leptos]] tailwind-input-file (apps/web/style/tailwind.css),
+# not this; the generated theme is relocated there.
+[package.metadata.leptos]
+tailwind-input-file = "style/tailwind.css"
 
 [lints]
 workspace = true
