@@ -214,7 +214,10 @@ mod tests {
         let mut envelope = encrypt_field(&key, b"data", b"aad").unwrap();
         let last = envelope.len() - 1;
         envelope[last] ^= 0x01;
-        assert_eq!(decrypt_field(&key, &envelope, b"aad"), Err(CryptoError::Decrypt));
+        assert_eq!(
+            decrypt_field(&key, &envelope, b"aad"),
+            Err(CryptoError::Decrypt)
+        );
     }
 
     #[test]
@@ -230,7 +233,10 @@ mod tests {
     #[test]
     fn wrong_key_is_rejected() {
         let envelope = encrypt_field(&dek(), b"data", b"").unwrap();
-        assert_eq!(decrypt_field(&dek(), &envelope, b""), Err(CryptoError::Decrypt));
+        assert_eq!(
+            decrypt_field(&dek(), &envelope, b""),
+            Err(CryptoError::Decrypt)
+        );
     }
 
     #[test]
@@ -238,14 +244,20 @@ mod tests {
         let key = dek();
         let mut envelope = encrypt_field(&key, b"data", b"").unwrap();
         envelope[0] = 0xFF;
-        assert_eq!(decrypt_field(&key, &envelope, b""), Err(CryptoError::Decrypt));
+        assert_eq!(
+            decrypt_field(&key, &envelope, b""),
+            Err(CryptoError::Decrypt)
+        );
     }
 
     #[test]
     fn truncated_envelope_is_rejected() {
         let key = dek();
         assert_eq!(decrypt_field(&key, &[], b""), Err(CryptoError::Decrypt));
-        assert_eq!(decrypt_field(&key, &[SUITE_TAG_AES_256_GCM_V1], b""), Err(CryptoError::Decrypt));
+        assert_eq!(
+            decrypt_field(&key, &[SUITE_TAG_AES_256_GCM_V1], b""),
+            Err(CryptoError::Decrypt)
+        );
     }
 
     #[test]
@@ -257,7 +269,10 @@ mod tests {
         // The unwrapped DEK must decrypt what the original DEK sealed.
         let envelope = encrypt_field(&dek, b"payload", b"aad").unwrap();
         let unwrapped = unwrap_key(&kek, &wrapped).unwrap();
-        assert_eq!(decrypt_field(&unwrapped, &envelope, b"aad").unwrap(), b"payload");
+        assert_eq!(
+            decrypt_field(&unwrapped, &envelope, b"aad").unwrap(),
+            b"payload"
+        );
     }
 
     #[test]
@@ -265,7 +280,10 @@ mod tests {
         let kek = RootKey::from_bytes(&[1u8; KEY_LEN]).unwrap();
         let other = RootKey::from_bytes(&[2u8; KEY_LEN]).unwrap();
         let wrapped = wrap_key(&kek, &generate_data_key().unwrap()).unwrap();
-        assert!(matches!(unwrap_key(&other, &wrapped), Err(CryptoError::KeyWrap)));
+        assert!(matches!(
+            unwrap_key(&other, &wrapped),
+            Err(CryptoError::KeyWrap)
+        ));
     }
 
     #[test]
