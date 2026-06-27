@@ -1,455 +1,711 @@
-use leptos_icons::Icon;
-use leptos::context::Provider;
-use leptos::prelude::*;
-use crate::clx;
-use tw_merge::*;
+use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::components::hooks::use_random::use_random_id_for;
+use crate::{clx, cn, use_lock_body_scroll, use_random_id_for};
+use leptos::context::Provider;
+use leptos::ev::KeyboardEvent;
+use leptos::html;
+use leptos::prelude::*;
+use leptos::wasm_bindgen::JsCast;
+use leptos_icons::Icon;
+use web_sys::{Element, HtmlElement};
+
 pub use crate::components::ui::separator::Separator as MenubarSeparator;
 
-/* ========================================================== */
-/*                     SIMPLE CLX COMPONENTS                  */
-/* ========================================================== */
-
-mod components {
-    use super::*;
-    clx! {MenubarGroup, ul, "group"}
-    clx! {MenubarLabel, div, "px-1.5 py-1 text-sm font-medium data-inset:pl-7"}
-    clx! {MenubarSubContent, ul, "menubar__sub_content", "rounded-md border bg-card shadow-lg p-1 absolute z-[100] min-w-[160px] opacity-0 invisible translate-x-[-8px] transition-all duration-200 ease-out pointer-events-none"}
+clx! {
+    /// Logical grouping of items inside a [`MenubarContent`] panel.
+    MenubarGroup, ul, "p-0"
+}
+clx! {
+    /// Non-interactive heading labelling the items beneath it.
+    MenubarLabel, div, "px-2 py-1.5 text-sm font-medium text-muted-foreground"
 }
 
-pub use components::*;
-
-/* ========================================================== */
-/*                     MENUBAR SHORTCUT                       */
-/* ========================================================== */
-
+/// Trailing keyboard hint shown at the end of a [`MenubarItem`].
 #[component]
-pub fn MenubarShortcut(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
-    let class = tw_merge!("ml-auto text-xs tracking-widest text-muted-foreground", class);
+pub fn MenubarShortcut(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
     view! {
-        <span data-slot="menubar-shortcut" class=class>
+        <span
+            data-name="MenubarShortcut"
+            class=move || cn!("ml-auto text-xs tracking-widest text-muted-foreground", class.get())
+        >
             {children()}
         </span>
     }
 }
 
-/* ========================================================== */
-/*                     MENUBAR ITEM                            */
-/* ========================================================== */
-
-#[component]
-pub fn MenubarItem(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
-    let class = tw_merge!(
-        "relative inline-flex gap-1.5 items-center w-full rounded-sm px-1.5 py-1 text-sm cursor-default no-underline transition-colors duration-200 text-popover-foreground hover:bg-accent hover:text-accent-foreground [&_svg:not([class*='size-'])]:size-4 data-inset:pl-7",
-        class
-    );
-    view! {
-        <li data-name="MenubarItem" class=class data-menubar-close="true">
-            {children()}
-        </li>
-    }
-}
-
-/* ========================================================== */
-/*                     CHECKBOX ITEM                          */
-/* ========================================================== */
-
-#[component]
-pub fn MenubarCheckboxItem(
-    children: Children,
-    checked: RwSignal<bool>,
-    #[prop(optional, into)] class: String,
-) -> impl IntoView {
-    let class = tw_merge!(
-        "group relative inline-flex gap-1.5 items-center w-full rounded-sm pl-7 pr-1.5 py-1 text-sm cursor-default transition-colors duration-200 text-popover-foreground hover:bg-accent hover:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
-        class
-    );
-
-    view! {
-        <li
-            data-name="MenubarCheckboxItem"
-            class=class
-            role="menuitemcheckbox"
-            aria-checked=move || checked.get().to_string()
-            on:click=move |_| checked.update(|v| *v = !*v)
-        >
-            <span class="flex absolute left-1.5 justify-center items-center pointer-events-none size-4">
-                <Icon
-                    icon=icondata::LuCheck
-                    attr:class="opacity-0 group-aria-checked:opacity-100 size-3.5"
-                />
-            </span>
-            {children()}
-        </li>
-    }
-}
-
-/* ========================================================== */
-/*                     RADIO GROUP                            */
-/* ========================================================== */
-
-#[derive(Clone)]
-struct MenubarRadioContext<T: Clone + PartialEq + Send + Sync + 'static> {
-    value_signal: RwSignal<T>,
-}
-
-#[component]
-pub fn MenubarRadioGroup<T>(children: Children, value: RwSignal<T>) -> impl IntoView
-where
-    T: Clone + PartialEq + Send + Sync + 'static,
-{
-    let ctx = MenubarRadioContext { value_signal: value };
-
-    view! {
-        <Provider value=ctx>
-            <ul data-name="MenubarRadioGroup" role="group" class="group">
-                {children()}
-            </ul>
-        </Provider>
-    }
-}
-
-#[component]
-pub fn MenubarRadioItem<T>(children: Children, value: T, #[prop(optional, into)] class: String) -> impl IntoView
-where
-    T: Clone + PartialEq + Send + Sync + 'static,
-{
-    let ctx = expect_context::<MenubarRadioContext<T>>();
-
-    let value_for_check = value.clone();
-    let value_for_click = value;
-    let is_selected = move || ctx.value_signal.get() == value_for_check;
-
-    let class = tw_merge!(
-        "group relative inline-flex gap-1.5 items-center w-full rounded-sm pl-7 pr-1.5 py-1 text-sm cursor-default transition-colors duration-200 text-popover-foreground hover:bg-accent hover:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
-        class
-    );
-
-    view! {
-        <li
-            data-name="MenubarRadioItem"
-            class=class
-            role="menuitemradio"
-            aria-checked=move || is_selected().to_string()
-            on:click=move |_| ctx.value_signal.set(value_for_click.clone())
-        >
-            <span class="flex absolute left-1.5 justify-center items-center pointer-events-none size-4">
-                <Icon
-                    icon=icondata::LuCheck
-                    attr:class="opacity-0 group-aria-checked:opacity-100 size-3.5"
-                />
-            </span>
-            {children()}
-        </li>
-    }
-}
-
-/* ========================================================== */
-/*                     MENUBAR ROOT                           */
-/* ========================================================== */
-
-#[derive(Clone)]
+/// Bar-wide open state shared from [`Menubar`] to every menu. `active` holds the
+/// id of the menu currently open, or `None` when the bar is closed; the
+/// `menubar_id` ties triggers and content back to their bar for keyboard
+/// navigation across menus.
+#[derive(Clone, Copy)]
 struct MenubarContext {
-    menubar_id: String,
+    active: RwSignal<Option<u64>>,
+    bar_ref: NodeRef<html::Div>,
 }
 
-#[component]
-pub fn Menubar(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
-    let menubar_id = use_random_id_for("menubar");
-    let ctx = MenubarContext { menubar_id: menubar_id.clone() };
+impl MenubarContext {
+    fn close(&self) {
+        self.active.set(None);
+    }
+}
 
-    let class = tw_merge!("flex h-8 items-center gap-0.5 rounded-lg border bg-background p-[3px]", class);
+/// Horizontal bar of menus with keyboard navigation. Owns the bar-wide open
+/// state and shares it with each nested [`MenubarMenu`] via context, so opening
+/// one menu closes the others and arrow keys can move between menus. The panels
+/// are anchored to their triggers with CSS, so no layout is measured at runtime.
+#[component]
+pub fn Menubar(
+    #[prop(into, optional)] class: Signal<String>,
+    children: ChildrenFn,
+) -> impl IntoView {
+    let ctx = MenubarContext {
+        active: RwSignal::new(None),
+        bar_ref: NodeRef::new(),
+    };
+
+    let locked = use_lock_body_scroll(false);
+    Effect::new(move |_| locked.set(ctx.active.get().is_some()));
+
+    let children = StoredValue::new(children);
 
     view! {
         <Provider value=ctx>
-            <style>
-                "
-                .menubar__sub_content {
-                    position: absolute;
-                    inset-inline-start: calc(100% + 8px);
-                    inset-block-start: -4px;
-                    z-index: 100;
-                    min-inline-size: 160px;
-                    opacity: 0;
-                    visibility: hidden;
-                    transform: translateX(-8px);
-                    transition: all 0.2s ease-out;
-                    pointer-events: none;
+            <div
+                node_ref=ctx.bar_ref
+                data-name="Menubar"
+                role="menubar"
+                data-state=move || if ctx.active.get().is_some() { "active" } else { "idle" }
+                class=move || {
+                    cn!(
+                        "flex h-8 items-center gap-0.5 rounded-lg border bg-background p-[3px]",
+                        class.get(),
+                    )
                 }
-                
-                .menubar__sub_trigger:hover .menubar__sub_content {
-                    opacity: 1;
-                    visibility: visible;
-                    transform: translateX(0);
-                    pointer-events: auto;
-                }
-                "
-            </style>
-
-            <div data-name="Menubar" data-menubar-id=menubar_id class=class>
-                {children()}
+            >
+                {move || children.read_value()()}
             </div>
         </Provider>
     }
 }
 
-/* ========================================================== */
-/*                     MENUBAR MENU                           */
-/* ========================================================== */
-
-#[derive(Clone)]
+/// Per-menu open state plus the wiring that links its trigger and panel. Created
+/// by [`MenubarMenu`] and shared with the nested [`MenubarTrigger`] and
+/// [`MenubarContent`]; `is_open` derives from the bar's active menu.
+#[derive(Clone, Copy)]
 struct MenubarMenuContext {
-    menu_id: String,
-    menubar_id: String,
+    menu_id: u64,
+    content_id: StoredValue<String>,
+    trigger_id: StoredValue<String>,
+    trigger_ref: NodeRef<html::Button>,
+    content_ref: NodeRef<html::Div>,
+    bar: MenubarContext,
 }
 
-#[component]
-pub fn MenubarMenu(children: Children) -> impl IntoView {
-    let menubar_ctx = expect_context::<MenubarContext>();
-    let menu_id = use_random_id_for("menubarmenu");
+impl MenubarMenuContext {
+    fn is_open(&self) -> bool {
+        self.bar.active.get() == Some(self.menu_id)
+    }
 
-    let ctx = MenubarMenuContext { menu_id, menubar_id: menubar_ctx.menubar_id };
+    fn open(&self) {
+        self.bar.active.set(Some(self.menu_id));
+    }
+
+    fn close_and_refocus(&self) {
+        self.bar.close();
+        if let Some(trigger) = self.trigger_ref.get_untracked() {
+            _ = trigger.focus();
+        }
+    }
+}
+
+/// A single menu within a [`Menubar`]: a trigger and its content panel. Owns its
+/// identity within the bar and provides it to the nested [`MenubarTrigger`] and
+/// [`MenubarContent`].
+#[component]
+pub fn MenubarMenu(children: ChildrenFn) -> impl IntoView {
+    let bar = expect_context::<MenubarContext>();
+
+    let ctx = MenubarMenuContext {
+        menu_id: next_menu_id(),
+        content_id: StoredValue::new(use_random_id_for("menubar")),
+        trigger_id: StoredValue::new(use_random_id_for("menubar")),
+        trigger_ref: NodeRef::new(),
+        content_ref: NodeRef::new(),
+        bar,
+    };
+
+    let children = StoredValue::new(children);
 
     view! {
         <Provider value=ctx>
             <div data-name="MenubarMenu" class="relative">
-                {children()}
+                {move || children.read_value()()}
             </div>
         </Provider>
     }
 }
 
-/* ========================================================== */
-/*                     MENUBAR TRIGGER                        */
-/* ========================================================== */
-
+/// Button that opens its [`MenubarMenu`]. Carries `aria-haspopup="menu"` and
+/// reflects the open state via `aria-expanded`. Clicking toggles the menu; while
+/// the bar already has a menu open, pointer-entering this trigger switches the
+/// open menu to it, matching native menubar behaviour.
 #[component]
-pub fn MenubarTrigger(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
+pub fn MenubarTrigger(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
     let ctx = expect_context::<MenubarMenuContext>();
-    let class = tw_merge!(
-        "flex items-center rounded-sm px-2 py-[2px] text-sm font-medium outline-none select-none cursor-default transition-colors hover:bg-muted aria-expanded:bg-muted",
-        class
-    );
+
+    let merged = move || {
+        cn!(
+            "flex items-center rounded-sm px-2 py-[2px] text-sm font-medium outline-none select-none cursor-default transition-colors hover:bg-muted aria-expanded:bg-muted focus-visible:ring-1 focus-visible:ring-ring",
+            class.get(),
+        )
+    };
 
     view! {
         <button
+            node_ref=ctx.trigger_ref
             type="button"
             data-name="MenubarTrigger"
-            data-menubar-trigger=ctx.menu_id
-            data-menubar-id=ctx.menubar_id
-            class=class
-            aria-expanded="false"
+            id=move || ctx.trigger_id.get_value()
+            aria-haspopup="menu"
+            aria-expanded=move || ctx.is_open().to_string()
+            aria-controls=move || ctx.content_id.get_value()
+            class=merged
+            on:click=move |_| {
+                if ctx.is_open() {
+                    ctx.bar.close();
+                } else {
+                    ctx.open();
+                }
+            }
+            on:pointerenter=move |_| {
+                if ctx.bar.active.get_untracked().is_some() {
+                    ctx.open();
+                }
+            }
         >
             {children()}
         </button>
     }
 }
 
-/* ========================================================== */
-/*                     MENUBAR CONTENT                        */
-/* ========================================================== */
-
+/// Popup panel listing the menu's items. Rendered only while open via [`Show`],
+/// it carries `role="menu"` and implements the WAI-ARIA roving-tabindex:
+/// ArrowUp/Down move focus between items, Home/End jump to the ends,
+/// ArrowLeft/Right move to the previous/next menu in the bar, Escape closes and
+/// returns focus to the trigger. A backdrop captures outside clicks.
 #[component]
-pub fn MenubarContent(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
+pub fn MenubarContent(
+    #[prop(into, optional)] class: Signal<String>,
+    children: ChildrenFn,
+) -> impl IntoView {
+    let ctx = expect_context::<MenubarMenuContext>();
+    let children = StoredValue::new(children);
+
+    Effect::new(move |_| {
+        if !ctx.is_open() {
+            return;
+        }
+        if let Some(panel) = ctx.content_ref.get() {
+            match first_menu_item(&panel) {
+                Some(first) => _ = first.focus(),
+                None => _ = panel.focus(),
+            }
+        }
+    });
+
+    let panel = move || {
+        cn!(
+            "absolute top-full left-0 mt-1 z-50 p-1 min-w-36 rounded-md border bg-popover text-popover-foreground shadow-md origin-top-left",
+            class.get(),
+        )
+    };
+
+    view! {
+        <Show when=move || {
+            ctx.is_open()
+        }>
+            {
+                let panel = panel.clone();
+                view! {
+                    <div
+                        aria-hidden="true"
+                        class="fixed inset-0 z-40"
+                        on:pointerdown=move |_| ctx.close_and_refocus()
+                    />
+                    <ul
+                        node_ref=ctx.content_ref
+                        data-name="MenubarContent"
+                        id=move || ctx.content_id.get_value()
+                        role="menu"
+                        tabindex="-1"
+                        aria-labelledby=move || ctx.trigger_id.get_value()
+                        data-state="open"
+                        class=panel
+                        on:keydown=move |ev: KeyboardEvent| handle_menu_keys(&ev, ctx)
+                    >
+                        {move || children.read_value()()}
+                    </ul>
+                }
+            }
+        </Show>
+    }
+}
+
+/// A selectable command in the menu. Carries `role="menuitem"`, participates in
+/// the roving-tabindex, and closes the menu when activated unless
+/// `close_on_select` is cleared. Provide `href` to render a navigating anchor
+/// instead of a button.
+#[component]
+pub fn MenubarItem(
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(into, optional)] href: Option<String>,
+    #[prop(default = true)] close_on_select: bool,
+    children: Children,
+) -> impl IntoView {
     let ctx = expect_context::<MenubarMenuContext>();
 
-    let base_classes = "z-50 p-1 min-w-36 rounded-md border bg-card shadow-md fixed transition-all duration-200 data-[state=closed]:opacity-0 data-[state=closed]:scale-95 data-[state=open]:opacity-100 data-[state=open]:scale-100";
-    let class = tw_merge!(base_classes, class);
+    let merged = move || {
+        cn!(
+            "relative inline-flex gap-1.5 items-center w-full rounded-sm px-1.5 py-1 text-sm cursor-default no-underline transition-colors outline-none text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
 
-    let menu_id = ctx.menu_id.clone();
-    let menubar_id = ctx.menubar_id;
+    if let Some(href) = href {
+        return view! {
+            <li role="none" class="contents">
+                <a
+                    data-name="MenubarItem"
+                    role="menuitem"
+                    tabindex="-1"
+                    href=href
+                    class=merged
+                    on:click=move |_| {
+                        if close_on_select {
+                            ctx.bar.close();
+                        }
+                    }
+                >
+                    {children()}
+                </a>
+            </li>
+        }
+        .into_any();
+    }
 
     view! {
-        <ul
-            data-name="MenubarContent"
-            data-menubar-content=""
-            class=class
-            id=menu_id.clone()
-            data-state="closed"
-            style="pointer-events: none;"
-        >
-            {children()}
-        </ul>
+        <li role="none" class="contents">
+            <button
+                type="button"
+                data-name="MenubarItem"
+                role="menuitem"
+                tabindex="-1"
+                class=merged
+                on:click=move |_| {
+                    if close_on_select {
+                        ctx.close_and_refocus();
+                    }
+                }
+            >
+                {children()}
+            </button>
+        </li>
+    }
+    .into_any()
+}
 
-        <script>
-            {format!(
-                r#"
-                (function() {{
-                    const setupMenu = () => {{
-                        const menu = document.querySelector('#{0}');
-                        const trigger = document.querySelector('[data-menubar-trigger="{0}"]');
-                        const menubarRoot = document.querySelector('[data-menubar-id="{1}"]');
+/// A toggleable item that shows a check while its bound `checked` signal is true.
+/// Carries `role="menuitemcheckbox"` and `aria-checked`, and participates in the
+/// roving-tabindex.
+#[component]
+pub fn MenubarCheckboxItem(
+    /// Signal holding this item's checked state.
+    checked: RwSignal<bool>,
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let merged = move || {
+        cn!(
+            "group relative inline-flex gap-1.5 items-center w-full rounded-sm pl-7 pr-1.5 py-1 text-sm cursor-default transition-colors outline-none text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
 
-                        if (!menu || !trigger || !menubarRoot) {{
-                            setTimeout(setupMenu, 50);
-                            return;
-                        }}
-
-                        if (menu.hasAttribute('data-initialized')) return;
-                        menu.setAttribute('data-initialized', 'true');
-
-                        const isOpen = () => menu.getAttribute('data-state') === 'open';
-
-                        const updatePosition = () => {{
-                            const triggerRect = trigger.getBoundingClientRect();
-                            const menuRect = menu.getBoundingClientRect();
-                            const viewportHeight = window.innerHeight;
-                            const spaceBelow = viewportHeight - triggerRect.bottom;
-                            const spaceAbove = triggerRect.top;
-
-                            const shouldPositionAbove = spaceAbove >= menuRect.height && spaceBelow < menuRect.height;
-
-                            if (shouldPositionAbove) {{
-                                menu.style.top = `${{triggerRect.top - menuRect.height - 4}}px`;
-                                menu.style.transformOrigin = 'left bottom';
-                            }} else {{
-                                menu.style.top = `${{triggerRect.bottom + 4}}px`;
-                                menu.style.transformOrigin = 'left top';
-                            }}
-                            menu.style.left = `${{triggerRect.left}}px`;
-                        }};
-
-                        const openMenu = () => {{
-                            // Close other menus in this menubar
-                            menubarRoot.querySelectorAll('[data-menubar-content]').forEach(m => {{
-                                if (m !== menu && m.getAttribute('data-state') === 'open') {{
-                                    m.setAttribute('data-state', 'closed');
-                                    m.style.pointerEvents = 'none';
-                                    // Update aria-expanded on the other trigger
-                                    const otherId = m.id;
-                                    const otherTrigger = menubarRoot.querySelector(`[data-menubar-trigger="${{otherId}}"]`);
-                                    if (otherTrigger) otherTrigger.setAttribute('aria-expanded', 'false');
-                                }}
-                            }});
-
-                            menubarRoot.setAttribute('data-active', 'true');
-                            trigger.setAttribute('aria-expanded', 'true');
-
-                            menu.setAttribute('data-state', 'open');
-                            menu.style.visibility = 'hidden';
-                            menu.style.pointerEvents = 'auto';
-                            menu.offsetHeight;
-                            updatePosition();
-                            menu.style.visibility = 'visible';
-
-                            window.ScrollLock?.lock();
-
-                            setTimeout(() => {{
-                                document.addEventListener('click', handleClickOutside);
-                            }}, 0);
-                        }};
-
-                        const closeMenu = () => {{
-                            menu.setAttribute('data-state', 'closed');
-                            menu.style.pointerEvents = 'none';
-                            trigger.setAttribute('aria-expanded', 'false');
-                            document.removeEventListener('click', handleClickOutside);
-
-                            const anyOpen = [...menubarRoot.querySelectorAll('[data-menubar-content]')]
-                                .some(m => m.getAttribute('data-state') === 'open');
-                            if (!anyOpen) {{
-                                menubarRoot.removeAttribute('data-active');
-                                window.ScrollLock?.unlock(200);
-                            }}
-                        }};
-
-                        const handleClickOutside = (e) => {{
-                            if (!menubarRoot.contains(e.target)) {{
-                                // Close all menus in this menubar
-                                menubarRoot.querySelectorAll('[data-menubar-content]').forEach(m => {{
-                                    m.setAttribute('data-state', 'closed');
-                                    m.style.pointerEvents = 'none';
-                                }});
-                                menubarRoot.querySelectorAll('[data-menubar-trigger]').forEach(t => {{
-                                    t.setAttribute('aria-expanded', 'false');
-                                }});
-                                menubarRoot.removeAttribute('data-active');
-                                window.ScrollLock?.unlock(200);
-                                document.removeEventListener('click', handleClickOutside);
-                            }}
-                        }};
-
-                        // Click trigger: toggle
-                        trigger.addEventListener('click', (e) => {{
-                            e.stopPropagation();
-                            if (isOpen()) {{
-                                closeMenu();
-                            }} else {{
-                                openMenu();
-                            }}
-                        }});
-
-                        // Hover trigger: switch between menus when bar is active
-                        trigger.addEventListener('mouseenter', () => {{
-                            if (menubarRoot.hasAttribute('data-active') && !isOpen()) {{
-                                openMenu();
-                            }}
-                        }});
-
-                        // Close when item with data-menubar-close is clicked (event delegation)
-                        menu.addEventListener('click', (e) => {{
-                            if (e.target.closest('[data-menubar-close]')) {{
-                                closeMenu();
-                            }}
-                        }});
-
-                        // ESC key
-                        document.addEventListener('keydown', (e) => {{
-                            if (e.key === 'Escape' && isOpen()) {{
-                                e.preventDefault();
-                                closeMenu();
-                            }}
-                        }});
-                    }};
-
-                    if (document.readyState === 'loading') {{
-                        document.addEventListener('DOMContentLoaded', setupMenu);
-                    }} else {{
-                        setupMenu();
-                    }}
-                }})();
-                "#,
-                menu_id,
-                menubar_id,
-            )}
-        </script>
+    view! {
+        <li role="none" class="contents">
+            <button
+                type="button"
+                data-name="MenubarCheckboxItem"
+                role="menuitemcheckbox"
+                tabindex="-1"
+                aria-checked=move || checked.get().to_string()
+                class=merged
+                on:click=move |_| checked.update(|v| *v = !*v)
+            >
+                <span class="flex absolute left-1.5 justify-center items-center pointer-events-none size-4">
+                    <Icon
+                        icon=icondata::LuCheck
+                        attr:class="opacity-0 group-aria-checked:opacity-100 size-3.5"
+                    />
+                </span>
+                {children()}
+            </button>
+        </li>
     }
 }
 
-/* ========================================================== */
-/*                     SUBMENU                                */
-/* ========================================================== */
-
-#[component]
-pub fn MenubarSub(children: Children) -> impl IntoView {
-    clx! {MenubarSubRoot, li, "menubar__sub_trigger", "relative inline-flex gap-1.5 items-center py-1 px-1.5 w-full text-sm no-underline rounded-sm transition-colors duration-200 cursor-default text-popover-foreground [&_svg:not([class*='size-'])]:size-4 hover:bg-accent hover:text-accent-foreground"}
-
-    view! { <MenubarSubRoot>{children()}</MenubarSubRoot> }
+/// Selected-value state for a [`MenubarRadioGroup`], shared with its items.
+#[derive(Clone)]
+struct MenubarRadioContext<T: Clone + PartialEq + Send + Sync + 'static> {
+    value: RwSignal<T>,
 }
 
+/// A group of radio items where exactly one is selected at a time. The bound
+/// `value` signal holds the current selection.
 #[component]
-pub fn MenubarSubTrigger(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
-    let class = tw_merge!("flex items-center justify-between w-full", class);
+pub fn MenubarRadioGroup<T>(
+    /// Signal holding the currently selected value.
+    value: RwSignal<T>,
+    children: Children,
+) -> impl IntoView
+where
+    T: Clone + PartialEq + Send + Sync + 'static,
+{
+    view! {
+        <Provider value=MenubarRadioContext { value }>
+            <ul data-name="MenubarRadioGroup" role="group" class="p-0">
+                {children()}
+            </ul>
+        </Provider>
+    }
+}
+
+/// A radio item that shows a check when its `value` matches the group's
+/// selection. Carries `role="menuitemradio"` and `aria-checked`, and
+/// participates in the roving-tabindex.
+#[component]
+pub fn MenubarRadioItem<T>(
+    /// Value this item selects when activated.
+    value: T,
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView
+where
+    T: Clone + PartialEq + Send + Sync + 'static,
+{
+    let group = expect_context::<MenubarRadioContext<T>>();
+
+    let value = StoredValue::new(value);
+    let is_selected = move || group.value.with(|v| *v == value.get_value());
+
+    let merged = move || {
+        cn!(
+            "group relative inline-flex gap-1.5 items-center w-full rounded-sm pl-7 pr-1.5 py-1 text-sm cursor-default transition-colors outline-none text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
 
     view! {
-        <span data-name="MenubarSubTrigger" class=class>
+        <li role="none" class="contents">
+            <button
+                type="button"
+                data-name="MenubarRadioItem"
+                role="menuitemradio"
+                tabindex="-1"
+                aria-checked=move || is_selected().to_string()
+                class=merged
+                on:click=move |_| group.value.set(value.get_value())
+            >
+                <span class="flex absolute left-1.5 justify-center items-center pointer-events-none size-4">
+                    <Icon
+                        icon=icondata::LuCheck
+                        attr:class="opacity-0 group-aria-checked:opacity-100 size-3.5"
+                    />
+                </span>
+                {children()}
+            </button>
+        </li>
+    }
+}
+
+/// Open state for a single [`MenubarSub`] flyout, shared with its trigger and
+/// content.
+#[derive(Clone, Copy)]
+struct MenubarSubContext {
+    open: RwSignal<bool>,
+}
+
+/// A nested submenu inside a [`MenubarContent`]. Owns its own open state, opening
+/// the flyout on hover or keyboard focus and providing the state to the nested
+/// [`MenubarSubTrigger`] and [`MenubarSubContent`].
+#[component]
+pub fn MenubarSub(children: ChildrenFn) -> impl IntoView {
+    let ctx = MenubarSubContext {
+        open: RwSignal::new(false),
+    };
+    let children = StoredValue::new(children);
+
+    view! {
+        <Provider value=ctx>
+            <li
+                data-name="MenubarSub"
+                role="none"
+                class="relative"
+                on:pointerenter=move |_| ctx.open.set(true)
+                on:pointerleave=move |_| ctx.open.set(false)
+                on:focusin=move |_| ctx.open.set(true)
+                on:focusout=move |_| ctx.open.set(false)
+            >
+                {move || children.read_value()()}
+            </li>
+        </Provider>
+    }
+}
+
+/// Row that opens its [`MenubarSub`] flyout. Carries `role="menuitem"` with
+/// `aria-haspopup="menu"`, reflects the flyout state via `aria-expanded`, and
+/// shows a trailing chevron.
+#[component]
+pub fn MenubarSubTrigger(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let ctx = expect_context::<MenubarSubContext>();
+
+    let merged = move || {
+        cn!(
+            "relative inline-flex gap-1.5 justify-between items-center w-full rounded-sm px-1.5 py-1 text-sm cursor-default no-underline transition-colors outline-none text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
+
+    view! {
+        <button
+            type="button"
+            data-name="MenubarSubTrigger"
+            role="menuitem"
+            tabindex="-1"
+            aria-haspopup="menu"
+            aria-expanded=move || ctx.open.get().to_string()
+            class=merged
+            on:click=move |_| ctx.open.update(|v| *v = !*v)
+        >
             <span class="flex gap-1.5 items-center">{children()}</span>
             <Icon icon=icondata::LuChevronRight attr:class="opacity-70 size-4" />
-        </span>
+        </button>
     }
 }
 
+/// Flyout panel of a [`MenubarSub`], rendered only while the submenu is open via
+/// [`Show`]. Carries `role="menu"` and is positioned to the trailing edge of its
+/// trigger with CSS.
 #[component]
-pub fn MenubarSubItem(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
-    let class = tw_merge!(
-        "inline-flex gap-1.5 items-center w-full rounded-sm px-3 py-2 text-sm transition-all duration-150 ease text-popover-foreground hover:bg-accent hover:text-accent-foreground cursor-default hover:translate-x-[2px]",
-        class
-    );
+pub fn MenubarSubContent(
+    #[prop(into, optional)] class: Signal<String>,
+    children: ChildrenFn,
+) -> impl IntoView {
+    let ctx = expect_context::<MenubarSubContext>();
+    let children = StoredValue::new(children);
+
+    let panel = move || {
+        cn!(
+            "absolute top-[-4px] left-full ml-2 z-[100] p-1 min-w-40 rounded-md border bg-popover text-popover-foreground shadow-lg origin-top-left",
+            class.get(),
+        )
+    };
 
     view! {
-        <li data-name="MenubarSubItem" class=class data-menubar-close="true">
-            {children()}
+        <Show when=move || {
+            ctx.open.get()
+        }>
+            {
+                let panel = panel.clone();
+                view! {
+                    <ul data-name="MenubarSubContent" role="menu" class=panel>
+                        {move || children.read_value()()}
+                    </ul>
+                }
+            }
+        </Show>
+    }
+}
+
+/// A selectable command inside a [`MenubarSubContent`] flyout. Carries
+/// `role="menuitem"` and closes the whole menubar when activated.
+#[component]
+pub fn MenubarSubItem(
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(into, optional)] href: Option<String>,
+    children: Children,
+) -> impl IntoView {
+    let ctx = expect_context::<MenubarMenuContext>();
+
+    let merged = move || {
+        cn!(
+            "inline-flex gap-1.5 items-center w-full rounded-sm px-3 py-2 text-sm no-underline cursor-default transition-all duration-150 outline-none text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground hover:translate-x-[2px] [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
+
+    if let Some(href) = href {
+        return view! {
+            <li role="none" class="contents">
+                <a
+                    data-name="MenubarSubItem"
+                    role="menuitem"
+                    tabindex="-1"
+                    href=href
+                    class=merged
+                    on:click=move |_| ctx.bar.close()
+                >
+                    {children()}
+                </a>
+            </li>
+        }
+        .into_any();
+    }
+
+    view! {
+        <li role="none" class="contents">
+            <button
+                type="button"
+                data-name="MenubarSubItem"
+                role="menuitem"
+                tabindex="-1"
+                class=merged
+                on:click=move |_| ctx.close_and_refocus()
+            >
+                {children()}
+            </button>
         </li>
+    }
+    .into_any()
+}
+
+/// Routes menu keydowns. ArrowUp/Down and Home/End rove focus within the panel,
+/// ArrowLeft/Right step to the previous/next menu in the bar, and Escape closes
+/// the menu and restores focus to its trigger. Runs only inside the keydown
+/// handler, so `web_sys` DOM access never executes during server rendering.
+fn handle_menu_keys(ev: &KeyboardEvent, ctx: MenubarMenuContext) {
+    match ev.key().as_str() {
+        "Escape" => {
+            ev.prevent_default();
+            ctx.close_and_refocus();
+        }
+        "ArrowDown" | "ArrowUp" | "Home" | "End" => {
+            if let Some(menu) = ctx.content_ref.get_untracked() {
+                move_focus(ev, &menu);
+            }
+        }
+        "ArrowRight" | "ArrowLeft" => {
+            ev.prevent_default();
+            move_to_sibling_menu(ev, ctx);
+        }
+        "Tab" => ctx.bar.close(),
+        _ => {}
+    }
+}
+
+/// Opens the previous/next menu in the bar and focuses its trigger, wrapping at
+/// the ends. Implements the WAI-ARIA menubar horizontal arrow navigation.
+fn move_to_sibling_menu(ev: &KeyboardEvent, ctx: MenubarMenuContext) {
+    let Some(bar) = ctx.bar.bar_ref.get_untracked() else {
+        return;
+    };
+    let Ok(triggers) = bar.query_selector_all("[data-name='MenubarTrigger']") else {
+        return;
+    };
+    let count = triggers.length();
+    if count == 0 {
+        return;
+    }
+
+    let trigger_id = ctx.trigger_id.get_value();
+    let current = (0..count).find(|&i| {
+        triggers
+            .item(i)
+            .and_then(|node| node.dyn_into::<Element>().ok())
+            .and_then(|el| el.get_attribute("id"))
+            .is_some_and(|id| id == trigger_id)
+    });
+
+    let target = match ev.key().as_str() {
+        "ArrowRight" => current.map_or(0, |i| (i + 1) % count),
+        "ArrowLeft" => current.map_or(count - 1, |i| if i == 0 { count - 1 } else { i - 1 }),
+        _ => return,
+    };
+
+    if let Some(el) = triggers
+        .item(target)
+        .and_then(|node| node.dyn_into::<HtmlElement>().ok())
+    {
+        _ = el.focus();
+        el.click();
+    }
+}
+
+/// Returns a process-unique identity for a menu, used to track which menu in a
+/// bar is open. Distinct within the process is sufficient — the value never
+/// reaches the DOM.
+fn next_menu_id() -> u64 {
+    static COUNTER: AtomicU64 = AtomicU64::new(1);
+    COUNTER.fetch_add(1, Ordering::Relaxed)
+}
+
+/// Returns the first focusable item within a menu panel.
+fn first_menu_item(menu: &Element) -> Option<HtmlElement> {
+    menu_items(menu)
+        .and_then(|items| items.item(0))
+        .and_then(|node| node.dyn_into::<HtmlElement>().ok())
+}
+
+/// Collects the menu's enabled item nodes in document order.
+fn menu_items(menu: &Element) -> Option<web_sys::NodeList> {
+    menu.query_selector_all(
+        "[role='menuitem']:not([disabled]),[role='menuitemradio']:not([disabled]),[role='menuitemcheckbox']:not([disabled])",
+    )
+    .ok()
+}
+
+/// Moves DOM focus among the menu's items in response to arrow/Home/End keys,
+/// wrapping at the ends.
+fn move_focus(ev: &KeyboardEvent, menu: &Element) {
+    let Some(items) = menu_items(menu) else {
+        return;
+    };
+    let count = items.length();
+    if count == 0 {
+        return;
+    }
+
+    let active = document().active_element();
+    let current = (0..count).find(|&i| {
+        items
+            .item(i)
+            .and_then(|node| node.dyn_into::<Element>().ok())
+            .zip(active.clone())
+            .is_some_and(|(item, focused)| item == focused)
+    });
+
+    let target = match ev.key().as_str() {
+        "ArrowDown" => current.map_or(0, |i| (i + 1) % count),
+        "ArrowUp" => current.map_or(count - 1, |i| if i == 0 { count - 1 } else { i - 1 }),
+        "Home" => 0,
+        "End" => count - 1,
+        _ => return,
+    };
+
+    if let Some(el) = items
+        .item(target)
+        .and_then(|node| node.dyn_into::<HtmlElement>().ok())
+    {
+        ev.prevent_default();
+        _ = el.focus();
     }
 }

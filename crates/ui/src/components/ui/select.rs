@@ -1,333 +1,385 @@
-use leptos_icons::Icon;
+use crate::{clx, cn, use_can_scroll_vertical, use_lock_body_scroll, use_random_id_for};
 use leptos::context::Provider;
+use leptos::ev::{KeyboardEvent, MouseEvent};
+use leptos::html;
 use leptos::prelude::*;
-use crate::clx;
-use strum::{AsRefStr, Display};
-use tw_merge::*;
+use leptos::wasm_bindgen::JsCast;
+use leptos_icons::Icon;
+use web_sys::{HtmlElement, Node};
 
-use crate::components::hooks::use_can_scroll_vertical::use_can_scroll_vertical;
-use crate::components::hooks::use_random::use_random_id_for;
+clx! {
+    /// Non-interactive heading for a [`SelectGroup`] of options.
+    SelectLabel, span, "px-2 py-1.5 text-sm font-medium text-muted-foreground"
+}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, AsRefStr)]
+clx! {
+    /// Static, non-selecting row for use inside a [`SelectContent`] popup — a
+    /// presentational sibling to [`SelectOption`] for separators or hints.
+    SelectItem, div, "inline-flex gap-2 items-center w-full rounded-sm px-2 py-1.5 text-sm text-popover-foreground [&_svg:not([class*='size-'])]:size-4"
+}
+
+/// Placement of the [`SelectContent`] popup relative to its trigger.
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub enum SelectPosition {
     #[default]
     Below,
     Above,
 }
 
-mod components {
-    use super::*;
-    clx! {SelectLabel, span, "px-2 py-1.5 text-sm font-medium data-inset:pl-8", "mb-1"}
-    clx! {SelectItem, li, "inline-flex gap-2 items-center w-full rounded-sm px-2 py-1.5 text-sm no-underline transition-colors duration-200 text-popover-foreground hover:bg-accent hover:text-accent-foreground [&_svg:not([class*='size-'])]:size-4"}
-}
-
-pub use components::*;
-
-#[component]
-pub fn SelectGroup(
-    children: Children,
-    #[prop(optional, into)] class: String,
-    #[prop(default = "Select options".into(), into)] aria_label: String,
-) -> impl IntoView {
-    let merged_class = tw_merge!("group", class);
-
-    view! {
-        <ul data-name="SelectGroup" role="listbox" aria-label=aria_label class=merged_class>
-            {children()}
-        </ul>
+impl SelectPosition {
+    fn as_data(self) -> &'static str {
+        match self {
+            Self::Below => "below",
+            Self::Above => "above",
+        }
     }
 }
 
-#[component]
-pub fn SelectValue(#[prop(optional, into)] placeholder: String) -> impl IntoView {
-    let select_ctx = expect_context::<SelectContext>();
-
-    view! {
-        <span data-name="SelectValue" class="text-sm text-muted-foreground truncate">
-            {move || { select_ctx.value_signal.get().unwrap_or_else(|| placeholder.clone()) }}
-        </span>
-    }
-}
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
-#[component]
-pub fn SelectOption(
-    children: Children,
-    #[prop(optional, into)] class: String,
-    #[prop(default = false.into(), into)] aria_selected: Signal<bool>,
-    #[prop(optional, into)] value: Option<String>,
-) -> impl IntoView {
-    let ctx = expect_context::<SelectContext>();
-
-    let merged_class = tw_merge!(
-        "group inline-flex gap-2 items-center w-full rounded-sm px-2 py-1.5 text-sm cursor-pointer no-underline transition-colors duration-200 text-popover-foreground hover:bg-accent hover:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
-        class
-    );
-
-    let value_for_check = value.clone();
-    let is_selected = move || aria_selected.get() || ctx.value_signal.get() == value_for_check;
-
-    view! {
-        <li
-            data-name="SelectOption"
-            class=merged_class
-            role="option"
-            tabindex="0"
-            aria-selected=move || is_selected().to_string()
-            data-select-option="true"
-            on:click=move |_| {
-                let val = value.clone();
-                ctx.value_signal.set(val.clone());
-                if let Some(on_change) = ctx.on_change {
-                    on_change.run(val);
-                }
-            }
-        >
-            {children()}
-            <Icon
-                icon=icondata::LuCheck
-                attr:class="ml-auto opacity-0 size-4 text-muted-foreground group-aria-selected:opacity-100"
-            />
-        </li>
-    }
-}
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
-#[derive(Clone)]
+/// Open state, current selection and the wiring that lets the parts cooperate:
+/// node refs for outside-click detection and focus return, plus the id base that
+/// labels the popup for assistive technology. Provided by [`Select`] to its
+/// descendants.
+#[derive(Clone, Copy)]
 struct SelectContext {
-    target_id: String,
-    value_signal: RwSignal<Option<String>>,
-    on_change: Option<Callback<Option<String>>>,
+    open: RwSignal<bool>,
+    value: RwSignal<Option<String>>,
+    on_change: StoredValue<Option<Callback<Option<String>>>>,
+    trigger_ref: NodeRef<html::Button>,
+    panel_ref: NodeRef<html::Div>,
+    id_base: StoredValue<String>,
 }
 
+impl SelectContext {
+    fn trigger_id(&self) -> String {
+        format!("{}-trigger", self.id_base.get_value())
+    }
+
+    fn content_id(&self) -> String {
+        format!("{}-content", self.id_base.get_value())
+    }
+
+    fn select(&self, value: Option<String>) {
+        self.value.set(value.clone());
+        if let Some(cb) = self.on_change.get_value() {
+            cb.run(value);
+        }
+        self.open.set(false);
+    }
+}
+
+/// Custom single-select. Owns the open state and selected value (seeded from
+/// `default_value`), sharing them with the nested [`SelectTrigger`],
+/// [`SelectContent`] and [`SelectOption`]s through context. `on_change` fires
+/// with the new value whenever a selection is made.
 #[component]
 pub fn Select(
-    children: Children,
-    #[prop(optional, into)] class: String,
-    #[prop(optional, into)] default_value: Option<String>,
+    /// Value selected on first render.
+    #[prop(into, optional)]
+    default_value: Option<String>,
     #[prop(optional)] on_change: Option<Callback<Option<String>>>,
+    #[prop(into, optional)] class: Signal<String>,
+    children: ChildrenFn,
 ) -> impl IntoView {
-    let select_target_id = use_random_id_for("select");
-    let value_signal = RwSignal::new(default_value);
-
-    let ctx = SelectContext { target_id: select_target_id, value_signal, on_change };
-
-    let merged_class = tw_merge!("relative w-fit", class);
+    let ctx = SelectContext {
+        open: RwSignal::new(false),
+        value: RwSignal::new(default_value),
+        on_change: StoredValue::new(on_change),
+        trigger_ref: NodeRef::new(),
+        panel_ref: NodeRef::new(),
+        id_base: StoredValue::new(use_random_id_for("select")),
+    };
 
     view! {
         <Provider value=ctx>
-            <div data-name="Select" class=merged_class>
+            <div
+                data-name="Select"
+                data-state=move || if ctx.open.get() { "open" } else { "closed" }
+                class=move || cn!("relative w-fit", class.get())
+            >
                 {children()}
             </div>
         </Provider>
     }
 }
 
+/// Button that toggles the [`SelectContent`] popup. Carries
+/// `aria-haspopup="listbox"` and reflects the open state via `aria-expanded`;
+/// receives focus back when the popup closes.
 #[component]
 pub fn SelectTrigger(
+    #[prop(into, optional)] class: Signal<String>,
     children: Children,
-    #[prop(optional, into)] class: String,
-    #[prop(optional, into)] id: String,
 ) -> impl IntoView {
     let ctx = expect_context::<SelectContext>();
-
-    let peer_class = if !id.is_empty() { format!("peer/{}", id) } else { String::new() };
-
-    let button_class = tw_merge!(
-        "w-full p-2 h-9 inline-flex items-center justify-between text-sm font-medium whitespace-nowrap rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-ring focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&_svg:not(:last-child)]:mr-2 [&_svg:not(:first-child)]:ml-2 [&_svg:not([class*='size-'])]:size-4 border bg-background border-input hover:bg-accent hover:text-accent-foreground",
-        &peer_class,
-        class
-    );
-
-    let button_id = if !id.is_empty() { id } else { format!("trigger_{}", ctx.target_id) };
+    let merged = move || {
+        cn!(
+            "w-full p-2 h-9 inline-flex items-center justify-between text-sm font-medium whitespace-nowrap rounded-md transition-colors border bg-background border-input hover:bg-accent hover:text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
 
     view! {
         <button
+            node_ref=ctx.trigger_ref
             type="button"
             data-name="SelectTrigger"
-            class=button_class
-            id=button_id
-            tabindex="0"
-            data-select-trigger=ctx.target_id
+            id=move || ctx.trigger_id()
+            data-state=move || if ctx.open.get() { "open" } else { "closed" }
+            aria-haspopup="listbox"
+            aria-expanded=move || ctx.open.get().to_string()
+            aria-controls=move || ctx.content_id()
+            class=merged
+            on:click=move |_| ctx.open.update(|open| *open = !*open)
         >
             {children()}
-            <Icon icon=icondata::LuChevronDown attr:class="text-muted-foreground" />
+            <Icon
+                icon=icondata::LuChevronDown
+                attr:class=move || {
+                    cn!(
+                        "ml-2 text-muted-foreground transition-transform duration-200",
+                        if ctx.open.get() { "rotate-180" } else { "" },
+                    )
+                }
+            />
         </button>
     }
 }
 
+/// Reflects the current selection inside a [`SelectTrigger`], falling back to
+/// `placeholder` when nothing is selected.
+#[component]
+pub fn SelectValue(#[prop(into, optional)] placeholder: String) -> impl IntoView {
+    let ctx = expect_context::<SelectContext>();
+    let placeholder = StoredValue::new(placeholder);
+
+    view! {
+        <span data-name="SelectValue" class="text-sm truncate">
+            {move || ctx.value.get().unwrap_or_else(|| placeholder.get_value())}
+        </span>
+    }
+}
+
+/// Listbox popup holding the [`SelectOption`]s. Rendered inside a [`Show`] while
+/// the select is open; focuses itself on open, returns focus to the trigger on
+/// close, and dismisses on Escape, an outside click or a selection. Shows
+/// top/bottom scroll affordances when the list overflows.
+///
+/// Placement is set explicitly via `position` rather than measuring viewport
+/// space at runtime — a deliberate simplification of the vendored version, which
+/// sniffed `getBoundingClientRect` from JavaScript to flip above/below.
 #[component]
 pub fn SelectContent(
-    children: Children,
-    #[prop(optional, into)] class: String,
-    #[prop(default = SelectPosition::default())] position: SelectPosition,
+    #[prop(into, optional)] position: Signal<SelectPosition>,
+    #[prop(into, optional)] class: Signal<String>,
+    children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<SelectContext>();
+    let children = StoredValue::new(children);
+    let (on_scroll, can_scroll_up, can_scroll_down) = use_can_scroll_vertical();
 
-    let merged_class = tw_merge!(
-        "w-[150px] overflow-auto z-50 p-1 rounded-md border bg-card shadow-md h-fit max-h-[300px] absolute top-[calc(100%+4px)] left-0 data-[position=Above]:top-auto data-[position=Above]:bottom-[calc(100%+4px)] transition-all duration-200 data-[state=closed]:opacity-0 data-[state=closed]:scale-95 data-[state=open]:opacity-100 data-[state=open]:scale-100 data-[state=closed]:data-[position=Below]:origin-top data-[state=open]:data-[position=Below]:origin-top data-[state=closed]:data-[position=Above]:origin-bottom data-[state=open]:data-[position=Above]:origin-bottom [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-        class
-    );
+    let lock = use_lock_body_scroll(false);
+    Effect::new(move |_| lock.set(ctx.open.get()));
 
-    let target_id_for_script = ctx.target_id.clone();
+    Effect::new(move |_| {
+        if !ctx.open.get() {
+            return;
+        }
+        let keydown = window_event_listener(leptos::ev::keydown, move |ev: KeyboardEvent| {
+            if ev.key() == "Escape" {
+                ev.prevent_default();
+                ctx.open.set(false);
+            }
+        });
+        let pointerdown = window_event_listener(leptos::ev::mousedown, move |ev: MouseEvent| {
+            if is_outside(&ev, ctx.panel_ref, ctx.trigger_ref) {
+                ctx.open.set(false);
+            }
+        });
+        on_cleanup(move || {
+            keydown.remove();
+            pointerdown.remove();
+        });
+    });
 
-    // Scroll indicator signals
-    let (on_scroll, can_scroll_up_signal, can_scroll_down_signal) = use_can_scroll_vertical();
+    Effect::new(move |was_open: Option<bool>| {
+        let open = ctx.open.get();
+        if open {
+            if let Some(panel) = ctx.panel_ref.get() {
+                _ = panel.focus();
+            }
+        } else if was_open == Some(true) {
+            if let Some(trigger) = ctx.trigger_ref.get_untracked() {
+                _ = trigger.focus();
+            }
+        }
+        open
+    });
+
+    let merged = move || {
+        cn!(
+            "w-[150px] min-w-[8rem] overflow-auto z-50 p-1 rounded-md border bg-card shadow-md h-fit max-h-[300px] absolute left-0 origin-top data-[position=below]:top-[calc(100%+4px)] data-[position=above]:bottom-[calc(100%+4px)] data-[position=above]:origin-bottom outline-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            class.get(),
+        )
+    };
+
+    view! {
+        <Show when=move || ctx.open.get()>
+            <div
+                node_ref=ctx.panel_ref
+                data-name="SelectContent"
+                id=move || ctx.content_id()
+                role="listbox"
+                tabindex="-1"
+                aria-labelledby=move || ctx.trigger_id()
+                data-state="open"
+                data-position=move || position.get().as_data()
+                class=merged
+                on:scroll=on_scroll
+                on:keydown=move |ev: KeyboardEvent| move_focus(&ev, ctx.panel_ref)
+            >
+                <Show when=move || can_scroll_up.get()>
+                    <div class="sticky -top-1 z-10 flex items-center justify-center py-1 bg-card">
+                        <Icon
+                            icon=icondata::LuChevronUp
+                            attr:class="size-4 text-muted-foreground"
+                        />
+                    </div>
+                </Show>
+                {children.get_value()()}
+                <Show when=move || can_scroll_down.get()>
+                    <div class="sticky -bottom-1 z-10 flex items-center justify-center py-1 bg-card">
+                        <Icon
+                            icon=icondata::LuChevronDown
+                            attr:class="size-4 text-muted-foreground"
+                        />
+                    </div>
+                </Show>
+            </div>
+        </Show>
+    }
+}
+
+/// Groups related [`SelectOption`]s under an optional [`SelectLabel`].
+#[component]
+pub fn SelectGroup(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <div data-name="SelectGroup" role="group" class=move || cn!(class.get())>
+            {children()}
+        </div>
+    }
+}
+
+/// A selectable row. Sets the [`Select`] value (and fires `on_change`) on click
+/// or Enter/Space, then closes the popup. Carries `role="option"` and
+/// `aria-selected`; arrow keys move focus between options via the popup's roving
+/// handler.
+#[component]
+pub fn SelectOption(
+    #[prop(into)] value: String,
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let ctx = expect_context::<SelectContext>();
+    let value = StoredValue::new(value);
+    let is_selected =
+        Memo::new(move |_| ctx.value.get().as_deref() == Some(value.get_value().as_str()));
+    let merged = move || {
+        cn!(
+            "group inline-flex gap-2 items-center w-full rounded-sm px-2 py-1.5 text-sm cursor-pointer no-underline transition-colors duration-200 text-popover-foreground hover:bg-accent hover:text-accent-foreground outline-none focus-visible:bg-accent focus-visible:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
 
     view! {
         <div
-            data-name="SelectContent"
-            class=merged_class
-            id=ctx.target_id
-            data-target="target__select"
-            data-state="closed"
-            data-position=position.to_string()
-            style="pointer-events: none;"
-            on:scroll=on_scroll
+            data-name="SelectOption"
+            role="option"
+            tabindex="-1"
+            aria-selected=move || is_selected.get().to_string()
+            data-state=move || if is_selected.get() { "selected" } else { "unselected" }
+            class=merged
+            on:click=move |_| ctx.select(Some(value.get_value()))
+            on:keydown=move |ev: KeyboardEvent| {
+                if matches!(ev.key().as_str(), "Enter" | " ") {
+                    ev.prevent_default();
+                    ctx.select(Some(value.get_value()));
+                }
+            }
         >
-            <div
-                data-scroll-up="true"
-                class=move || {
-                    if can_scroll_up_signal.get() {
-                        "sticky -top-1 z-10 flex items-center justify-center py-1 bg-card"
-                    } else {
-                        "hidden"
-                    }
-                }
-            >
-                <Icon icon=icondata::LuChevronUp attr:class="size-4 text-muted-foreground" />
-            </div>
             {children()}
-            <div
-                data-scroll-down="true"
-                class=move || {
-                    if can_scroll_down_signal.get() {
-                        "sticky -bottom-1 z-10 flex items-center justify-center py-1 bg-card"
-                    } else {
-                        "hidden"
-                    }
+            <Icon
+                icon=icondata::LuCheck
+                attr:class=move || {
+                    cn!(
+                        "ml-auto size-4 text-muted-foreground",
+                        if is_selected.get() { "opacity-100" } else { "opacity-0" },
+                    )
                 }
-            >
-                <Icon icon=icondata::LuChevronDown attr:class="size-4 text-muted-foreground" />
-            </div>
+            />
         </div>
+    }
+}
 
-        <script>
-            {format!(
-                r#"
-                (function() {{
-                    const setupSelect = () => {{
-                        const select = document.querySelector('#{}');
-                        const trigger = document.querySelector('[data-select-trigger="{}"]');
+/// Reports whether a pointer event landed outside both the popup and its
+/// trigger. Runs only inside the pointer handler, so the `web_sys` DOM access
+/// never executes during server rendering.
+fn is_outside(
+    ev: &MouseEvent,
+    panel_ref: NodeRef<html::Div>,
+    trigger_ref: NodeRef<html::Button>,
+) -> bool {
+    let Some(target) = ev.target().and_then(|t| t.dyn_into::<Node>().ok()) else {
+        return false;
+    };
+    let in_panel = panel_ref
+        .get_untracked()
+        .is_some_and(|panel| panel.contains(Some(&target)));
+    let in_trigger = trigger_ref
+        .get_untracked()
+        .is_some_and(|trigger| trigger.contains(Some(&target)));
+    !in_panel && !in_trigger
+}
 
-                        if (!select || !trigger) {{
-                            setTimeout(setupSelect, 50);
-                            return;
-                        }}
+/// Roving-focus navigation for the listbox: ArrowUp/Down step between options,
+/// Home/End jump to the ends. Runs only inside the keydown handler, so the
+/// `web_sys` DOM access never executes during server rendering.
+fn move_focus(ev: &KeyboardEvent, panel_ref: NodeRef<html::Div>) {
+    let Some(panel) = panel_ref.get_untracked() else {
+        return;
+    };
+    let Ok(options) = panel.query_selector_all("[data-name='SelectOption']") else {
+        return;
+    };
+    let count = options.length();
+    if count == 0 {
+        return;
+    }
 
-                        if (select.hasAttribute('data-initialized')) {{
-                            return;
-                        }}
-                        select.setAttribute('data-initialized', 'true');
+    let current = document().active_element().and_then(|el| {
+        (0..count).find(|&i| {
+            options
+                .item(i)
+                .is_some_and(|n| &n == el.unchecked_ref::<Node>())
+        })
+    });
 
-                        let isOpen = false;
+    let target = match ev.key().as_str() {
+        "ArrowDown" => Some(current.map_or(0, |i| (i + 1) % count)),
+        "ArrowUp" => Some(current.map_or(count - 1, |i| if i == 0 { count - 1 } else { i - 1 })),
+        "Home" => Some(0),
+        "End" => Some(count - 1),
+        _ => return,
+    };
+    let Some(target) = target else { return };
 
-                        const updatePosition = () => {{
-                            const triggerRect = trigger.getBoundingClientRect();
-                            const viewportHeight = window.innerHeight;
-                            const spaceBelow = viewportHeight - triggerRect.bottom;
-                            const spaceAbove = triggerRect.top;
-
-                            // Determine if dropdown should go above or below
-                            if (spaceBelow < 200 && spaceAbove > spaceBelow) {{
-                                select.setAttribute('data-position', 'Above');
-                            }} else {{
-                                select.setAttribute('data-position', 'Below');
-                            }}
-
-                            // Set min-width to match trigger
-                            select.style.minWidth = `${{triggerRect.width}}px`;
-                        }};
-
-                        const openSelect = () => {{
-                            isOpen = true;
-
-                            // Lock scrolling
-                            window.ScrollLock.lock();
-
-                            // Update position and open
-                            updatePosition();
-                            select.setAttribute('data-state', 'open');
-                            select.style.pointerEvents = 'auto';
-
-                            // Trigger scroll event to update indicators
-                            select.dispatchEvent(new Event('scroll'));
-
-                            // Close on click outside
-                            setTimeout(() => {{
-                                document.addEventListener('click', handleClickOutside);
-                            }}, 0);
-                        }};
-
-                        const closeSelect = () => {{
-                            isOpen = false;
-                            select.setAttribute('data-state', 'closed');
-                            select.style.pointerEvents = 'none';
-                            document.removeEventListener('click', handleClickOutside);
-
-                            // Unlock scrolling after animation
-                            window.ScrollLock.unlock(200);
-                        }};
-
-                        const handleClickOutside = (e) => {{
-                            if (!select.contains(e.target) && !trigger.contains(e.target)) {{
-                                closeSelect();
-                            }}
-                        }};
-
-                        // Toggle select when trigger is clicked
-                        trigger.addEventListener('click', (e) => {{
-                            e.stopPropagation();
-                            if (isOpen) {{
-                                closeSelect();
-                            }} else {{
-                                openSelect();
-                            }}
-                        }});
-
-                        // Close when option is selected
-                        const options = select.querySelectorAll('[data-select-option]');
-                        options.forEach(option => {{
-                            option.addEventListener('click', () => {{
-                                closeSelect();
-                            }});
-                        }});
-
-                        // Handle ESC key to close
-                        document.addEventListener('keydown', (e) => {{
-                            if (e.key === 'Escape' && isOpen) {{
-                                e.preventDefault();
-                                closeSelect();
-                            }}
-                        }});
-                    }};
-
-                    if (document.readyState === 'loading') {{
-                        document.addEventListener('DOMContentLoaded', setupSelect);
-                    }} else {{
-                        setupSelect();
-                    }}
-                }})();
-                "#,
-                target_id_for_script,
-                target_id_for_script,
-            )}
-        </script>
+    if let Some(el) = options
+        .item(target)
+        .and_then(|n| n.dyn_into::<HtmlElement>().ok())
+    {
+        ev.prevent_default();
+        _ = el.focus();
     }
 }

@@ -1,10 +1,10 @@
+use crate::{cn, use_random_id_for};
+use leptos::context::Provider;
+use leptos::ev::keydown;
 use leptos::prelude::*;
-use crate::clx;
-use tw_merge::tw_merge;
 
-clx! {Tooltip, div, "inline-block relative mx-0 whitespace-nowrap transition-all duration-300 ease-in-out group/tooltip my-[5px]"}
-
-#[derive(Clone, Copy, Default, strum::Display, strum::AsRefStr)]
+/// Placement of a [`TooltipContent`] panel relative to its trigger.
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub enum TooltipPosition {
     #[default]
     Top,
@@ -13,54 +13,159 @@ pub enum TooltipPosition {
     Bottom,
 }
 
-#[component]
-pub fn TooltipContent(
-    #[prop(into, optional)] class: String,
-    #[prop(default = TooltipPosition::default())] position: TooltipPosition,
-    children: Children,
-) -> impl IntoView {
-    const SHARED_TRANSITION_CLASSES: &str = "absolute opacity-0 transition-all duration-300 ease-in-out pointer-events-none group-hover/tooltip:opacity-100 group-hover/tooltip:pointer-events-auto z-[1000000]";
+impl TooltipPosition {
+    fn as_data(self) -> &'static str {
+        match self {
+            Self::Top => "top",
+            Self::Left => "left",
+            Self::Right => "right",
+            Self::Bottom => "bottom",
+        }
+    }
 
-    // Position-specific classes for tooltip content
-    let position_class = match position {
-        TooltipPosition::Top => "left-1/2 bottom-full mb-1 -ml-2.5",
-        TooltipPosition::Right => "bottom-1/2 left-full ml-2.5 -mb-3.5",
-        TooltipPosition::Bottom => "left-1/2 top-full mt-1 -ml-2.5",
-        TooltipPosition::Left => "bottom-1/2 right-full mr-2.5 -mb-3.5",
-    };
+    fn content_class(self) -> &'static str {
+        match self {
+            Self::Top => "left-1/2 bottom-full mb-1 -ml-2.5",
+            Self::Right => "bottom-1/2 left-full ml-2.5 -mb-3.5",
+            Self::Bottom => "left-1/2 top-full mt-1 -ml-2.5",
+            Self::Left => "bottom-1/2 right-full mr-2.5 -mb-3.5",
+        }
+    }
 
-    // Position-specific classes for arrow
-    let arrow_position_class = match position {
-        TooltipPosition::Top => "left-1/2 bottom-full -mb-2 border-t-foreground/90",
-        TooltipPosition::Right => "bottom-1/2 left-full -mr-0.5 -mb-1 border-r-foreground/90",
-        TooltipPosition::Bottom => "left-1/2 top-full -mt-2 border-b-foreground/90",
-        TooltipPosition::Left => "bottom-1/2 right-full -mb-1 -ml-0.5 border-l-foreground/90",
-    };
-
-    let tooltip_class = tw_merge!(
-        SHARED_TRANSITION_CLASSES,
-        "py-2 px-2.5 text-xs whitespace-nowrap shadow-lg text-background bg-foreground/90",
-        class,
-        position_class,
-    );
-
-    let arrow_class = tw_merge!(
-        "absolute opacity-0 transition-all duration-300 ease-in-out pointer-events-none group-hover/tooltip:opacity-100 group-hover/tooltip:pointer-events-auto z-[1000000]",
-        "bg-transparent border-transparent border-6",
-        arrow_position_class,
-    );
-
-    view! {
-        <>
-            <div data-name="TooltipArrow" data-position=position.to_string() class=arrow_class />
-            <div data-name="TooltipContent" data-position=position.to_string() class=tooltip_class>
-                {children()}
-            </div>
-        </>
+    fn arrow_class(self) -> &'static str {
+        match self {
+            Self::Top => "left-1/2 bottom-full -mb-2 border-t-foreground/90",
+            Self::Right => "bottom-1/2 left-full -mr-0.5 -mb-1 border-r-foreground/90",
+            Self::Bottom => "left-1/2 top-full -mt-2 border-b-foreground/90",
+            Self::Left => "bottom-1/2 right-full -mb-1 -ml-0.5 border-l-foreground/90",
+        }
     }
 }
 
-/// TooltipProvider is no longer needed - tooltips work with pure CSS via Tailwind's group-hover.
-/// Kept for backwards compatibility but renders nothing.
+/// Visibility state shared from [`Tooltip`] to its trigger and content. The id
+/// ties the trigger's `aria-describedby` to the content panel for assistive
+/// technology.
+#[derive(Clone, Copy)]
+struct TooltipContext {
+    open: RwSignal<bool>,
+    content_id: StoredValue<String>,
+}
+
+/// Hover/focus tooltip. Owns the visibility state shared with its
+/// [`TooltipTrigger`] and [`TooltipContent`]. The tooltip shows while the
+/// trigger is hovered or focused and hides on leave, blur or Escape.
 #[component]
-pub fn TooltipProvider() -> impl IntoView {}
+pub fn Tooltip(
+    #[prop(into, optional)] class: Signal<String>,
+    children: ChildrenFn,
+) -> impl IntoView {
+    let ctx = TooltipContext {
+        open: RwSignal::new(false),
+        content_id: StoredValue::new(use_random_id_for("tooltip")),
+    };
+
+    let merged = move || {
+        cn!(
+            "inline-block relative mx-0 whitespace-nowrap my-[5px]",
+            class.get()
+        )
+    };
+
+    view! {
+        <Provider value=ctx>
+            <div
+                data-name="Tooltip"
+                data-state=move || if ctx.open.get() { "open" } else { "closed" }
+                class=merged
+            >
+                {children()}
+            </div>
+        </Provider>
+    }
+}
+
+/// Element that reveals the tooltip while hovered or focused. Reflects the
+/// described panel via `aria-describedby` so screen readers announce it.
+#[component]
+pub fn TooltipTrigger(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let ctx = expect_context::<TooltipContext>();
+
+    view! {
+        <div
+            data-name="TooltipTrigger"
+            data-state=move || if ctx.open.get() { "open" } else { "closed" }
+            aria-describedby=move || ctx.content_id.get_value()
+            class=move || cn!("inline-flex w-fit", class.get())
+            on:pointerenter=move |_| ctx.open.set(true)
+            on:pointerleave=move |_| ctx.open.set(false)
+            on:focusin=move |_| ctx.open.set(true)
+            on:focusout=move |_| ctx.open.set(false)
+        >
+            {children()}
+        </div>
+    }
+}
+
+/// Floating panel shown while the [`Tooltip`] is open. Carries `role="tooltip"`
+/// and an arrow oriented by `position`; Escape hides the tooltip while it is
+/// shown. Rendered only when open, so its `children` run under [`Show`].
+#[component]
+pub fn TooltipContent(
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(into, optional)] position: Signal<TooltipPosition>,
+    children: ChildrenFn,
+) -> impl IntoView {
+    let ctx = expect_context::<TooltipContext>();
+    let children = StoredValue::new(children);
+
+    Effect::new(move |_| {
+        if !ctx.open.get() {
+            return;
+        }
+        let handle = window_event_listener(keydown, move |ev| {
+            if ev.key() == "Escape" {
+                ctx.open.set(false);
+            }
+        });
+        on_cleanup(move || handle.remove());
+    });
+
+    view! {
+        <Show when=move || {
+            ctx.open.get()
+        }>
+            {
+                let position = position.get();
+                let arrow = cn!(
+                    "absolute pointer-events-none z-[1000000] bg-transparent border-transparent border-6",
+                    position.arrow_class(),
+                );
+                let panel = cn!(
+                    "absolute pointer-events-none z-[1000000] py-2 px-2.5 text-xs whitespace-nowrap shadow-lg text-background bg-foreground/90",
+                    position.content_class(),
+                    class.get(),
+                );
+                view! {
+                    <div
+                        data-name="TooltipArrow"
+                        data-position=position.as_data()
+                        aria-hidden="true"
+                        class=arrow
+                    />
+                    <div
+                        data-name="TooltipContent"
+                        data-position=position.as_data()
+                        role="tooltip"
+                        id=ctx.content_id.get_value()
+                        class=panel
+                    >
+                        {children.read_value()()}
+                    </div>
+                }
+            }
+        </Show>
+    }
+}

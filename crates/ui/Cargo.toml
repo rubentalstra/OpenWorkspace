@@ -28,12 +28,7 @@ time.workspace = true
 # the client (inside Effect/event handlers).
 wasm-bindgen = { workspace = true }
 js-sys = "0.3"
-web-sys = { version = "0.3", features = [
-    "Clipboard", "CssStyleDeclaration", "CustomEvent", "Document", "Element",
-    "Event", "HtmlElement", "HtmlInputElement", "KeyboardEvent", "MediaQueryList",
-    "MediaQueryListEvent", "MouseEvent", "Navigator", "Node", "NodeList", "Storage",
-    "Window",
-] }
+web-sys = { version = "0.3", features = ["Clipboard", "CssStyleDeclaration", "CustomEvent", "Document", "Element", "Event", "HtmlElement", "HtmlInputElement", "KeyboardEvent", "MediaQueryList", "MediaQueryListEvent", "MouseEvent", "Navigator", "Node", "NodeList", "Storage", "Window", "DomRect"] }
 
 [features]
 ssr = ["leptos/ssr"]

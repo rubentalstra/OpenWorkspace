@@ -1,145 +1,111 @@
-use leptos_icons::Icon;
+use crate::{clx, cn, use_lock_body_scroll, use_random_id_for};
 use leptos::context::Provider;
+use leptos::ev::{KeyboardEvent, MouseEvent};
+use leptos::html;
 use leptos::prelude::*;
-use crate::clx;
-use tw_merge::*;
-use wasm_bindgen::JsCast;
+use leptos::wasm_bindgen::JsCast;
+use leptos_icons::Icon;
+use web_sys::{Element, HtmlElement};
 
-use crate::components::hooks::use_random::use_random_id_for;
-
-/// Programmatically close any open context menu.
-pub fn close_context_menu() {
-    let Some(document) = window().document() else {
-        return;
-    };
-    let Some(menu) = document.query_selector("[data-target='target__context'][data-state='open']").ok().flatten()
-    else {
-        return;
-    };
-    let _ = menu.set_attribute("data-state", "closed");
-    if let Some(el) = menu.dyn_ref::<web_sys::HtmlElement>() {
-        let _ = el.style().set_property("pointer-events", "none");
-    }
+clx! {
+    /// Non-interactive heading inside a context menu, grouping the items beneath it.
+    ContextMenuLabel, span, "px-2 py-1.5 text-sm font-medium text-muted-foreground"
 }
 
-mod components {
-    use super::*;
-    clx! {ContextMenuLabel, span, "px-2 py-1.5 text-sm font-medium data-inset:pl-8", "mb-1"}
-    clx! {ContextMenuGroup, ul, "group"}
-    clx! {ContextMenuItem, li, "inline-flex gap-2 items-center w-full rounded-sm px-2 py-1.5 text-sm no-underline transition-colors duration-200 text-popover-foreground hover:bg-accent hover:text-accent-foreground [&_svg:not([class*='size-'])]:size-4"}
-    clx! {ContextMenuSubContent, ul, "context__menu_sub_content", "rounded-md border bg-card shadow-lg p-1 absolute z-[100] min-w-[160px] opacity-0 invisible translate-x-[-8px] transition-all duration-200 ease-out pointer-events-none"}
-    clx! {ContextMenuLink, a, "w-full inline-flex gap-2 items-center"}
+clx! {
+    /// Logical grouping of context-menu items under an optional [`ContextMenuLabel`].
+    ContextMenuGroup, ul, "list-none p-0 m-0"
 }
 
-pub use components::*;
-
-#[component]
-pub fn ContextMenuAction(
-    children: Children,
-    #[prop(optional, into)] class: String,
-    #[prop(optional, into)] aria_selected: Option<Signal<bool>>,
-    #[prop(optional, into)] href: Option<String>,
-) -> impl IntoView {
-    let _ctx = expect_context::<ContextMenuContext>();
-
-    let class = tw_merge!(
-        "inline-flex gap-2 items-center w-full text-sm text-left transition-colors duration-200 focus:outline-none focus-visible:outline-none text-popover-foreground [&_svg:not([class*='size-'])]:size-4",
-        class
-    );
-
-    let aria_selected_attr = move || aria_selected.map(|s| s.get()).unwrap_or(false).to_string();
-
-    if let Some(href) = href {
-        view! {
-            <a
-                data-name="ContextMenuAction"
-                class=class
-                href=href
-                aria-selected=aria_selected_attr
-                data-context-close="true"
-            >
-                {children()}
-            </a>
-        }
-        .into_any()
-    } else {
-        view! {
-            <button
-                type="button"
-                data-name="ContextMenuAction"
-                class=class
-                data-context-close="true"
-                aria-selected=aria_selected_attr
-            >
-                {children()}
-            </button>
-        }
-        .into_any()
-    }
+clx! {
+    /// Anchor row styled to sit inside a [`ContextMenuContent`] panel.
+    ContextMenuLink, a, "w-full inline-flex gap-2 items-center no-underline"
 }
 
-#[derive(Clone)]
+/// Open state, pointer anchor and the wiring that links a context menu's
+/// trigger, panel and items. Created by [`ContextMenu`] and shared with every
+/// descendant through context, mirroring the dropdown-menu/tabs pattern.
+#[derive(Clone, Copy)]
 struct ContextMenuContext {
-    target_id: String,
+    open: RwSignal<bool>,
+    point: RwSignal<(i32, i32)>,
+    content_id: StoredValue<String>,
+    trigger_ref: NodeRef<html::Div>,
+    content_ref: NodeRef<html::Div>,
+    on_close: StoredValue<Option<Callback<()>>>,
 }
 
-#[component]
-pub fn ContextMenu(children: Children) -> impl IntoView {
-    let context_target_id = use_random_id_for("context");
+impl ContextMenuContext {
+    fn open_at(&self, x: i32, y: i32) {
+        self.point.set((x, y));
+        self.open.set(true);
+    }
 
-    let ctx = ContextMenuContext { target_id: context_target_id };
+    fn close_and_refocus(&self) {
+        if !self.open.get_untracked() {
+            return;
+        }
+        self.open.set(false);
+        if let Some(cb) = self.on_close.get_value() {
+            cb.run(());
+        }
+        if let Some(trigger) = self.trigger_ref.get_untracked() {
+            _ = trigger.focus();
+        }
+    }
+}
+
+/// Right-click menu. Owns the open state plus the pointer anchor and shares them
+/// with the nested [`ContextMenuTrigger`] and [`ContextMenuContent`] via context.
+#[component]
+pub fn ContextMenu(children: ChildrenFn) -> impl IntoView {
+    let ctx = ContextMenuContext {
+        open: RwSignal::new(false),
+        point: RwSignal::new((0, 0)),
+        content_id: StoredValue::new(use_random_id_for("context")),
+        trigger_ref: NodeRef::new(),
+        content_ref: NodeRef::new(),
+        on_close: StoredValue::new(None),
+    };
+
+    let locked = use_lock_body_scroll(false);
+    Effect::new(move |_| locked.set(ctx.open.get()));
+
+    let children = StoredValue::new(children);
 
     view! {
         <Provider value=ctx>
-            <style>
-                "
-                /* Submenu Styles */
-                .context__menu_sub_content {
-                    position: absolute;
-                    inset-inline-start: calc(100% + 8px);
-                    inset-block-start: -4px;
-                    z-index: 100;
-                    min-inline-size: 160px;
-                    opacity: 0;
-                    visibility: hidden;
-                    transform: translateX(-8px);
-                    transition: all 0.2s ease-out;
-                    pointer-events: none;
-                }
-                
-                .context__menu_sub_trigger:hover .context__menu_sub_content {
-                    opacity: 1;
-                    visibility: visible;
-                    transform: translateX(0);
-                    pointer-events: auto;
-                }
-                "
-            </style>
-
-            <div data-name="ContextMenu" class="contents">
-                {children()}
+            <div
+                data-name="ContextMenu"
+                data-state=move || if ctx.open.get() { "open" } else { "closed" }
+                class="contents"
+            >
+                {move || children.read_value()()}
             </div>
         </Provider>
     }
 }
 
-/// Wrapper that triggers the context menu on right-click.
-/// The `on_open` callback is triggered when the context menu opens (right-click).
+/// Region whose right-click opens the enclosing [`ContextMenu`]. Captures the
+/// pointer coordinates so the panel anchors under the cursor. `on_open` fires
+/// when the menu opens.
 #[component]
 pub fn ContextMenuTrigger(
-    children: Children,
-    #[prop(optional, into)] class: String,
+    #[prop(into, optional)] class: Signal<String>,
     #[prop(optional)] on_open: Option<Callback<()>>,
+    children: Children,
 ) -> impl IntoView {
     let ctx = expect_context::<ContextMenuContext>();
-    let trigger_class = tw_merge!("contents", class);
 
     view! {
         <div
-            class=trigger_class
+            node_ref=ctx.trigger_ref
             data-name="ContextMenuTrigger"
-            data-context-trigger=ctx.target_id
-            on:contextmenu=move |_| {
+            tabindex="-1"
+            class=move || cn!("contents", class.get())
+            on:contextmenu=move |ev: MouseEvent| {
+                ev.prevent_default();
+                ctx.open_at(ev.client_x(), ev.client_y());
                 if let Some(cb) = on_open {
                     cb.run(());
                 }
@@ -150,215 +116,374 @@ pub fn ContextMenuTrigger(
     }
 }
 
-/// Content of the context menu that appears on right-click.
-/// The `on_close` callback is triggered when the menu closes (click outside, ESC key, or action click).
+/// Popup panel listing the menu items. Rendered only while open via [`Show`] and
+/// fixed-positioned at the pointer anchor, clamped to stay within the viewport.
+/// Carries `role="menu"` and implements the WAI-ARIA roving-tabindex: arrow keys
+/// move focus, Home/End jump to the ends, Escape closes and returns focus to the
+/// trigger. A backdrop captures outside clicks and right-clicks. `on_close` fires
+/// on any dismissal.
 #[component]
 pub fn ContextMenuContent(
-    children: Children,
-    #[prop(optional, into)] class: String,
+    #[prop(into, optional)] class: Signal<String>,
     #[prop(optional)] on_close: Option<Callback<()>>,
+    children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<ContextMenuContext>();
+    ctx.on_close.set_value(on_close);
+    let children = StoredValue::new(children);
 
-    let base_classes = "z-50 p-1 rounded-md border bg-card shadow-md w-[200px] fixed transition-all duration-200 data-[state=closed]:opacity-0 data-[state=closed]:scale-95 data-[state=open]:opacity-100 data-[state=open]:scale-100";
+    let position = RwSignal::new((0.0_f64, 0.0_f64));
 
-    let class = tw_merge!(base_classes, class);
+    Effect::new(move |_| {
+        if !ctx.open.get() {
+            return;
+        }
+        let (px, py) = ctx.point.get();
+        let mut x = f64::from(px);
+        let mut y = f64::from(py);
+        if let Some(panel) = ctx.content_ref.get() {
+            let rect = panel.get_bounding_client_rect();
+            let viewport_width = window().inner_width().ok().and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let viewport_height = window().inner_height().ok().and_then(|v| v.as_f64()).unwrap_or(0.0);
+            if x + rect.width() > viewport_width {
+                x = (x - rect.width()).max(0.0);
+            }
+            if y + rect.height() > viewport_height {
+                y = (y - rect.height()).max(0.0);
+            }
+            match first_menu_item(&panel) {
+                Some(first) => _ = first.focus(),
+                None => _ = panel.focus(),
+            }
+        }
+        position.set((x, y));
+    });
 
-    let target_id_for_script = ctx.target_id.clone();
+    let panel = move || {
+        cn!(
+            "fixed z-50 p-1 rounded-md border bg-popover text-popover-foreground shadow-md min-w-[12rem] origin-top-left",
+            class.get(),
+        )
+    };
+    let style = move || {
+        let (x, y) = position.get();
+        format!("left: {x}px; top: {y}px;")
+    };
 
     view! {
-        <div
-            data-name="ContextMenuContent"
-            class=class
-            // Listen for custom 'contextmenuclose' event dispatched by JS when menu closes
-            on:contextmenuclose=move |_: web_sys::CustomEvent| {
-                if let Some(cb) = on_close {
-                    cb.run(());
+        <Show when=move || {
+            ctx.open.get()
+        }>
+            {
+                let panel = panel.clone();
+                let style = style.clone();
+                view! {
+                    <div
+                        aria-hidden="true"
+                        class="fixed inset-0 z-40"
+                        on:pointerdown=move |_| ctx.close_and_refocus()
+                        on:contextmenu=move |ev: MouseEvent| {
+                            ev.prevent_default();
+                            ctx.close_and_refocus();
+                        }
+                    />
+                    <div
+                        node_ref=ctx.content_ref
+                        data-name="ContextMenuContent"
+                        id=move || ctx.content_id.get_value()
+                        role="menu"
+                        tabindex="-1"
+                        data-state="open"
+                        class=panel
+                        style=style
+                        on:keydown=move |ev: KeyboardEvent| handle_menu_keys(&ev, ctx)
+                    >
+                        {move || children.read_value()()}
+                    </div>
                 }
             }
-            id=ctx.target_id
-            data-target="target__context"
-            data-state="closed"
-            style="pointer-events: none;"
-        >
-            {children()}
-        </div>
-
-        <script>
-            {format!(
-                r#"
-                (function() {{
-                    const setupContextMenu = () => {{
-                        const menu = document.querySelector('#{}');
-                        const trigger = document.querySelector('[data-context-trigger="{}"]');
-
-                        if (!menu || !trigger) {{
-                            setTimeout(setupContextMenu, 50);
-                            return;
-                        }}
-
-                        if (menu.hasAttribute('data-initialized')) {{
-                            return;
-                        }}
-                        menu.setAttribute('data-initialized', 'true');
-
-                        let isOpen = false;
-
-                        const updatePosition = (x, y) => {{
-                            const menuRect = menu.getBoundingClientRect();
-                            const viewportHeight = window.innerHeight;
-                            const viewportWidth = window.innerWidth;
-
-                            // Calculate position, ensuring menu stays within viewport
-                            let left = x;
-                            let top = y;
-
-                            // Adjust if menu would go off right edge
-                            if (x + menuRect.width > viewportWidth) {{
-                                left = x - menuRect.width;
-                            }}
-
-                            // Adjust if menu would go off bottom edge
-                            if (y + menuRect.height > viewportHeight) {{
-                                top = y - menuRect.height;
-                            }}
-
-                            menu.style.left = `${{left}}px`;
-                            menu.style.top = `${{top}}px`;
-                            menu.style.transformOrigin = 'top left';
-                        }};
-
-                        const openMenu = (x, y) => {{
-                            isOpen = true;
-
-                            // Close any other open context menus
-                            const allMenus = document.querySelectorAll('[data-target="target__context"]');
-                            allMenus.forEach(m => {{
-                                if (m !== menu && m.getAttribute('data-state') === 'open') {{
-                                    m.setAttribute('data-state', 'closed');
-                                    m.style.pointerEvents = 'none';
-                                }}
-                            }});
-
-                            menu.setAttribute('data-state', 'open');
-                            menu.style.visibility = 'hidden';
-                            menu.style.pointerEvents = 'auto';
-
-                            // Force reflow
-                            menu.offsetHeight;
-
-                            updatePosition(x, y);
-                            menu.style.visibility = 'visible';
-
-                            // Lock scroll
-                            if (window.ScrollLock) {{
-                                window.ScrollLock.lock();
-                            }}
-
-                            setTimeout(() => {{
-                                document.addEventListener('click', handleClickOutside);
-                                document.addEventListener('contextmenu', handleContextOutside);
-                            }}, 0);
-                        }};
-
-                        const closeMenu = () => {{
-                            isOpen = false;
-                            menu.setAttribute('data-state', 'closed');
-                            menu.style.pointerEvents = 'none';
-                            document.removeEventListener('click', handleClickOutside);
-                            document.removeEventListener('contextmenu', handleContextOutside);
-
-                            // Dispatch custom event for Leptos to listen to
-                            menu.dispatchEvent(new CustomEvent('contextmenuclose', {{ bubbles: false }}));
-
-                            if (window.ScrollLock) {{
-                                window.ScrollLock.unlock(200);
-                            }}
-                        }};
-
-                        const handleClickOutside = (e) => {{
-                            if (!menu.contains(e.target)) {{
-                                closeMenu();
-                            }}
-                        }};
-
-                        const handleContextOutside = (e) => {{
-                            if (!trigger.contains(e.target)) {{
-                                closeMenu();
-                            }}
-                        }};
-
-                        // Right-click on trigger
-                        trigger.addEventListener('contextmenu', (e) => {{
-                            e.preventDefault();
-                            e.stopPropagation();
-
-                            if (isOpen) {{
-                                closeMenu();
-                            }}
-                            openMenu(e.clientX, e.clientY);
-                        }});
-
-                        // Close when action is clicked
-                        const actions = menu.querySelectorAll('[data-context-close]');
-                        actions.forEach(action => {{
-                            action.addEventListener('click', () => {{
-                                closeMenu();
-                            }});
-                        }});
-
-                        // Handle ESC key
-                        document.addEventListener('keydown', (e) => {{
-                            if (e.key === 'Escape' && isOpen) {{
-                                e.preventDefault();
-                                closeMenu();
-                            }}
-                        }});
-                    }};
-
-                    if (document.readyState === 'loading') {{
-                        document.addEventListener('DOMContentLoaded', setupContextMenu);
-                    }} else {{
-                        setupContextMenu();
-                    }}
-                }})();
-                "#,
-                target_id_for_script,
-                target_id_for_script,
-            )}
-        </script>
+        </Show>
     }
 }
 
+/// A selectable command in the context menu. Carries `role="menuitem"`,
+/// participates in the roving-tabindex, and closes the menu when activated unless
+/// `close_on_select` is cleared. Provide `href` to render a navigating anchor
+/// instead of a button.
 #[component]
-pub fn ContextMenuSub(children: Children) -> impl IntoView {
-    clx! {ContextMenuSubRoot, li, "context__menu_sub_trigger", " relative inline-flex relative gap-2 items-center py-1.5 px-2 w-full text-sm no-underline rounded-sm transition-colors duration-200 cursor-pointer text-popover-foreground [&_svg:not([class*='size-'])]:size-4 hover:bg-accent hover:text-accent-foreground"}
+pub fn ContextMenuItem(
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(into, optional)] href: Option<String>,
+    #[prop(default = true)] close_on_select: bool,
+    children: Children,
+) -> impl IntoView {
+    let ctx = expect_context::<ContextMenuContext>();
 
-    view! { <ContextMenuSubRoot>{children()}</ContextMenuSubRoot> }
-}
+    let merged = move || {
+        cn!(
+            "inline-flex gap-2 items-center w-full rounded-sm px-2 py-1.5 text-sm text-left no-underline cursor-pointer transition-colors outline-none text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
 
-#[component]
-pub fn ContextMenuSubTrigger(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
-    let class = tw_merge!("flex items-center justify-between w-full", class);
+    if let Some(href) = href {
+        return view! {
+            <a
+                data-name="ContextMenuItem"
+                role="menuitem"
+                tabindex="-1"
+                href=href
+                class=merged
+                on:click=move |_| {
+                    if close_on_select {
+                        ctx.open.set(false);
+                    }
+                }
+            >
+                {children()}
+            </a>
+        }
+        .into_any();
+    }
 
     view! {
-        <span data-name="ContextMenuSubTrigger" class=class>
+        <button
+            type="button"
+            data-name="ContextMenuItem"
+            role="menuitem"
+            tabindex="-1"
+            class=merged
+            on:click=move |_| {
+                if close_on_select {
+                    ctx.close_and_refocus();
+                }
+            }
+        >
+            {children()}
+        </button>
+    }
+    .into_any()
+}
+
+/// A selectable command identical to [`ContextMenuItem`] in behaviour, kept as a
+/// distinct name for call-site clarity. Closes the menu when activated unless
+/// `close_on_select` is cleared; provide `href` to render a navigating anchor.
+/// Forward any extra ARIA from the call site (e.g. `attr:aria-selected`).
+#[component]
+pub fn ContextMenuAction(
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(into, optional)] href: Option<String>,
+    #[prop(default = true)] close_on_select: bool,
+    children: Children,
+) -> impl IntoView {
+    let ctx = expect_context::<ContextMenuContext>();
+
+    let merged = move || {
+        cn!(
+            "inline-flex gap-2 items-center w-full rounded-sm px-2 py-1.5 text-sm text-left no-underline cursor-pointer transition-colors outline-none text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
+
+    if let Some(href) = href {
+        return view! {
+            <a
+                data-name="ContextMenuAction"
+                role="menuitem"
+                tabindex="-1"
+                href=href
+                class=merged
+                on:click=move |_| {
+                    if close_on_select {
+                        ctx.open.set(false);
+                    }
+                }
+            >
+                {children()}
+            </a>
+        }
+        .into_any();
+    }
+
+    view! {
+        <button
+            type="button"
+            data-name="ContextMenuAction"
+            role="menuitem"
+            tabindex="-1"
+            class=merged
+            on:click=move |_| {
+                if close_on_select {
+                    ctx.close_and_refocus();
+                }
+            }
+        >
+            {children()}
+        </button>
+    }
+    .into_any()
+}
+
+/// A nested submenu host. Hovering the row reveals its [`ContextMenuSubContent`]
+/// via CSS, so the flyout needs no runtime measurement.
+#[component]
+pub fn ContextMenuSub(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <li
+            data-name="ContextMenuSub"
+            class=move || {
+                cn!(
+                    "group/sub relative inline-flex gap-2 items-center w-full rounded-sm px-2 py-1.5 text-sm no-underline cursor-pointer transition-colors text-popover-foreground hover:bg-accent hover:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
+                    class.get(),
+                )
+            }
+        >
+            {children()}
+        </li>
+    }
+}
+
+/// Row that opens its [`ContextMenuSub`] on hover. Renders a trailing chevron and
+/// carries `aria-haspopup="menu"`.
+#[component]
+pub fn ContextMenuSubTrigger(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <span
+            data-name="ContextMenuSubTrigger"
+            role="menuitem"
+            tabindex="-1"
+            aria-haspopup="menu"
+            class=move || cn!("flex items-center justify-between w-full", class.get())
+        >
             <span class="flex gap-2 items-center">{children()}</span>
             <Icon icon=icondata::LuChevronRight attr:class="opacity-70 size-4" />
         </span>
     }
 }
 
+/// Flyout panel revealed when its [`ContextMenuSub`] row is hovered. Carries
+/// `role="menu"`; its visibility is driven by the parent's `group/sub` hover
+/// state, so it animates in without JavaScript.
 #[component]
-pub fn ContextMenuSubItem(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
-    let class = tw_merge!(
-        "inline-flex gap-2 items-center w-full rounded-sm px-3 py-2 text-sm transition-all duration-150 ease text-popover-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer hover:translate-x-[2px]",
-        class
-    );
+pub fn ContextMenuSubContent(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <ul
+            data-name="ContextMenuSubContent"
+            role="menu"
+            class=move || {
+                cn!(
+                    "list-none m-0 absolute z-[100] left-full top-[-0.25rem] ml-2 min-w-[10rem] p-1 rounded-md border bg-popover text-popover-foreground shadow-lg opacity-0 invisible -translate-x-2 transition-all duration-200 ease-out pointer-events-none group-hover/sub:opacity-100 group-hover/sub:visible group-hover/sub:translate-x-0 group-hover/sub:pointer-events-auto",
+                    class.get(),
+                )
+            }
+        >
+            {children()}
+        </ul>
+    }
+}
+
+/// A selectable command inside a [`ContextMenuSubContent`]. Carries
+/// `role="menuitem"` and closes the whole menu when activated.
+#[component]
+pub fn ContextMenuSubItem(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let ctx = expect_context::<ContextMenuContext>();
 
     view! {
-        <li data-name="ContextMenuSubItem" class=class data-context-close="true">
+        <li
+            data-name="ContextMenuSubItem"
+            role="menuitem"
+            tabindex="-1"
+            class=move || {
+                cn!(
+                    "inline-flex gap-2 items-center w-full rounded-sm px-3 py-2 text-sm cursor-pointer transition-all duration-150 text-popover-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-0.5 [&_svg:not([class*='size-'])]:size-4",
+                    class.get(),
+                )
+            }
+            on:click=move |_| ctx.close_and_refocus()
+        >
             {children()}
         </li>
+    }
+}
+
+/// Implements the WAI-ARIA menu roving-tabindex: ArrowUp/Down move focus between
+/// items, Home/End jump to the ends, and Escape closes the menu and restores
+/// focus to the trigger. Runs only inside the keydown handler, so `web_sys` DOM
+/// access never executes during server rendering.
+fn handle_menu_keys(ev: &KeyboardEvent, ctx: ContextMenuContext) {
+    match ev.key().as_str() {
+        "Escape" => {
+            ev.prevent_default();
+            ctx.close_and_refocus();
+        }
+        "ArrowDown" | "ArrowUp" | "Home" | "End" => {
+            let Some(menu) = ctx.content_ref.get_untracked() else {
+                return;
+            };
+            move_focus(ev, &menu);
+        }
+        "Tab" => ctx.close_and_refocus(),
+        _ => {}
+    }
+}
+
+/// Returns the first focusable `role="menuitem"` element within a panel.
+fn first_menu_item(menu: &Element) -> Option<HtmlElement> {
+    menu_items(menu)
+        .and_then(|items| items.item(0))
+        .and_then(|node| node.dyn_into::<HtmlElement>().ok())
+}
+
+/// Collects the menu's enabled item nodes in document order.
+fn menu_items(menu: &Element) -> Option<web_sys::NodeList> {
+    menu.query_selector_all("[role='menuitem']:not([disabled])").ok()
+}
+
+/// Moves DOM focus among the menu's items in response to arrow/Home/End keys,
+/// wrapping at the ends.
+fn move_focus(ev: &KeyboardEvent, menu: &Element) {
+    let Some(items) = menu_items(menu) else {
+        return;
+    };
+    let count = items.length();
+    if count == 0 {
+        return;
+    }
+
+    let active = document().active_element();
+    let current = (0..count).find(|&i| {
+        items
+            .item(i)
+            .and_then(|node| node.dyn_into::<Element>().ok())
+            .zip(active.clone())
+            .is_some_and(|(item, focused)| item == focused)
+    });
+
+    let target = match ev.key().as_str() {
+        "ArrowDown" => current.map_or(0, |i| (i + 1) % count),
+        "ArrowUp" => current.map_or(count - 1, |i| if i == 0 { count - 1 } else { i - 1 }),
+        "Home" => 0,
+        "End" => count - 1,
+        _ => return,
+    };
+
+    if let Some(el) = items
+        .item(target)
+        .and_then(|node| node.dyn_into::<HtmlElement>().ok())
+    {
+        ev.prevent_default();
+        _ = el.focus();
     }
 }

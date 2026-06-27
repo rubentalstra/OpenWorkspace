@@ -1,12 +1,15 @@
+use crate::{cn, use_random_id_for};
+use leptos::context::Provider;
+use leptos::ev::KeyboardEvent;
 use leptos::prelude::*;
-use tw_merge::*;
+use std::time::Duration;
 
-use crate::components::hooks::use_random::use_random_id;
+/// Delay before a pending open or close commits. Closing is deferred so a
+/// pointer crossing the gap between trigger and panel has time to reach the
+/// panel and cancel the pending close.
+const HOVER_DELAY: Duration = Duration::from_millis(150);
 
-/* ========================================================== */
-/*                     ✨ TYPES ✨                            */
-/* ========================================================== */
-
+/// Edge of the trigger the panel anchors to.
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub enum HoverCardSide {
     Top,
@@ -16,135 +19,175 @@ pub enum HoverCardSide {
     Right,
 }
 
-#[derive(Clone)]
-struct HoverCardContext {
-    anchor_name: String,
-    trigger_id: String,
-    content_id: String,
-}
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
-#[component]
-pub fn HoverCard(children: Children, #[prop(default = HoverCardSide::default())] side: HoverCardSide) -> impl IntoView {
-    let id = use_random_id();
-    let anchor_name = format!("--hc_anchor_{}", id);
-    let trigger_id = format!("hc_trigger_{}", id);
-    let content_id = format!("hc_content_{}", id);
-
-    let (position_styles, transform_origin) = match side {
-        HoverCardSide::Bottom => ("position-area: block-end; margin-top: 8px;".to_string(), "center top".to_string()),
-        HoverCardSide::Top => {
-            ("position-area: block-start; margin-bottom: 8px;".to_string(), "center bottom".to_string())
+impl HoverCardSide {
+    /// Absolute-position and slide-origin classes that place the panel on this
+    /// side of the trigger wrapper.
+    fn placement(self) -> &'static str {
+        match self {
+            Self::Bottom => "top-full left-1/2 -translate-x-1/2 mt-2 origin-top",
+            Self::Top => "bottom-full left-1/2 -translate-x-1/2 mb-2 origin-bottom",
+            Self::Left => "right-full top-1/2 -translate-y-1/2 mr-2 origin-right",
+            Self::Right => "left-full top-1/2 -translate-y-1/2 ml-2 origin-left",
         }
-        HoverCardSide::Left => {
-            ("position-area: inline-start; margin-right: 8px;".to_string(), "right center".to_string())
-        }
-        HoverCardSide::Right => ("position-area: inline-end; margin-left: 8px;".to_string(), "left center".to_string()),
-    };
-
-    let ctx = HoverCardContext {
-        anchor_name: anchor_name.clone(),
-        trigger_id: trigger_id.clone(),
-        content_id: content_id.clone(),
-    };
-
-    view! {
-        <leptos::context::Provider value=ctx>
-            <style>
-                {format!(
-                    "
-                    #{content_id} {{
-                        position-anchor: {anchor_name};
-                        inset: auto;
-                        {position_styles}
-                        position-try-fallbacks: flip-block;
-                        position-try-order: most-height;
-                        position-visibility: anchors-visible;
-
-                        &:popover-open {{
-                            opacity: 1;
-                            transform: scale(1) translateY(0px);
-
-                            @starting-style {{
-                                opacity: 0;
-                                transform: scale(0.95) translateY(-4px);
-                            }}
-                        }}
-
-                        & {{
-                            transition:
-                                display 0.2s allow-discrete,
-                                overlay 0.2s allow-discrete,
-                                transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                                opacity 0.15s ease-out;
-                            opacity: 0;
-                            transform: scale(0.95) translateY(-4px);
-                            transform-origin: {transform_origin};
-                        }}
-                    }}
-                    ",
-                )}
-            </style>
-            {children()}
-            <script>
-                {format!(
-                    r#"
-                    (function() {{
-                        const setup = () => {{
-                            const trigger = document.getElementById('{trigger_id}');
-                            const content = document.getElementById('{content_id}');
-                            if (!trigger || !content) {{ setTimeout(setup, 50); return; }}
-                            if (trigger.dataset.hcInit) return;
-                            trigger.dataset.hcInit = '1';
-                            let t;
-                            const show = () => {{ clearTimeout(t); t = setTimeout(() => {{ try {{ content.showPopover(); }} catch(e) {{}} }}, 150); }};
-                            const hide = () => {{ clearTimeout(t); t = setTimeout(() => {{ try {{ content.hidePopover(); }} catch(e) {{}} }}, 150); }};
-                            trigger.addEventListener('mouseenter', show);
-                            trigger.addEventListener('mouseleave', hide);
-                            trigger.addEventListener('focus', show);
-                            trigger.addEventListener('blur', hide);
-                            content.addEventListener('mouseenter', () => clearTimeout(t));
-                            content.addEventListener('mouseleave', hide);
-                        }};
-                        if (document.readyState === 'loading') {{
-                            document.addEventListener('DOMContentLoaded', setup);
-                        }} else {{
-                            setup();
-                        }}
-                    }})();
-                    "#,
-                )}
-            </script>
-        </leptos::context::Provider>
     }
 }
 
+/// Open state plus the timer and id wiring shared from [`HoverCard`] to its
+/// [`HoverCardTrigger`] and [`HoverCardContent`].
+#[derive(Clone, Copy)]
+struct HoverCardContext {
+    open: RwSignal<bool>,
+    side: HoverCardSide,
+    trigger_id: StoredValue<String>,
+    content_id: StoredValue<String>,
+    timer: StoredValue<Option<TimeoutHandle>>,
+}
+
+impl HoverCardContext {
+    fn cancel_pending(self) {
+        if let Some(handle) = self.timer.try_update_value(Option::take).flatten() {
+            handle.clear();
+        }
+    }
+
+    /// Schedules `target` after [`HOVER_DELAY`], replacing any pending change so
+    /// a quick re-entry cancels the opposite transition.
+    fn schedule(self, target: bool) {
+        self.cancel_pending();
+        let open = self.open;
+        let timer = self.timer;
+        if let Ok(handle) = set_timeout_with_handle(
+            move || {
+                _ = open.try_set(target);
+                timer.set_value(None);
+            },
+            HOVER_DELAY,
+        ) {
+            self.timer.set_value(Some(handle));
+        }
+    }
+
+    fn close_now(self) {
+        self.cancel_pending();
+        self.open.set(false);
+    }
+}
+
+/// Rich card revealed when its [`HoverCardTrigger`] is hovered or focused, after
+/// a short delay. Owns the open state and the open/close timer and shares them,
+/// with the id wiring, to the nested trigger and [`HoverCardContent`].
 #[component]
-pub fn HoverCardTrigger(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
+pub fn HoverCard(
+    #[prop(into, optional)] side: HoverCardSide,
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let ctx = HoverCardContext {
+        open: RwSignal::new(false),
+        side,
+        trigger_id: StoredValue::new(use_random_id_for("hovercard")),
+        content_id: StoredValue::new(use_random_id_for("hovercard")),
+        timer: StoredValue::new(None),
+    };
+
+    on_cleanup(move || ctx.cancel_pending());
+
+    view! {
+        <Provider value=ctx>
+            <div
+                data-name="HoverCard"
+                data-state=move || if ctx.open.get() { "open" } else { "closed" }
+                class=move || cn!("relative inline-block", class.get())
+            >
+                {children()}
+            </div>
+        </Provider>
+    }
+}
+
+/// Element that opens the [`HoverCard`] on hover or focus and closes it on
+/// leave or blur. Wires `aria-describedby` to the panel and reflects the open
+/// state through `data-state`.
+#[component]
+pub fn HoverCardTrigger(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
     let ctx = expect_context::<HoverCardContext>();
 
     view! {
         <span
-            id=ctx.trigger_id
-            class=tw_merge!("inline-block", class)
-            style=format!("anchor-name: {}", ctx.anchor_name)
+            data-name="HoverCardTrigger"
+            data-state=move || if ctx.open.get() { "open" } else { "closed" }
+            id=move || ctx.trigger_id.get_value()
+            aria-describedby=move || ctx.content_id.get_value()
+            class=move || cn!("inline-block outline-none", class.get())
+            tabindex="0"
+            on:mouseenter=move |_| ctx.schedule(true)
+            on:mouseleave=move |_| ctx.schedule(false)
+            on:focusin=move |_| ctx.schedule(true)
+            on:focusout=move |_| ctx.schedule(false)
         >
             {children()}
         </span>
     }
 }
 
+/// Floating panel shown while the [`HoverCard`] is open. Hovering it cancels a
+/// pending close so the pointer can move from trigger to panel; leaving it
+/// schedules the close. Escape dismisses it. Rendered only while open.
 #[component]
-pub fn HoverCardContent(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
+pub fn HoverCardContent(
+    #[prop(into, optional)] class: Signal<String>,
+    children: ChildrenFn,
+) -> impl IntoView {
     let ctx = expect_context::<HoverCardContext>();
-    let class = tw_merge!("overflow-visible relative z-50 p-4 rounded-lg border bg-card shadow-md w-64", class);
+
+    Effect::new(move |_| {
+        if !ctx.open.get() {
+            return;
+        }
+        let handle = window_event_listener(leptos::ev::keydown, move |ev: KeyboardEvent| {
+            if ev.key() == "Escape" {
+                ctx.close_now();
+            }
+        });
+        on_cleanup(move || handle.remove());
+    });
 
     view! {
-        <div class=class id=ctx.content_id popover="manual">
-            {children()}
-        </div>
+        <Show when=move || {
+            ctx.open.get()
+        }>
+            {
+                let children = children.clone();
+                view! {
+                    <div
+                        data-name="HoverCardContent"
+                        data-state="open"
+                        data-side=match ctx.side {
+                            HoverCardSide::Top => "top",
+                            HoverCardSide::Bottom => "bottom",
+                            HoverCardSide::Left => "left",
+                            HoverCardSide::Right => "right",
+                        }
+                        role="dialog"
+                        id=move || ctx.content_id.get_value()
+                        aria-labelledby=move || ctx.trigger_id.get_value()
+                        class=move || {
+                            cn!(
+                                "absolute z-50 w-64 rounded-lg border bg-card p-4 text-card-foreground shadow-md animate-in fade-in-0 zoom-in-95 duration-150",
+                                ctx.side.placement(),
+                                class.get(),
+                            )
+                        }
+                        on:mouseenter=move |_| ctx.cancel_pending()
+                        on:mouseleave=move |_| ctx.schedule(false)
+                    >
+                        {children()}
+                    </div>
+                }
+            }
+        </Show>
     }
 }

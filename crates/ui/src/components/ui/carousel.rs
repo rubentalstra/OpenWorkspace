@@ -1,238 +1,223 @@
-use leptos_icons::Icon;
+use crate::{cn, use_random_id_for};
 use leptos::context::Provider;
+use leptos::ev::KeyboardEvent;
 use leptos::prelude::*;
-use tw_merge::*;
+use leptos_icons::Icon;
 
-use crate::components::hooks::use_random::use_random_id_for;
-
-/* ========================================================== */
-/*                     CAROUSEL CONTEXT                       */
-/* ========================================================== */
-
-#[derive(Clone, Copy, PartialEq, Default)]
+/// Layout axis for a [`Carousel`]. `Horizontal` slides translate along the x
+/// axis and bind the left/right arrow keys; `Vertical` slides translate along
+/// the y axis and bind the up/down arrow keys.
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub enum CarouselOrientation {
     #[default]
     Horizontal,
     Vertical,
 }
 
-#[derive(Clone)]
-struct CarouselContext {
-    carousel_id: String,
-    orientation: CarouselOrientation,
+impl CarouselOrientation {
+    fn as_data(self) -> &'static str {
+        match self {
+            Self::Horizontal => "horizontal",
+            Self::Vertical => "vertical",
+        }
+    }
 }
 
-/* ========================================================== */
-/*                     CAROUSEL ROOT                          */
-/* ========================================================== */
+/// Slide state shared from [`Carousel`] to its parts. `index` is the active
+/// slide; `count` is incremented as each [`CarouselItem`] mounts so the
+/// controls and indicator can reason about bounds without measuring the DOM.
+#[derive(Clone, Copy)]
+struct CarouselContext {
+    index: RwSignal<usize>,
+    count: RwSignal<usize>,
+    orientation: CarouselOrientation,
+    looping: bool,
+}
 
+impl CarouselContext {
+    fn can_prev(&self) -> bool {
+        self.looping || self.index.get() > 0
+    }
+
+    fn can_next(&self) -> bool {
+        let count = self.count.get();
+        self.looping || (count > 0 && self.index.get() + 1 < count)
+    }
+
+    fn go_prev(&self) {
+        let count = self.count.get();
+        self.index.update(|i| {
+            if *i > 0 {
+                *i -= 1;
+            } else if self.looping && count > 0 {
+                *i = count - 1;
+            }
+        });
+    }
+
+    fn go_next(&self) {
+        let count = self.count.get();
+        self.index.update(|i| {
+            if *i + 1 < count {
+                *i += 1;
+            } else if self.looping {
+                *i = 0;
+            }
+        });
+    }
+}
+
+/// Slide carousel. Owns the active-slide index and shares it with the nested
+/// [`CarouselContent`], [`CarouselItem`]s, [`CarouselPrevious`],
+/// [`CarouselNext`] and [`CarouselIndicator`] through context. The active slide
+/// is driven by a reactive transform — no scrolling and no JavaScript. Arrow
+/// keys move between slides along the configured axis.
 #[component]
 pub fn Carousel(
+    #[prop(into, optional)] orientation: CarouselOrientation,
+    /// When set, advancing past the last slide wraps to the first (and vice
+    /// versa) and the controls stay enabled at the ends.
+    #[prop(optional)]
+    looping: bool,
+    #[prop(into, optional)] class: Signal<String>,
     children: Children,
-    #[prop(optional, into)] class: String,
-    #[prop(optional)] orientation: CarouselOrientation,
-    #[prop(optional)] looping: bool,
 ) -> impl IntoView {
     let carousel_id = use_random_id_for("carousel");
-    let ctx = CarouselContext { carousel_id: carousel_id.clone(), orientation };
-
-    let orientation_str = match orientation {
-        CarouselOrientation::Horizontal => "horizontal",
-        CarouselOrientation::Vertical => "vertical",
+    let ctx = CarouselContext {
+        index: RwSignal::new(0),
+        count: RwSignal::new(0),
+        orientation,
+        looping,
     };
 
-    let class = tw_merge!("relative", class);
+    let on_keydown = move |ev: KeyboardEvent| {
+        let (prev, next) = match orientation {
+            CarouselOrientation::Horizontal => ("ArrowLeft", "ArrowRight"),
+            CarouselOrientation::Vertical => ("ArrowUp", "ArrowDown"),
+        };
+        let key = ev.key();
+        if key == prev {
+            ev.prevent_default();
+            ctx.go_prev();
+        } else if key == next {
+            ev.prevent_default();
+            ctx.go_next();
+        }
+    };
 
     view! {
         <Provider value=ctx>
-            <style>"[data-carousel-scroll]::-webkit-scrollbar { display: none; }"</style>
-
             <div
                 data-name="Carousel"
-                data-carousel-id=carousel_id.clone()
-                data-carousel-orientation=orientation_str
+                data-carousel-id=carousel_id
+                data-carousel-orientation=orientation.as_data()
                 data-carousel-loop=looping.to_string()
-                class=class
+                class=move || cn!("relative", class.get())
                 role="region"
                 aria-roledescription="carousel"
                 tabindex="0"
+                on:keydown=on_keydown
             >
                 {children()}
             </div>
-
-            <script>
-                {format!(
-                    r#"
-                    (function() {{
-                        const setup = () => {{
-                            const root = document.querySelector('[data-carousel-id="{0}"]');
-                            const scrollEl = root && root.querySelector('[data-carousel-scroll="{0}"]');
-                            const prevBtn = root && root.querySelector('[data-carousel-prev="{0}"]');
-                            const nextBtn = root && root.querySelector('[data-carousel-next="{0}"]');
-
-                            if (!root || !scrollEl) {{ setTimeout(setup, 50); return; }}
-                            if (root.hasAttribute('data-carousel-initialized')) return;
-                            root.setAttribute('data-carousel-initialized', 'true');
-
-                            const isHorizontal = root.getAttribute('data-carousel-orientation') !== 'vertical';
-                            const isLoop = root.getAttribute('data-carousel-loop') === 'true';
-
-                            const getScrollPos  = () => isHorizontal ? scrollEl.scrollLeft : scrollEl.scrollTop;
-                            const getScrollSize = () => isHorizontal ? scrollEl.scrollWidth  : scrollEl.scrollHeight;
-                            const getClientSize = () => isHorizontal ? scrollEl.clientWidth  : scrollEl.clientHeight;
-
-                            const canPrev = () => getScrollPos() > 1;
-                            const canNext = () => Math.round(getScrollPos() + getClientSize()) < getScrollSize() - 1;
-
-                            const countSlides = () => scrollEl.querySelectorAll('[role="group"]').length;
-                            const currentSlide = () => {{
-                                const size = getClientSize();
-                                if (size === 0) return 1;
-                                return Math.min(Math.round(getScrollPos() / size) + 1, countSlides());
-                            }};
-
-                            const updateIndicator = () => {{
-                                const indicator = root.querySelector('[data-carousel-indicator="{0}"]');
-                                if (!indicator) return;
-                                indicator.textContent = `${{currentSlide()}} / ${{countSlides()}}`;
-                            }};
-
-                            const updateButtons = () => {{
-                                if (prevBtn) prevBtn.disabled = !isLoop && !canPrev();
-                                if (nextBtn) nextBtn.disabled = !isLoop && !canNext();
-                                updateIndicator();
-                            }};
-
-                            const scrollPrev = () => {{
-                                if (isLoop && !canPrev()) {{
-                                    if (isHorizontal) scrollEl.scrollLeft = scrollEl.scrollWidth;
-                                    else scrollEl.scrollTop = scrollEl.scrollHeight;
-                                }} else {{
-                                    const size = getClientSize();
-                                    if (isHorizontal) scrollEl.scrollBy({{ left: -size, behavior: 'smooth' }});
-                                    else scrollEl.scrollBy({{ top: -size, behavior: 'smooth' }});
-                                }}
-                            }};
-
-                            const scrollNext = () => {{
-                                if (isLoop && !canNext()) {{
-                                    if (isHorizontal) scrollEl.scrollLeft = 0;
-                                    else scrollEl.scrollTop = 0;
-                                }} else {{
-                                    const size = getClientSize();
-                                    if (isHorizontal) scrollEl.scrollBy({{ left: size, behavior: 'smooth' }});
-                                    else scrollEl.scrollBy({{ top: size, behavior: 'smooth' }});
-                                }}
-                            }};
-
-                            if (prevBtn) prevBtn.addEventListener('click', scrollPrev);
-                            if (nextBtn) nextBtn.addEventListener('click', scrollNext);
-
-                            scrollEl.addEventListener('scroll', updateButtons, {{ passive: true }});
-
-                            root.addEventListener('keydown', (e) => {{
-                                if (isHorizontal) {{
-                                    if (e.key === 'ArrowLeft')  {{ e.preventDefault(); scrollPrev(); }}
-                                    else if (e.key === 'ArrowRight') {{ e.preventDefault(); scrollNext(); }}
-                                }} else {{
-                                    if (e.key === 'ArrowUp')   {{ e.preventDefault(); scrollPrev(); }}
-                                    else if (e.key === 'ArrowDown') {{ e.preventDefault(); scrollNext(); }}
-                                }}
-                            }});
-
-                            updateButtons();
-                        }};
-
-                        if (document.readyState === 'loading') {{
-                            document.addEventListener('DOMContentLoaded', setup);
-                        }} else {{
-                            setup();
-                        }}
-                    }})();
-                    "#,
-                    carousel_id,
-                )}
-            </script>
         </Provider>
     }
 }
 
-/* ========================================================== */
-/*                     CAROUSEL CONTENT                       */
-/* ========================================================== */
-
+/// Viewport that clips the slide track and translates it so the active
+/// [`CarouselItem`] is shown. The transform animates between slides.
 #[component]
-pub fn CarouselContent(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
+pub fn CarouselContent(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
     let ctx = expect_context::<CarouselContext>();
-    let carousel_id = ctx.carousel_id;
 
-    let (scroll_class, inner_class) = match ctx.orientation {
-        CarouselOrientation::Horizontal => {
-            ("overflow-x-auto snap-x snap-mandatory scroll-smooth", tw_merge!("flex -ml-4", class))
-        }
-        CarouselOrientation::Vertical => {
-            ("overflow-y-auto snap-y snap-mandatory scroll-smooth", tw_merge!("flex flex-col -mt-4", class))
+    let track_axis = match ctx.orientation {
+        CarouselOrientation::Horizontal => "flex",
+        CarouselOrientation::Vertical => "flex flex-col",
+    };
+
+    let transform = move || {
+        let offset = ctx.index.get() * 100;
+        match ctx.orientation {
+            CarouselOrientation::Horizontal => format!("transform: translateX(-{offset}%)"),
+            CarouselOrientation::Vertical => format!("transform: translateY(-{offset}%)"),
         }
     };
 
     view! {
-        <div
-            data-carousel-scroll=carousel_id
-            class=scroll_class
-            style="scrollbar-width: none; -ms-overflow-style: none;"
-        >
-            <div class=inner_class>{children()}</div>
+        <div data-name="CarouselContent" aria-live="polite" class="overflow-hidden">
+            <div
+                class=move || {
+                    cn!(track_axis, "transition-transform duration-300 ease-out", class.get())
+                }
+                style=transform
+            >
+                {children()}
+            </div>
         </div>
     }
 }
 
-/* ========================================================== */
-/*                     CAROUSEL ITEM                          */
-/* ========================================================== */
-
+/// A single slide. Claims its slot in the track when it mounts and releases it
+/// on cleanup so [`Carousel`] always knows the live slide count. Slides that are
+/// not active are hidden from assistive technology and removed from the tab
+/// order so a screen reader never reads an off-screen slide.
 #[component]
-pub fn CarouselItem(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
+pub fn CarouselItem(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
     let ctx = expect_context::<CarouselContext>();
 
-    let padding = match ctx.orientation {
-        CarouselOrientation::Horizontal => "pl-4",
-        CarouselOrientation::Vertical => "pt-4",
-    };
+    let slot = StoredValue::new(ctx.count.get_untracked());
+    ctx.count.update(|n| *n += 1);
+    on_cleanup(move || {
+        ctx.count.update(|n| *n = n.saturating_sub(1));
+    });
 
-    let class = tw_merge!("min-w-0 shrink-0 grow-0 basis-full snap-start", padding, class);
+    let is_active = Memo::new(move |_| ctx.index.get() == slot.get_value());
 
     view! {
-        <div data-name="CarouselItem" role="group" aria-roledescription="slide" class=class>
+        <div
+            data-name="CarouselItem"
+            role="group"
+            aria-roledescription="slide"
+            aria-hidden=move || (!is_active.get()).then_some("true")
+            inert=move || !is_active.get()
+            class=move || cn!("min-w-0 shrink-0 grow-0 basis-full", class.get())
+        >
             {children()}
         </div>
     }
 }
 
-/* ========================================================== */
-/*                     CAROUSEL PREVIOUS                      */
-/* ========================================================== */
-
+/// Button moving to the previous slide. Disabled at the first slide unless the
+/// enclosing [`Carousel`] loops.
 #[component]
-pub fn CarouselPrevious(#[prop(optional, into)] class: String) -> impl IntoView {
+pub fn CarouselPrevious(#[prop(into, optional)] class: Signal<String>) -> impl IntoView {
     let ctx = expect_context::<CarouselContext>();
 
-    let position_class = match ctx.orientation {
+    let position = match ctx.orientation {
         CarouselOrientation::Horizontal => "top-1/2 -left-12 -translate-y-1/2",
         CarouselOrientation::Vertical => "-top-12 left-1/2 -translate-x-1/2 rotate-90",
     };
 
-    let class = tw_merge!(
-        "absolute inline-flex items-center justify-center size-8 rounded-full border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground cursor-pointer touch-manipulation disabled:pointer-events-none disabled:opacity-50",
-        position_class,
-        class
-    );
-
     view! {
         <button
+            type="button"
             data-name="CarouselPrevious"
-            data-carousel-prev=ctx.carousel_id
-            class=class
+            class=move || {
+                cn!(
+                    "absolute inline-flex items-center justify-center size-8 rounded-full border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground cursor-pointer touch-manipulation disabled:pointer-events-none disabled:opacity-50",
+                    position,
+                    class.get(),
+                )
+            }
             aria-label="Previous slide"
+            disabled=move || !ctx.can_prev()
+            on:click=move |_| ctx.go_prev()
         >
             <Icon icon=icondata::LuChevronLeft attr:class="size-4" />
             <span class="sr-only">"Previous slide"</span>
@@ -240,31 +225,31 @@ pub fn CarouselPrevious(#[prop(optional, into)] class: String) -> impl IntoView 
     }
 }
 
-/* ========================================================== */
-/*                     CAROUSEL NEXT                          */
-/* ========================================================== */
-
+/// Button moving to the next slide. Disabled at the last slide unless the
+/// enclosing [`Carousel`] loops.
 #[component]
-pub fn CarouselNext(#[prop(optional, into)] class: String) -> impl IntoView {
+pub fn CarouselNext(#[prop(into, optional)] class: Signal<String>) -> impl IntoView {
     let ctx = expect_context::<CarouselContext>();
 
-    let position_class = match ctx.orientation {
+    let position = match ctx.orientation {
         CarouselOrientation::Horizontal => "top-1/2 -right-12 -translate-y-1/2",
         CarouselOrientation::Vertical => "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
     };
 
-    let class = tw_merge!(
-        "absolute inline-flex items-center justify-center size-8 rounded-full border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground cursor-pointer touch-manipulation disabled:pointer-events-none disabled:opacity-50",
-        position_class,
-        class
-    );
-
     view! {
         <button
+            type="button"
             data-name="CarouselNext"
-            data-carousel-next=ctx.carousel_id
-            class=class
+            class=move || {
+                cn!(
+                    "absolute inline-flex items-center justify-center size-8 rounded-full border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground cursor-pointer touch-manipulation disabled:pointer-events-none disabled:opacity-50",
+                    position,
+                    class.get(),
+                )
+            }
             aria-label="Next slide"
+            disabled=move || !ctx.can_next()
+            on:click=move |_| ctx.go_next()
         >
             <Icon icon=icondata::LuChevronRight attr:class="size-4" />
             <span class="sr-only">"Next slide"</span>
@@ -272,15 +257,25 @@ pub fn CarouselNext(#[prop(optional, into)] class: String) -> impl IntoView {
     }
 }
 
-/* ========================================================== */
-/*                     CAROUSEL INDICATOR                     */
-/* ========================================================== */
-
-/// Displays "current / total" slide count, updated automatically by JS.
+/// Live "current / total" slide readout, recomputed from the shared index and
+/// slide count.
 #[component]
-pub fn CarouselIndicator(#[prop(optional, into)] class: String) -> impl IntoView {
+pub fn CarouselIndicator(#[prop(into, optional)] class: Signal<String>) -> impl IntoView {
     let ctx = expect_context::<CarouselContext>();
-    let class = tw_merge!("py-2 text-center text-sm text-muted-foreground", class);
 
-    view! { <div data-name="CarouselIndicator" data-carousel-indicator=ctx.carousel_id class=class /> }
+    let label = move || {
+        let count = ctx.count.get();
+        let current = if count == 0 { 0 } else { ctx.index.get() + 1 };
+        format!("{current} / {count}")
+    };
+
+    view! {
+        <div
+            data-name="CarouselIndicator"
+            aria-live="polite"
+            class=move || cn!("py-2 text-center text-sm text-muted-foreground", class.get())
+        >
+            {label}
+        </div>
+    }
 }
