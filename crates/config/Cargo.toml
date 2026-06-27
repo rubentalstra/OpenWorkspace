@@ -10,6 +10,7 @@ figment = { version = "0.10.19", features = ["toml", "env"] }
 secrecy.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+humantime-serde = "1.1.1"
 
 [lints]
 workspace = true

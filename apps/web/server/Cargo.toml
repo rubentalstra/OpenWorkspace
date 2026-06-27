@@ -9,6 +9,7 @@ license.workspace = true
 app = { path = "../app", version = "0.1.0", default-features = false, features = ["ssr"] }
 config = { path = "../../../crates/config", version = "0.1.0" }
 db = { path = "../../../crates/db", version = "0.1.0" }
+auth = { path = "../../../crates/auth", version = "0.1.0", features = ["ssr"] }
 observability = { path = "../../../crates/observability", version = "0.1.0" }
 leptos = { workspace = true, features = ["ssr"] }
 leptos_axum.workspace = true

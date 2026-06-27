@@ -1,10 +1,15 @@
 //! PostgreSQL access and migrations (sqlx), behind a thin facade.
 
 mod bookings;
+mod credentials;
 
 pub use bookings::{
     Booking, BookingSourceRow, BookingStatusRow, BookingVisibilityRow, CreatedBooking, NewBooking,
     OccurrenceKindRow, apply_transition, auto_release, cancel, check_in, check_out, create_booking,
+};
+pub use credentials::{
+    CredentialRow, UserStatusRow, insert_bootstrap_admin, instance_admin_exists,
+    load_credential_by_email, load_credential_by_id, touch_last_login, update_password_hash,
 };
 
 use secrecy::{ExposeSecret, SecretString};

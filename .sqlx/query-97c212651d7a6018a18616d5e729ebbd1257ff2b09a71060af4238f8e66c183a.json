@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            u.id,\n            u.email::text AS \"email!\",\n            u.status AS \"status: UserStatusRow\",\n            u.last_login_at,\n            pc.must_change,\n            pc.password_hash\n        FROM users u\n        JOIN password_credentials pc ON pc.user_id = u.id\n        WHERE u.id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "email!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "status: UserStatusRow",
+        "type_info": {
+          "Custom": {
+            "name": "user_status",
+            "kind": {
+              "Enum": [
+                "active",
+                "suspended",
+                "deactivated"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "last_login_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "last_login_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "must_change",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "password_credentials",
+            "name": "must_change"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "password_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "password_credentials",
+            "name": "password_hash"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "97c212651d7a6018a18616d5e729ebbd1257ff2b09a71060af4238f8e66c183a"
+}

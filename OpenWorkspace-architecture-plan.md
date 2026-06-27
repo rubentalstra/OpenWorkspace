@@ -76,7 +76,7 @@ Latest from crates.io, GitHub and npm as of 26 June 2026; re-pin at install.
 | Database and queries | sqlx (Postgres, compile-time-checked, `PgListener`) + PostgreSQL 18 (`btree_gist`, `pg_trgm`, `citext`) | sqlx 0.9.0; PostgreSQL 18.4 |
 | Background jobs and cron | apalis + apalis-sql (Postgres-durable) | 0.7.4 |
 | Date/time and recurrence | chrono + chrono-tz + rrule | chrono 0.4.45; chrono-tz 0.10.4; rrule 0.14.0 |
-| Sessions and authorization | axum-login + tower-sessions (Postgres store) | axum-login 0.18.0; tower-sessions 0.15.0 |
+| Sessions and authorization | axum-login + tower-sessions (Postgres store) | axum-login 0.18.0; tower-sessions 0.14.0; tower-sessions-sqlx-store 0.15.0 |
 | Passwords, passkeys, TOTP | argon2 (Argon2id) + webauthn-rs + totp-rs | argon2 0.5.3; webauthn-rs 0.5.5; totp-rs 5.7.2 |
 | SSO (OIDC, the only SSO for now) | openidconnect + oauth2 (Authorization Code + PKCE) | openidconnect 4.0.1; oauth2 5.0.0 |
 | Local OIDC for dev and test | Keycloak (a real OIDC provider for SSO tests; not a runtime dependency) | 26.6.3 |

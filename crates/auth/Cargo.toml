@@ -6,6 +6,81 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+# Non-optional: the facade's typed domain surface, available without `ssr`.
+domain = { path = "../domain", version = "0.1.0" }
+db = { path = "../db", version = "0.1.0" }
+crypto = { path = "../crypto", version = "0.1.0" }
+config = { path = "../config", version = "0.1.0" }
+secrecy.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+uuid = { version = "1", features = ["v4", "serde"] }
+tracing.workspace = true
+
+# ssr-only: the vendor session/auth stack lives entirely behind this feature so
+# axum_login / tower_sessions / sqlx types never reach another crate's API.
+axum = { workspace = true, optional = true }
+axum-login = { version = "0.18.0", optional = true }
+tower-sessions = { version = "0.14.0", optional = true }
+# `tower_sessions::SessionStore` is an `#[async_trait]` trait and is not
+# re-exported by the facade; the macro is needed to implement it.
+async-trait = { version = "0.1.74", optional = true }
+# The first-party `PgSessionStore` runs session-row CRUD over the workspace's
+# sqlx 0.9 `db::Db` pool — exactly the `db` crate's feature set so there is one
+# `sqlx` in the tree (and one chrono/time mapping for `timestamptz`). The store's
+# wire format matches the upstream tower-sessions-sqlx-store (rmp_serde body,
+# base64 text id) so the existing migration is reused unchanged.
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "macros", "chrono", "uuid"], optional = true }
+rmp-serde = { version = "1", optional = true }
+# Converts the record's `time::OffsetDateTime` expiry to the `chrono` type the
+# shared sqlx pool maps `timestamptz` to (matching the `db` crate's mapping).
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"], optional = true }
+tokio = { workspace = true, optional = true }
+rand = { version = "0.9", optional = true }
+base64 = { version = "0.22", optional = true }
+subtle = { version = "2.6", optional = true }
+time = { version = "0.3", optional = true }
+form_urlencoded = { version = "1.2", optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+tower = { workspace = true }
+http = { workspace = true }
+# 0.9 to match `db::Db`'s PgPool type; provides `#[sqlx::test]` for the backend
+# and store tests, which run the db crate's migrations.
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "macros", "migrate", "chrono", "uuid"] }
+secrecy = { workspace = true }
+crypto = { path = "../crypto", version = "0.1.0" }
+argon2 = { version = "0.5.3", features = ["std"] }
+chrono = "0.4.45"
+axum = { workspace = true }
+axum-login = { version = "0.18.0" }
+tower-sessions = { version = "0.14.0" }
+http-body-util = "0.1"
+form_urlencoded = "1.2"
+config = { path = "../config", version = "0.1.0" }
+# Store round-trip tests build records with a JSON data map and time-based expiry.
+serde_json = "1"
+time = { version = "0.3", features = ["std"] }
+# Bootstrap test captures tracing output to assert no secret is logged.
+tracing-subscriber = { version = "0.3.23", features = ["fmt"] }
+
+[features]
+ssr = [
+    "dep:axum",
+    "dep:axum-login",
+    "dep:tower-sessions",
+    "dep:async-trait",
+    "dep:sqlx",
+    "dep:rmp-serde",
+    "dep:chrono",
+    "dep:tokio",
+    "dep:rand",
+    "dep:base64",
+    "dep:subtle",
+    "dep:time",
+    "dep:form_urlencoded",
+]
 
 [lints]
 workspace = true
