@@ -207,20 +207,20 @@ pub fn SelectContent(
             if let Some(panel) = ctx.panel_ref.get() {
                 _ = panel.focus();
             }
-        } else if was_open == Some(true) {
-            if let Some(trigger) = ctx.trigger_ref.get_untracked() {
-                _ = trigger.focus();
-            }
+        } else if was_open == Some(true)
+            && let Some(trigger) = ctx.trigger_ref.get_untracked()
+        {
+            _ = trigger.focus();
         }
         open
     });
 
-    let merged = move || {
+    let merged = Signal::derive(move || {
         cn!(
             "w-[150px] min-w-[8rem] overflow-auto z-50 p-1 rounded-md border bg-card shadow-md h-fit max-h-[300px] absolute left-0 origin-top data-[position=below]:top-[calc(100%+4px)] data-[position=above]:bottom-[calc(100%+4px)] data-[position=above]:origin-bottom outline-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             class.get(),
         )
-    };
+    });
 
     view! {
         <Show when=move || ctx.open.get()>
@@ -234,7 +234,7 @@ pub fn SelectContent(
                 data-state="open"
                 data-position=move || position.get().as_data()
                 class=merged
-                on:scroll=on_scroll
+                on:scroll=on_scroll.clone()
                 on:keydown=move |ev: KeyboardEvent| move_focus(&ev, ctx.panel_ref)
             >
                 <Show when=move || can_scroll_up.get()>

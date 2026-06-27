@@ -162,10 +162,10 @@ pub fn PopoverContent(
             if let Some(panel) = ctx.panel_ref.get() {
                 _ = panel.focus();
             }
-        } else if was_open == Some(true) {
-            if let Some(trigger) = ctx.trigger_ref.get_untracked() {
-                _ = trigger.focus();
-            }
+        } else if was_open == Some(true)
+            && let Some(trigger) = ctx.trigger_ref.get_untracked()
+        {
+            _ = trigger.focus();
         }
         open
     });

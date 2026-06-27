@@ -193,7 +193,7 @@ pub fn DropdownMenuContent(
             ctx.open.get()
         }>
             {
-                let panel = panel.clone();
+                let panel = panel;
                 view! {
                     <div
                         aria-hidden="true"

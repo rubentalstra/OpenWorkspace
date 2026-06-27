@@ -143,8 +143,16 @@ pub fn ContextMenuContent(
         let mut y = f64::from(py);
         if let Some(panel) = ctx.content_ref.get() {
             let rect = panel.get_bounding_client_rect();
-            let viewport_width = window().inner_width().ok().and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let viewport_height = window().inner_height().ok().and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let viewport_width = window()
+                .inner_width()
+                .ok()
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let viewport_height = window()
+                .inner_height()
+                .ok()
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
             if x + rect.width() > viewport_width {
                 x = (x - rect.width()).max(0.0);
             }
@@ -175,8 +183,8 @@ pub fn ContextMenuContent(
             ctx.open.get()
         }>
             {
-                let panel = panel.clone();
-                let style = style.clone();
+                let panel = panel;
+                let style = style;
                 view! {
                     <div
                         aria-hidden="true"
@@ -448,7 +456,8 @@ fn first_menu_item(menu: &Element) -> Option<HtmlElement> {
 
 /// Collects the menu's enabled item nodes in document order.
 fn menu_items(menu: &Element) -> Option<web_sys::NodeList> {
-    menu.query_selector_all("[role='menuitem']:not([disabled])").ok()
+    menu.query_selector_all("[role='menuitem']:not([disabled])")
+        .ok()
 }
 
 /// Moves DOM focus among the menu's items in response to arrow/Home/End keys,

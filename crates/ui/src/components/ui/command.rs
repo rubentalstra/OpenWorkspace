@@ -96,7 +96,8 @@ impl CommandContext {
             None if forward => 0,
             None => visible.len() - 1,
         };
-        self.active.set(visible.get(next).map(|item| item.id.clone()));
+        self.active
+            .set(visible.get(next).map(|item| item.id.clone()));
     }
 
     fn activate_edge(&self, first: bool) {
@@ -155,10 +156,9 @@ pub fn CommandDialogProvider(
 
     let handle = window_event_listener(ev::keydown, move |event| {
         let key = event.key();
-        if (event.meta_key() || event.ctrl_key()) && key == "k" {
-            event.prevent_default();
-            open.set(true);
-        } else if key == "/" && !open.get_untracked() && !in_text_field() {
+        let open_combo = (event.meta_key() || event.ctrl_key()) && key == "k";
+        let slash = key == "/" && !open.get_untracked() && !in_text_field();
+        if open_combo || slash {
             event.prevent_default();
             open.set(true);
         }
@@ -203,6 +203,7 @@ pub fn CommandDialog(
 ) -> impl IntoView {
     let ctx = expect_context::<CommandDialogContext>();
     let panel_ref = NodeRef::<html::Div>::new();
+    let children = StoredValue::new(children);
 
     let locked = use_lock_body_scroll(false);
     Effect::new(move |was_open: Option<bool>| {
@@ -212,12 +213,11 @@ pub fn CommandDialog(
             if let Some(el) = panel_ref.get() {
                 _ = el.focus();
             }
-        } else if was_open == Some(true) {
-            if let Some(el) = document().get_element_by_id(&ctx.trigger_id.get_value()) {
-                if let Some(el) = el.dyn_ref::<web_sys::HtmlElement>() {
-                    _ = el.focus();
-                }
-            }
+        } else if was_open == Some(true)
+            && let Some(el) = document().get_element_by_id(&ctx.trigger_id.get_value())
+            && let Some(el) = el.dyn_ref::<web_sys::HtmlElement>()
+        {
+            _ = el.focus();
         }
         is_open
     });
@@ -230,12 +230,12 @@ pub fn CommandDialog(
     });
     on_cleanup(move || handle.remove());
 
-    let panel = move || {
+    let panel = Signal::derive(move || {
         cn!(
             "grid fixed z-100 gap-4 p-2 w-full bg-clip-padding rounded-xl ring-4 shadow-2xl outline-none sm:max-w-lg bg-background top-[50%] left-[50%] max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] ring-neutral-200/80",
             class.get()
         )
-    };
+    });
 
     view! {
         <Show when=move || ctx.open.get()>
@@ -255,7 +255,7 @@ pub fn CommandDialog(
                     tabindex="-1"
                     class=panel
                 >
-                    {children()}
+                    {children.get_value()()}
                 </div>
             </Portal>
         </Show>
@@ -427,10 +427,9 @@ pub fn CommandGroup(
             return true;
         }
         let group_prefix = format!("{}__opt_", group_id.get_value());
-        ctx.items
-            .get()
-            .iter()
-            .any(|item| !item.disabled && item.id.starts_with(&group_prefix) && ctx.matches(&item.label))
+        ctx.items.get().iter().any(|item| {
+            !item.disabled && item.id.starts_with(&group_prefix) && ctx.matches(&item.label)
+        })
     };
 
     let merged = move || {
@@ -499,7 +498,15 @@ pub fn CommandItem(
         )
     };
 
-    command_option("CommandItem", OptionTag::Div, value, merged, on_select, disabled, children)
+    command_option(
+        "CommandItem",
+        OptionTag::Div,
+        value,
+        merged,
+        on_select,
+        disabled,
+        children,
+    )
 }
 
 /// Anchor variant of [`CommandItem`] for options that navigate. Same registration,
@@ -521,7 +528,15 @@ pub fn CommandItemLink(
         )
     };
 
-    command_option("CommandItemLink", OptionTag::Anchor, value, merged, on_select, disabled, children)
+    command_option(
+        "CommandItemLink",
+        OptionTag::Anchor,
+        value,
+        merged,
+        on_select,
+        disabled,
+        children,
+    )
 }
 
 #[derive(Clone, Copy)]
@@ -534,6 +549,10 @@ enum OptionTag {
 /// with its [`Command`] root on mount (and a [`CommandGroup`] prefix when nested),
 /// deregisters on cleanup, reflects the active highlight via `aria-selected`, and
 /// hides itself when filtered out.
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "owned so the returned view does not capture the argument's lifetime"
+)]
 fn command_option(
     data_name: &'static str,
     tag: OptionTag,
@@ -564,7 +583,8 @@ fn command_option(
     }
     on_cleanup(move || {
         let target = id.get_value();
-        ctx.items.update(|items| items.retain(|item| item.id != target));
+        ctx.items
+            .update(|items| items.retain(|item| item.id != target));
     });
 
     let is_visible = move || ctx.matches(&label.get_value());
@@ -633,10 +653,10 @@ fn in_text_field() -> bool {
     let Some(active) = document().active_element() else {
         return false;
     };
-    if let Some(el) = active.dyn_ref::<web_sys::HtmlElement>() {
-        if el.is_content_editable() {
-            return true;
-        }
+    if let Some(el) = active.dyn_ref::<web_sys::HtmlElement>()
+        && el.is_content_editable()
+    {
+        return true;
     }
     matches!(active.tag_name().as_str(), "INPUT" | "TEXTAREA")
 }

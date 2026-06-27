@@ -89,8 +89,7 @@ pub fn ActionBarButton(
     }
 
     let is_active = Memo::new(move |_| ctx.selected.get().as_deref() == Some(&value.get_value()));
-    let is_tab_stop =
-        Memo::new(move |_| ctx.roving.get().as_deref() == Some(&value.get_value()));
+    let is_tab_stop = Memo::new(move |_| ctx.roving.get().as_deref() == Some(&value.get_value()));
 
     let merged = move || {
         let state = if is_active.get() {

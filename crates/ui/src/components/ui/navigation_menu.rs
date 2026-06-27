@@ -29,7 +29,6 @@ struct NavigationMenuContext {
     timer: StoredValue<Option<TimeoutHandle>>,
     root_ref: NodeRef<html::Nav>,
     active_trigger: StoredValue<Option<NodeRef<html::Button>>>,
-    pending_focus: RwSignal<bool>,
 }
 
 impl NavigationMenuContext {
@@ -43,14 +42,6 @@ impl NavigationMenuContext {
         self.cancel_pending();
         self.active_trigger.set_value(Some(trigger));
         self.active.set(Some(id));
-    }
-
-    /// Opens a panel and requests that its first link take focus once the panel
-    /// mounts. Used for keyboard intent (ArrowDown), where hover-style opening
-    /// must not steal focus.
-    fn open_with_focus(self, id: String, trigger: NodeRef<html::Button>) {
-        self.pending_focus.set(true);
-        self.open(id, trigger);
     }
 
     /// Schedules the menu to close after [`HOVER_DELAY`]; a re-entry that calls
@@ -118,7 +109,6 @@ pub fn NavigationMenu(
         timer: StoredValue::new(None),
         root_ref: NodeRef::new(),
         active_trigger: StoredValue::new(None),
-        pending_focus: RwSignal::new(false),
     };
 
     on_cleanup(move || ctx.cancel_pending());

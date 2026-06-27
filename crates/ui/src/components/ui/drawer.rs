@@ -1,6 +1,4 @@
-use crate::{
-    Button, ButtonSize, ButtonVariant, clx, cn, use_lock_body_scroll, use_random_id_for,
-};
+use crate::{Button, ButtonSize, ButtonVariant, clx, cn, use_lock_body_scroll, use_random_id_for};
 use leptos::context::Provider;
 use leptos::ev::KeyboardEvent;
 use leptos::html;
@@ -272,13 +270,12 @@ pub fn DrawerContent(
             if let Some(panel) = panel_ref.get() {
                 _ = panel.focus();
             }
-        } else if prev == Some(true) {
-            if let Some(trigger) = document()
+        } else if prev == Some(true)
+            && let Some(trigger) = document()
                 .get_element_by_id(&ctx.trigger_id.get_value())
                 .and_then(|el| el.dyn_into::<HtmlElement>().ok())
-            {
-                _ = trigger.focus();
-            }
+        {
+            _ = trigger.focus();
         }
         open
     });
@@ -318,7 +315,11 @@ pub fn DrawerContent(
             } else {
                 pos.offscreen()
             },
-            if ctx.open.get() { "" } else { "pointer-events-none" },
+            if ctx.open.get() {
+                ""
+            } else {
+                "pointer-events-none"
+            },
             class.get(),
         )
     };

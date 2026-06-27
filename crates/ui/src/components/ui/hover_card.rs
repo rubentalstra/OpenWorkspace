@@ -142,6 +142,7 @@ pub fn HoverCardContent(
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<HoverCardContext>();
+    let children = StoredValue::new(children);
 
     Effect::new(move |_| {
         if !ctx.open.get() {
@@ -160,7 +161,7 @@ pub fn HoverCardContent(
             ctx.open.get()
         }>
             {
-                let children = children.clone();
+                let children = children.get_value();
                 view! {
                     <div
                         data-name="HoverCardContent"

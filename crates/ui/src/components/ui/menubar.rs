@@ -100,7 +100,7 @@ struct MenubarMenuContext {
     content_id: StoredValue<String>,
     trigger_id: StoredValue<String>,
     trigger_ref: NodeRef<html::Button>,
-    content_ref: NodeRef<html::Div>,
+    content_ref: NodeRef<html::Ul>,
     bar: MenubarContext,
 }
 
@@ -231,7 +231,7 @@ pub fn MenubarContent(
             ctx.is_open()
         }>
             {
-                let panel = panel.clone();
+                let panel = panel;
                 view! {
                     <div
                         aria-hidden="true"
@@ -525,7 +525,7 @@ pub fn MenubarSubContent(
             ctx.open.get()
         }>
             {
-                let panel = panel.clone();
+                let panel = panel;
                 view! {
                     <ul data-name="MenubarSubContent" role="menu" class=panel>
                         {move || children.read_value()()}

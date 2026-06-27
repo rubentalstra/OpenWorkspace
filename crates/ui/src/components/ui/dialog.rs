@@ -64,12 +64,12 @@ pub fn Dialog(
     Effect::new(move |was_open: Option<bool>| {
         let is_open = open.get();
         locked.set(is_open);
-        if was_open == Some(true) && !is_open {
-            if let Some(el) = document().get_element_by_id(&ctx.trigger_id.get_value()) {
-                if let Some(el) = el.dyn_ref::<web_sys::HtmlElement>() {
-                    _ = el.focus();
-                }
-            }
+        if was_open == Some(true)
+            && !is_open
+            && let Some(el) = document().get_element_by_id(&ctx.trigger_id.get_value())
+            && let Some(el) = el.dyn_ref::<web_sys::HtmlElement>()
+        {
+            _ = el.focus();
         }
         is_open
     });
@@ -133,10 +133,10 @@ pub fn DialogContent(
     let panel_ref = NodeRef::<html::Div>::new();
 
     Effect::new(move |_| {
-        if ctx.open.get() {
-            if let Some(el) = panel_ref.get() {
-                _ = el.focus();
-            }
+        if ctx.open.get()
+            && let Some(el) = panel_ref.get()
+        {
+            _ = el.focus();
         }
     });
 

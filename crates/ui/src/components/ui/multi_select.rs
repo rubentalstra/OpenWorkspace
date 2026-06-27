@@ -10,8 +10,7 @@ use leptos_icons::Icon;
 use web_sys::{Element, HtmlElement, Node};
 
 pub use crate::components::ui::select::{
-    SelectGroup as MultiSelectGroup, SelectItem as MultiSelectItem,
-    SelectLabel as MultiSelectLabel,
+    SelectGroup as MultiSelectGroup, SelectItem as MultiSelectItem, SelectLabel as MultiSelectLabel,
 };
 
 /// Horizontal placement of a [`MultiSelectContent`] popup relative to its
@@ -60,6 +59,10 @@ struct MultiSelectContext {
 ///
 /// Pass `values` to drive the selection externally (controlled); otherwise an
 /// internal set is used.
+#[expect(
+    clippy::implicit_hasher,
+    reason = "the public component prop uses the standard hasher"
+)]
 #[component]
 pub fn MultiSelect(
     /// External signal holding the selected values; when omitted the component
@@ -166,10 +169,10 @@ pub fn MultiSelectContent(
             if let Some(panel) = ctx.panel_ref.get() {
                 focus_first_option(&panel);
             }
-        } else if was_open == Some(true) {
-            if let Some(trigger) = ctx.trigger_ref.get_untracked() {
-                _ = trigger.focus();
-            }
+        } else if was_open == Some(true)
+            && let Some(trigger) = ctx.trigger_ref.get_untracked()
+        {
+            _ = trigger.focus();
         }
         open
     });
@@ -278,7 +281,10 @@ fn focus_first_option(panel: &Element) {
     else {
         return;
     };
-    if let Some(el) = options.item(0).and_then(|n| n.dyn_into::<HtmlElement>().ok()) {
+    if let Some(el) = options
+        .item(0)
+        .and_then(|n| n.dyn_into::<HtmlElement>().ok())
+    {
         _ = el.focus();
     }
 }
@@ -314,7 +320,10 @@ fn move_focus(ev: &KeyboardEvent, panel: &Element) {
     };
     let Some(target) = target else { return };
 
-    if let Some(el) = options.item(target).and_then(|n| n.dyn_into::<HtmlElement>().ok()) {
+    if let Some(el) = options
+        .item(target)
+        .and_then(|n| n.dyn_into::<HtmlElement>().ok())
+    {
         ev.prevent_default();
         _ = el.focus();
     }
