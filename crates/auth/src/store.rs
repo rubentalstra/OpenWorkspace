@@ -16,11 +16,13 @@
 //! No `sqlx` or `tower_sessions` type appears in this module's public surface
 //! beyond the implemented trait; the store is constructed from a [`db::Db`].
 
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
 use db::Db;
 use tower_sessions::SessionStore;
 use tower_sessions::session::{Id, Record};
-use tower_sessions::session_store;
+use tower_sessions::session_store::{self, ExpiredDeletion};
 
 /// Bound on the create-collision retry loop. A 128-bit random id collision is
 /// astronomically unlikely; a handful of attempts removes any realistic chance
@@ -150,6 +152,44 @@ impl SessionStore for PgSessionStore {
     }
 }
 
+#[async_trait::async_trait]
+impl ExpiredDeletion for PgSessionStore {
+    async fn delete_expired(&self) -> session_store::Result<()> {
+        sqlx::query!(r#"DELETE FROM tower_sessions.session WHERE expiry_date < now()"#)
+            .execute(&self.db)
+            .await
+            .map_err(|e| backend(&e))?;
+        Ok(())
+    }
+}
+
+/// Spawns a background task that reaps expired session rows on a fixed `period`.
+///
+/// `load` already filters expired rows server-side, so an expired session never
+/// authenticates; this task only stops the table from accumulating dead rows
+/// (which would otherwise grow unbounded and bloat the `expiry_date` index). A
+/// transient database error is logged and the loop continues — a blip must not
+/// silently kill reaping for the process lifetime. The returned
+/// [`tokio::task::JoinHandle`] should be held for as long as reaping is wanted;
+/// dropping it does not stop the task, but holding it keeps ownership explicit.
+///
+/// Takes the first-party [`Db`] and a `std::time::Duration` so no `tower_sessions`
+/// type appears in the signature.
+#[must_use]
+pub fn spawn_session_reaper(db: Db, period: Duration) -> tokio::task::JoinHandle<()> {
+    let store = PgSessionStore::new(db);
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(period);
+        // The first tick fires immediately; an initial sweep at startup is fine.
+        loop {
+            interval.tick().await;
+            if let Err(err) = store.delete_expired().await {
+                tracing::warn!(error = %err, "session reaper: delete_expired failed; retrying next period");
+            }
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -158,6 +198,7 @@ mod tests {
     use time::{Duration, OffsetDateTime};
     use tower_sessions::SessionStore as _;
     use tower_sessions::session::{Id, Record};
+    use tower_sessions::session_store::ExpiredDeletion as _;
 
     use super::PgSessionStore;
 
@@ -203,6 +244,47 @@ mod tests {
         assert!(
             store.load(&rec.id).await.unwrap().is_none(),
             "delete must remove the record"
+        );
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn delete_expired_removes_only_expired_rows(pool: PgPool) {
+        let store = PgSessionStore::new(pool.clone());
+        let live = record(3600);
+        let expired = record(-1);
+        // `save` writes the row verbatim (no expiry gate), so the expired row
+        // lands in the table and is then reaped.
+        store.save(&live).await.unwrap();
+        store.save(&expired).await.unwrap();
+
+        store.delete_expired().await.unwrap();
+
+        let remaining: i64 = sqlx::query_scalar("SELECT count(*) FROM tower_sessions.session")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(remaining, 1, "only the live row must survive reaping");
+        assert!(
+            store.load(&live.id).await.unwrap().is_some(),
+            "the live session must remain"
+        );
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn expiry_date_index_exists_after_migrate(pool: PgPool) {
+        // The reversible session_expiry_index migration creates this index; without
+        // it the reaper's `expiry_date < now()` would full-scan the table.
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM pg_indexes \
+             WHERE schemaname = 'tower_sessions' AND tablename = 'session' \
+             AND indexname = 'idx_session_expiry_date')",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(
+            exists,
+            "the session_expiry_index migration must create idx_session_expiry_date"
         );
     }
 

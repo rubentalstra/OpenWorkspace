@@ -10,6 +10,7 @@ use db::Db;
 use leptos::logging::log;
 use leptos::prelude::*;
 use leptos_axum::{LeptosRoutes, generate_route_list};
+use secrecy::SecretString;
 use tower_http::trace::TraceLayer;
 
 /// Shared web state. `FromRef` lets Leptos pull `LeptosOptions` and handlers pull
@@ -49,6 +50,11 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("bootstrapping instance admin")?;
 
+    // Reap expired session rows so the table cannot grow unbounded. Expired rows
+    // never authenticate (the store filters them on load); this is housekeeping.
+    // Held for the process lifetime.
+    let _reaper = auth::spawn_session_reaper(pool.clone(), std::time::Duration::from_hours(6));
+
     let auth_layer = auth::build_auth_layer(
         pool.clone(),
         cfg.auth.argon2_pepper.clone(),
@@ -75,19 +81,23 @@ async fn main() -> anyhow::Result<()> {
         )
         .with_state(state.clone());
 
-    // Authenticated surface: Leptos routes plus the login/logout endpoints. The
-    // CSRF middleware runs inside the session/auth layer (it needs the session)
-    // and is outermost over the handlers; the auth layer is outermost overall.
+    // Authenticated surface: Leptos routes plus the login/logout/change-password
+    // endpoints. The CSRF middleware runs inside the session/auth layer (it needs
+    // the session) and is outermost over the handlers; the auth layer is outermost
+    // overall.
     //
     // FAIL-CLOSED CSRF: `auth::csrf_layer` rejects every unsafe method lacking a
-    // valid token, INCLUDING the Leptos server-fn endpoints under `/api/*`. The
-    // Leptos client attaches no `X-CSRF-Token` yet (no cleanly-documented hook in
-    // 0.8.20 to inject a header from the `<meta name="csrf-token">`), so the first
-    // mutating `#[server]` fn MUST add the token before it can succeed. P5 ships
-    // none. Do NOT exempt `/api/*` from CSRF to work around this — see csrf.rs.
+    // valid token, INCLUDING the Leptos server-fn endpoints under `/api/*`. A
+    // mutating `#[server]` fn must attach the token via the first-party
+    // `app::CsrfClient` (`#[server(client = CsrfClient)]`), which reads
+    // `<meta name="csrf-token">` and sets `X-CSRF-Token`; read-only queries use a
+    // real GET (`#[server(input = GetUrl)]`) and are CSRF-exempt by method. P5
+    // ships no server fns yet, so there is nothing to annotate. Do NOT exempt
+    // `/api/*` from CSRF to work around a 403 — see csrf.rs.
     let app = Router::new()
         .route("/api/login", post(login))
         .route("/api/logout", post(logout))
+        .route("/api/change-password", post(change_password))
         .leptos_routes_with_context(&state, routes, provide_csrf_context, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())
@@ -151,6 +161,68 @@ async fn logout(mut auth_session: AuthSession) -> StatusCode {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
+}
+
+/// Change-password form. `Debug` is derived only via the redacting `SecretString`,
+/// so neither password reaches logs.
+#[derive(serde::Deserialize)]
+struct ChangePassword {
+    current_password: SecretString,
+    new_password: SecretString,
+}
+
+/// Change-password endpoint.
+///
+/// Requires an authenticated session (else `401`). Validates the new password
+/// against the policy (length over composition; see [`auth::validate_password`]),
+/// then verifies the current password and persists the new hash. On success it
+/// re-binds **this** session via [`auth::rebind_after_password_change`] (reload +
+/// cycle id + re-login, re-stamping the stored auth hash) and rotates the CSRF
+/// token, so the active session stays valid under the new hash while
+/// `session_auth_hash` invalidates every *other* live session on its next
+/// request.
+///
+/// `must_change` is surfaced (cleared by the change) but **not** enforced with a
+/// blanket forced-redirect here: route-gating that forces a flagged user to this
+/// endpoint before anything else is P8's job. Mirrors the deferral note in
+/// `bootstrap.rs` / `auth::User`.
+///
+/// Status mapping: wrong current password → `403` (never revealing which field);
+/// policy failure → `400`; missing auth → `401`; infrastructure error → `500`.
+async fn change_password(
+    mut auth_session: AuthSession,
+    Form(form): Form<ChangePassword>,
+) -> StatusCode {
+    let Some(user) = auth_session.user.clone() else {
+        return StatusCode::UNAUTHORIZED;
+    };
+    if auth::validate_password(&form.new_password).is_err() {
+        return StatusCode::BAD_REQUEST;
+    }
+    match auth_session
+        .backend
+        .change_password(
+            user.id.as_uuid(),
+            &form.current_password,
+            &form.new_password,
+        )
+        .await
+    {
+        Ok(()) => {}
+        Err(auth::AuthError::WrongPassword) => return StatusCode::FORBIDDEN,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
+    }
+    // Re-bind THIS session to the new hash (cycle id + re-login) so it stays valid
+    // while session_auth_hash invalidates every OTHER session; then rotate the
+    // per-session CSRF token across the change.
+    if auth::rebind_after_password_change(&mut auth_session, user.id)
+        .await
+        .is_err()
+        || auth::rotate_csrf_token(&auth_session).await.is_err()
+    {
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+    StatusCode::OK
 }
 
 /// Readiness probe: 200 when the database is reachable, 503 otherwise.

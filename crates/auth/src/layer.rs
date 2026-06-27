@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use axum_login::{AuthManagerLayer, AuthManagerLayerBuilder};
+use axum_login::{AuthManagerLayer, AuthManagerLayerBuilder, AuthnBackend as _};
 use db::Db;
 use secrecy::SecretString;
 use tower_sessions::cookie::SameSite;
@@ -39,6 +39,44 @@ pub async fn cycle_session_id(auth_session: &AuthSession) -> Result<(), ReauthEr
         .cycle_id()
         .await
         .map_err(|_| ReauthError)
+}
+
+/// Re-binds the **current** session after the signed-in user's password changed.
+///
+/// A password change rotates `session_auth_hash`. The current session's *stored*
+/// auth hash is still the pre-change value, so without this it would be treated
+/// as stale and flushed on its very next request — logging out the user who just
+/// changed their own password. This reloads the user (now carrying the new hash)
+/// from the backend, cycles the session id (fixation defence), and re-logs them
+/// in, which re-stamps the stored auth hash to the new value. Every *other*
+/// session keeps the old stored hash and is correctly invalidated on its next
+/// request.
+///
+/// Call after [`Backend::change_password`] succeeds. The `login` call lives here,
+/// inside the facade, so no `axum-login` method is invoked from app code beyond
+/// the existing login/logout handlers.
+///
+/// # Errors
+///
+/// Returns [`ReauthError`] if reloading the user, cycling the id, or re-logging in
+/// fails (including the user vanishing between the change and the reload).
+pub async fn rebind_after_password_change(
+    auth_session: &mut AuthSession,
+    user_id: domain::UserId,
+) -> Result<(), ReauthError> {
+    let user = auth_session
+        .backend
+        .get_user(&user_id.as_uuid())
+        .await
+        .map_err(|_| ReauthError)?
+        .ok_or(ReauthError)?;
+    auth_session
+        .session
+        .cycle_id()
+        .await
+        .map_err(|_| ReauthError)?;
+    auth_session.login(&user).await.map_err(|_| ReauthError)?;
+    Ok(())
 }
 
 /// Builds the auth-manager layer: an [`AuthManagerLayer`] wrapping the
@@ -172,6 +210,48 @@ mod tests {
         }
     }
 
+    #[derive(serde::Deserialize)]
+    struct ChangePasswordForm {
+        current_password: SecretString,
+        new_password: SecretString,
+    }
+
+    /// Mirror of the server binary's `/api/change-password` handler, so the
+    /// session-invalidation and policy behaviour is covered by the auth crate's
+    /// integration tests (the binary itself is not unit-testable).
+    async fn change_password_handler(
+        mut auth_session: AuthSession,
+        Form(form): Form<ChangePasswordForm>,
+    ) -> StatusCode {
+        let Some(user) = auth_session.user.clone() else {
+            return StatusCode::UNAUTHORIZED;
+        };
+        if crate::validate_password(&form.new_password).is_err() {
+            return StatusCode::BAD_REQUEST;
+        }
+        match auth_session
+            .backend
+            .change_password(
+                user.id.as_uuid(),
+                &form.current_password,
+                &form.new_password,
+            )
+            .await
+        {
+            Ok(()) => {}
+            Err(crate::AuthError::WrongPassword) => return StatusCode::FORBIDDEN,
+            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
+        }
+        if crate::rebind_after_password_change(&mut auth_session, user.id)
+            .await
+            .is_err()
+            || crate::rotate_csrf_token(&auth_session).await.is_err()
+        {
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
+        StatusCode::OK
+    }
+
     /// Reports whether the request's session is still authenticated. Used to
     /// confirm a session survives a second request after rehash-on-login.
     async fn whoami(auth_session: AuthSession) -> impl IntoResponse {
@@ -194,13 +274,27 @@ mod tests {
         format!("{id}|{token}")
     }
 
+    /// A read-only probe that returns the CSRF token from extensions but never
+    /// writes the session, so a test can observe whether the CSRF *layer* (not a
+    /// handler) created a session row.
+    async fn readonly_probe(req: Request) -> impl IntoResponse {
+        let token = req
+            .extensions()
+            .get::<CsrfToken>()
+            .map(|t| t.as_str().to_owned())
+            .unwrap_or_default();
+        format!("|{token}")
+    }
+
     fn build_router(pool: PgPool) -> Router {
         let auth_layer = build_auth_layer(pool, None, Duration::from_hours(8));
         Router::new()
             .route("/probe", get(probe))
+            .route("/readonly", get(readonly_probe))
             .route("/whoami", get(whoami))
             .route("/api/login", post(login_handler))
             .route("/api/logout", post(logout_handler))
+            .route("/api/change-password", post(change_password_handler))
             .layer(axum::middleware::from_fn(csrf_layer))
             .layer(auth_layer)
     }
@@ -216,13 +310,16 @@ mod tests {
             .map(str::to_owned)
     }
 
-    /// GET /probe; returns (cookie, session id, CSRF token).
+    /// GET /probe as an HTML navigation; returns (cookie, session id, CSRF token).
+    /// The `Accept: text/html` header is what makes the lazy-minting layer mint a
+    /// token and set the session cookie (asset/XHR GETs do not).
     async fn prime(router: &Router) -> (String, String, String) {
         let resp = router
             .clone()
             .oneshot(
                 Request::builder()
                     .uri("/probe")
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -238,6 +335,68 @@ mod tests {
 
     fn login_body(email: &str, token: &str) -> String {
         login_body_pw(email, "correct horse", token)
+    }
+
+    fn change_pw_body(current: &str, new: &str, token: &str) -> String {
+        form_urlencoded::Serializer::new(String::new())
+            .append_pair("current_password", current)
+            .append_pair("new_password", new)
+            .append_pair("csrf_token", token)
+            .finish()
+    }
+
+    /// Logs in on a fresh anonymous session and returns the post-login cookie.
+    async fn login(router: &Router, email: &str) -> String {
+        let (cookie, _id, token) = prime(router).await;
+        let resp = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/login")
+                    .header(header::COOKIE, &cookie)
+                    .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Body::from(login_body(email, &token)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK, "login should succeed");
+        session_cookie(resp.headers()).expect("login re-issues owk.sid")
+    }
+
+    /// Posts a form to a path with the given cookie and CSRF header token.
+    async fn post_form(router: &Router, path: &str, cookie: &str, body: String) -> StatusCode {
+        router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(path)
+                    .header(header::COOKIE, cookie)
+                    .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+            .status()
+    }
+
+    /// GET /whoami with a cookie; returns the status.
+    async fn whoami_status(router: &Router, cookie: &str) -> StatusCode {
+        router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/whoami")
+                    .header(header::COOKIE, cookie)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+            .status()
     }
 
     fn login_body_pw(email: &str, password: &str, token: &str) -> String {
@@ -330,13 +489,15 @@ mod tests {
             .unwrap();
         assert!(count_before >= 1, "a session row must exist after login");
 
-        // A CSRF token valid for the post-login session.
+        // A CSRF token valid for the post-login session. Sent as an HTML
+        // navigation so the lazy-minting layer mints a fresh post-login token.
         let token = {
             let resp = router
                 .clone()
                 .oneshot(
                     Request::builder()
                         .uri("/probe")
+                        .header(header::ACCEPT, "text/html")
                         .header(header::COOKIE, &cookie)
                         .body(Body::empty())
                         .unwrap(),
@@ -453,13 +614,89 @@ mod tests {
         );
     }
 
-    /// Fetch the (cookie, csrf token) pair from /probe for a given cookie.
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn html_get_mints_token_and_sets_cookie(pool: PgPool) {
+        let router = build_router(pool);
+        // prime() sends Accept: text/html → an HTML navigation, which mints.
+        let (cookie, _id, token) = prime(&router).await;
+        assert!(cookie.starts_with("owk.sid="), "HTML GET must set owk.sid");
+        assert!(!token.is_empty(), "HTML GET must mint a CSRF token");
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn non_html_get_does_not_write_session(pool: PgPool) {
+        let router = build_router(pool.clone());
+        // A GET WITHOUT Accept: text/html (asset/XHR) must do a read-only lookup:
+        // no Set-Cookie, no token in the body, and no session row persisted.
+        let resp = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/readonly")
+                    .header(header::ACCEPT, "application/json")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert!(
+            session_cookie(resp.headers()).is_none(),
+            "a non-HTML GET must not emit a Set-Cookie"
+        );
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let text = String::from_utf8(body.to_vec()).unwrap();
+        let token = text.split_once('|').unwrap().1;
+        assert!(token.is_empty(), "a non-HTML GET must not mint a token");
+
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM tower_sessions.session")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0, "a non-HTML GET must not persist a session row");
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn unsafe_post_without_stored_token_is_403_and_writes_no_session(pool: PgPool) {
+        let router = build_router(pool.clone());
+        // Straight POST, no prior priming → no stored token. Must be 403, and the
+        // unsafe path must never mint, so no session row is written.
+        let resp = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/logout")
+                    .header("x-csrf-token", "anything")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.status(),
+            StatusCode::FORBIDDEN,
+            "an unsafe POST with no stored token must be 403"
+        );
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM tower_sessions.session")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "the unsafe path must never mint a token (no session row written)"
+        );
+    }
+
+    /// Fetch the (cookie, csrf token) pair from /probe for a given cookie. Sent as
+    /// an HTML navigation so the lazy-minting layer mints a token if absent.
     async fn probe_with(router: &Router, cookie: &str) -> (String, String) {
         let resp = router
             .clone()
             .oneshot(
                 Request::builder()
                     .uri("/probe")
+                    .header(header::ACCEPT, "text/html")
                     .header(header::COOKIE, cookie)
                     .body(Body::empty())
                     .unwrap(),
@@ -634,6 +871,141 @@ mod tests {
             resp.status(),
             StatusCode::OK,
             "rehash-on-login must not log the user out on the next request"
+        );
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn change_password_succeeds_and_invalidates_other_sessions(pool: PgPool) {
+        let email = seed_user(&pool, "correct horse").await;
+        let router = build_router(pool.clone());
+
+        // Two independent authenticated sessions for the same user.
+        let cookie_a = login(&router, &email).await;
+        let cookie_b = login(&router, &email).await;
+
+        // Both authenticate before the change.
+        assert_eq!(whoami_status(&router, &cookie_a).await, StatusCode::OK);
+        assert_eq!(whoami_status(&router, &cookie_b).await, StatusCode::OK);
+
+        // Change the password on session A (CSRF token bound to A).
+        let (cookie_a, token_a) = probe_with(&router, &cookie_a).await;
+        let resp = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/change-password")
+                    .header(header::COOKIE, &cookie_a)
+                    .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Body::from(change_pw_body(
+                        "correct horse",
+                        "a brand new long password",
+                        &token_a,
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.status(),
+            StatusCode::OK,
+            "correct current password → 200"
+        );
+
+        // The handler cycles A's id, so the response re-issues owk.sid with a fresh
+        // value. A keeps working under the new cookie because its session was
+        // re-bound; the old cookie value no longer loads.
+        let cookie_a_after = session_cookie(resp.headers())
+            .expect("change-password must re-issue owk.sid for the active session");
+        assert_ne!(
+            cookie_a, cookie_a_after,
+            "the active session id must be cycled across the password change"
+        );
+        assert_eq!(
+            whoami_status(&router, &cookie_a_after).await,
+            StatusCode::OK,
+            "session A must still authenticate under its cycled cookie"
+        );
+
+        // B's session_auth_hash no longer matches the new stored hash → its next
+        // request must fail to authenticate.
+        assert_eq!(
+            whoami_status(&router, &cookie_b).await,
+            StatusCode::UNAUTHORIZED,
+            "other sessions must be invalidated by the password change"
+        );
+
+        // The stored hash actually changed and must_change is cleared.
+        let (hash, must_change): (String, bool) = sqlx::query_as(
+            "SELECT pc.password_hash, pc.must_change FROM password_credentials pc \
+             JOIN users u ON u.id = pc.user_id WHERE u.email = $1::citext",
+        )
+        .bind(&email)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(!must_change, "must_change must be cleared");
+        assert!(!hash.is_empty());
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn change_password_wrong_current_is_403(pool: PgPool) {
+        let email = seed_user(&pool, "correct horse").await;
+        let router = build_router(pool);
+
+        let cookie = login(&router, &email).await;
+        let (cookie, token) = probe_with(&router, &cookie).await;
+        let status = post_form(
+            &router,
+            "/api/change-password",
+            &cookie,
+            change_pw_body("wrong current pw", "a brand new long password", &token),
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "wrong current password → 403"
+        );
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn change_password_short_new_is_400(pool: PgPool) {
+        let email = seed_user(&pool, "correct horse").await;
+        let router = build_router(pool);
+
+        let cookie = login(&router, &email).await;
+        let (cookie, token) = probe_with(&router, &cookie).await;
+        let status = post_form(
+            &router,
+            "/api/change-password",
+            &cookie,
+            change_pw_body("correct horse", "tooshort", &token),
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "a new password failing the length policy → 400"
+        );
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn change_password_without_csrf_is_403(pool: PgPool) {
+        let email = seed_user(&pool, "correct horse").await;
+        let router = build_router(pool);
+
+        let cookie = login(&router, &email).await;
+        // No csrf_token field and no header → CSRF layer rejects before the handler.
+        let body = form_urlencoded::Serializer::new(String::new())
+            .append_pair("current_password", "correct horse")
+            .append_pair("new_password", "a brand new long password")
+            .finish();
+        let status = post_form(&router, "/api/change-password", &cookie, body).await;
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "change-password without a CSRF token must be 403"
         );
     }
 }

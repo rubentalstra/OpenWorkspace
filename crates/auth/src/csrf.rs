@@ -3,26 +3,32 @@
 //! # FAIL-CLOSED: mutating Leptos `#[server]` functions
 //!
 //! This middleware is **fail-closed** for every unsafe method, including the
-//! Leptos server-fn endpoints under `/api/*`. The Leptos client does **not**
-//! attach an `X-CSRF-Token` header out of the box, so the first mutating
-//! `#[server]` function (a urlencoded `POST`) will 403 until a client-side token
-//! path is wired in. As of Leptos 0.8.20 there is no cleanly-documented public
-//! hook to inject a per-request header (read from the rendered
-//! `<meta name="csrf-token">`) into the generated server-fn client, so that work
-//! is a **required follow-up for the first server-fn phase**. P5 ships no
-//! mutating server fns, so nothing breaks today.
+//! Leptos server-fn endpoints under `/api/*`. Mutating `#[server]` functions must
+//! attach the token; the project ships a first-party `app::CsrfClient` that reads
+//! `<meta name="csrf-token">` and sets the `X-CSRF-Token` header, so a mutation
+//! annotated `#[server(client = CsrfClient)]` passes this check. Do **not** "fix"
+//! a 403 by exempting `/api/*` from CSRF — that would reopen the hole this layer
+//! closes. Read-only queries use a real `GET` (`#[server(input = GetUrl)]`) and
+//! are CSRF-exempt by method.
 //!
-//! Do **not** "fix" this by exempting `/api/*` from CSRF — that would reopen the
-//! hole this layer closes. The first mutating server fn MUST attach the token.
+//! # Token lifecycle (lazy minting)
 //!
 //! A per-session token is minted (CSPRNG → base64url) and stored in the session
-//! under [`SESSION_TOKEN_KEY`]. The token is also placed in the request
-//! extensions as [`CsrfToken`] so the SSR shell can render it into a `<meta>` tag
-//! and a hidden form field. Safe methods (`GET`/`HEAD`/`OPTIONS`/`TRACE`) bypass
-//! the check; unsafe methods must echo the token either in the `X-CSRF-Token`
-//! header (JS) or — for `application/x-www-form-urlencoded` bodies with no header
-//! — in a `csrf_token` form field (no-JS progressive enhancement). Comparison is
-//! constant-time. Absence or mismatch is `403 Forbidden`.
+//! under [`SESSION_TOKEN_KEY`]. It is minted **lazily**: only a *safe* request
+//! that looks like an HTML navigation (an `Accept` advertising HTML, on a
+//! non-asset/non-api/non-ops path) mints and persists a token — that is the only
+//! request that needs to render the token into the page. Asset/XHR `GET`s and ops
+//! probes do a read-only lookup and never write the session, so they create no
+//! anonymous session row and emit no `Set-Cookie`. The token is placed in the
+//! request extensions as [`CsrfToken`] (when one exists) so the SSR shell can
+//! render it into a `<meta>` tag and a hidden form field.
+//!
+//! Safe methods (`GET`/`HEAD`/`OPTIONS`/`TRACE`) bypass the *check*. Unsafe
+//! methods require an existing stored token (they never mint one) and must echo
+//! it either in the `X-CSRF-Token` header (JS) or — for
+//! `application/x-www-form-urlencoded` bodies with no header — in a `csrf_token`
+//! form field (no-JS progressive enhancement). Comparison is constant-time.
+//! Absence or mismatch is `403 Forbidden`.
 
 use axum::body::Body;
 use axum::extract::Request;
@@ -150,7 +156,9 @@ async fn remove_token(session: &Session) -> Result<(), CsrfError> {
         .map_err(|_| CsrfError::Session)
 }
 
-/// Loads the session token, minting and persisting one if absent.
+/// Loads the session token, minting and persisting one if absent. The only
+/// session-*writing* call in this module's request path; called solely on the
+/// HTML-navigation branch so anonymous asset/XHR/ops traffic creates no row.
 async fn ensure_token(session: &Session) -> Result<String, CsrfError> {
     if let Some(existing) = session
         .get::<String>(SESSION_TOKEN_KEY)
@@ -165,6 +173,45 @@ async fn ensure_token(session: &Session) -> Result<String, CsrfError> {
         .await
         .map_err(|_| CsrfError::Session)?;
     Ok(token)
+}
+
+/// Reads the stored session token without minting. A read-only `get` never marks
+/// the session modified, so it cannot trigger a `Set-Cookie` or persist a row.
+async fn get_token(session: &Session) -> Result<Option<String>, CsrfError> {
+    session
+        .get::<String>(SESSION_TOKEN_KEY)
+        .await
+        .map_err(|_| CsrfError::Session)
+}
+
+/// Path prefixes that never need a CSRF token rendered into them — static assets,
+/// the server-fn/api surface, and operational probes. A safe `GET` to any of
+/// these does a read-only token lookup and never mints, so it writes no session.
+const NON_HTML_PREFIXES: [&str; 5] = ["/pkg/", "/api/", "/health", "/ready", "/metrics"];
+
+/// Whether the path is one that should never mint a token on a safe request.
+fn is_non_html_path(path: &str) -> bool {
+    NON_HTML_PREFIXES
+        .iter()
+        .any(|prefix| path == *prefix || path.starts_with(prefix))
+}
+
+/// Whether the request advertises an HTML navigation (`Accept` contains
+/// `text/html` or `application/xhtml+xml`). Only such a request needs a token
+/// rendered into the response, so only it mints one.
+fn wants_html(headers: &HeaderMap) -> bool {
+    headers
+        .get(header::ACCEPT)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|accept| {
+            accept
+                .split(',')
+                .map(|part| part.split(';').next().unwrap_or("").trim())
+                .any(|mime| {
+                    mime.eq_ignore_ascii_case("text/html")
+                        || mime.eq_ignore_ascii_case("application/xhtml+xml")
+                })
+        })
 }
 
 /// Whether the request carries `application/x-www-form-urlencoded`.
@@ -202,14 +249,30 @@ pub async fn csrf_layer(mut request: Request, next: Next) -> Result<Response, Cs
         .cloned()
         .ok_or(CsrfError::MissingSession)?;
 
-    let expected = ensure_token(&session).await?;
-
     if !is_unsafe(request.method()) {
-        request.extensions_mut().insert(CsrfToken(expected.clone()));
+        // Safe method: mint a token (the only session-writing call) ONLY for an
+        // HTML navigation that will render it. Everything else — assets, XHR, ops
+        // probes — does a read-only lookup so no anonymous session row is created
+        // and no Set-Cookie is emitted.
+        let token = if wants_html(request.headers()) && !is_non_html_path(request.uri().path()) {
+            Some(ensure_token(&session).await?)
+        } else {
+            get_token(&session).await?
+        };
+        if let Some(token) = token {
+            request.extensions_mut().insert(CsrfToken(token));
+        }
         return Ok(next.run(request).await);
     }
 
-    // Unsafe method: a header token wins; otherwise fall back to a form field.
+    // Unsafe method: require an EXISTING stored token — never mint here. An unsafe
+    // request with no session token is rejected outright (no minting on the unsafe
+    // path, so a cross-site POST cannot bootstrap its own token).
+    let Some(expected) = get_token(&session).await? else {
+        return Err(CsrfError::Invalid);
+    };
+
+    // A header token wins; otherwise fall back to a form field.
     if let Some(header_token) = request
         .headers()
         .get(CSRF_HEADER)

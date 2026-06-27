@@ -51,6 +51,16 @@ pub enum AuthError {
     /// The blocking verification task failed to join.
     #[error("password verification task failed")]
     Task,
+    /// The supplied current password did not match the stored hash. Distinct from
+    /// the `authenticate` flow (where a mismatch is `Ok(None)`): on a deliberate
+    /// password change the caller already knows who the user is, so a wrong
+    /// current password is a typed error the handler maps to 403 — never revealing
+    /// which field was wrong.
+    #[error("current password does not match")]
+    WrongPassword,
+    /// The targeted user has no password credential to change.
+    #[error("no password credential for user")]
+    NoCredential,
 }
 
 impl AuthnBackend for Backend {
@@ -115,6 +125,62 @@ impl AuthnBackend for Backend {
 }
 
 impl Backend {
+    /// Changes a user's password after verifying the current one.
+    ///
+    /// Loads the stored hash, verifies `current` against it off the async runtime
+    /// (peppered), and on a match hashes `new` off-runtime and persists it via
+    /// [`db::change_password`] (which also clears `must_change`). Both Argon2
+    /// operations run in `spawn_blocking` so the CPU-bound work never blocks the
+    /// reactor.
+    ///
+    /// A wrong `current` password is [`AuthError::WrongPassword`] (not silent), so
+    /// the handler can answer `403` without disclosing which field was wrong.
+    /// Changing the stored hash rotates `session_auth_hash`, which invalidates
+    /// every *other* live session on its next request; the caller is expected to
+    /// re-bind the current session (cycle its id) so the active session survives.
+    ///
+    /// # Errors
+    ///
+    /// - [`AuthError::WrongPassword`] if `current` does not match.
+    /// - [`AuthError::NoCredential`] if the user has no password credential.
+    /// - [`AuthError::Crypto`] if the stored hash is malformed or hashing fails.
+    /// - [`AuthError::Db`] on a database error.
+    /// - [`AuthError::Task`] if a blocking crypto task fails to join.
+    pub async fn change_password(
+        &self,
+        user_id: Uuid,
+        current: &SecretString,
+        new: &SecretString,
+    ) -> Result<(), AuthError> {
+        let Some(row) = db::load_credential_by_id(&self.db, user_id).await? else {
+            return Err(AuthError::NoCredential);
+        };
+
+        let stored = PasswordHashString::from(row.password_hash);
+        let verify_password = current.clone();
+        let pepper = self.pepper.clone();
+        let outcome = tokio::task::spawn_blocking(move || {
+            crypto::verify_password(&verify_password, &stored, pepper.as_ref())
+        })
+        .await
+        .map_err(|_| AuthError::Task)??;
+
+        if outcome == VerifyOutcome::Mismatch {
+            return Err(AuthError::WrongPassword);
+        }
+
+        let new_password = new.clone();
+        let pepper = self.pepper.clone();
+        let new_hash = tokio::task::spawn_blocking(move || {
+            crypto::hash_password(&new_password, pepper.as_ref())
+        })
+        .await
+        .map_err(|_| AuthError::Task)??;
+
+        db::change_password(&self.db, user_id, new_hash.as_str()).await?;
+        Ok(())
+    }
+
     /// Best-effort rehash-on-login: re-hash the verified password at the active
     /// cost and persist it, returning the hash that is *actually* the DB state.
     ///
@@ -406,6 +472,108 @@ mod tests {
         assert!(
             eq,
             "post-rehash session auth hash must match the freshly-loaded DB hash"
+        );
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn change_password_succeeds_and_clears_must_change(pool: PgPool) {
+        let email = seed_user(&pool, "active", "old password", false).await;
+        let user_id = user_id_for(&pool, &email).await;
+        // Flag must_change so the success path is shown to clear it.
+        sqlx::query("UPDATE password_credentials SET must_change = true WHERE user_id = $1")
+            .bind(user_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let before: (String, chrono::DateTime<chrono::Utc>) = sqlx::query_as(
+            "SELECT password_hash, password_changed_at FROM password_credentials WHERE user_id = $1",
+        )
+        .bind(user_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        let backend = Backend::new(pool.clone(), None);
+        backend
+            .change_password(
+                user_id,
+                &SecretString::from("old password".to_owned()),
+                &SecretString::from("a brand new long password".to_owned()),
+            )
+            .await
+            .expect("correct current password changes the password");
+
+        let after: (String, chrono::DateTime<chrono::Utc>, bool) = sqlx::query_as(
+            "SELECT password_hash, password_changed_at, must_change \
+             FROM password_credentials WHERE user_id = $1",
+        )
+        .bind(user_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        assert_ne!(before.0, after.0, "stored hash must change");
+        assert!(after.1 > before.1, "password_changed_at must advance");
+        assert!(!after.2, "must_change must be cleared");
+
+        // The new password authenticates; the old one no longer does.
+        assert!(
+            backend
+                .authenticate(Credentials {
+                    email: email.clone(),
+                    password: SecretString::from("a brand new long password".to_owned()),
+                })
+                .await
+                .unwrap()
+                .is_some(),
+            "new password authenticates"
+        );
+        assert!(
+            backend
+                .authenticate(Credentials {
+                    email,
+                    password: SecretString::from("old password".to_owned()),
+                })
+                .await
+                .unwrap()
+                .is_none(),
+            "old password no longer authenticates"
+        );
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn change_password_wrong_current_is_wrong_password(pool: PgPool) {
+        let email = seed_user(&pool, "active", "old password", false).await;
+        let user_id = user_id_for(&pool, &email).await;
+
+        let before: String =
+            sqlx::query_scalar("SELECT password_hash FROM password_credentials WHERE user_id = $1")
+                .bind(user_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+        let backend = Backend::new(pool.clone(), None);
+        let err = backend
+            .change_password(
+                user_id,
+                &SecretString::from("not the password".to_owned()),
+                &SecretString::from("a brand new long password".to_owned()),
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, AuthError::WrongPassword), "got {err:?}");
+
+        let after: String =
+            sqlx::query_scalar("SELECT password_hash FROM password_credentials WHERE user_id = $1")
+                .bind(user_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            before, after,
+            "a wrong current password must not change the hash"
         );
     }
 

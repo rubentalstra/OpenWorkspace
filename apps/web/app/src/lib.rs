@@ -5,6 +5,9 @@ use leptos_router::{
     components::{Route, Router, Routes},
 };
 
+mod csrf_client;
+pub use csrf_client::CsrfClient;
+
 /// The per-request CSRF token, provided as Leptos context by the server so the
 /// `App` can render it into `<head>` as `<meta name="csrf-token">`. Defined here
 /// (not in `auth`) so the app crate stays free of the ssr-only auth facade and

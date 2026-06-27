@@ -141,6 +141,29 @@ pub async fn update_password_hash(pool: &Db, user_id: Uuid, new_hash: &str) -> R
     Ok(())
 }
 
+/// Replaces a user's stored password hash on a deliberate password change:
+/// stamps `password_changed_at = now()` and clears `must_change` (the user has
+/// now chosen their own password). Distinct from [`update_password_hash`], which
+/// is the silent rehash-on-login path and must not touch `must_change`.
+///
+/// # Errors
+///
+/// [`DbError::Sqlx`] on any database error.
+pub async fn change_password(pool: &Db, user_id: Uuid, new_hash: &str) -> Result<(), DbError> {
+    sqlx::query!(
+        r#"
+        UPDATE password_credentials
+        SET password_hash = $2, password_changed_at = now(), must_change = false
+        WHERE user_id = $1
+        "#,
+        user_id,
+        new_hash,
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 /// Stamps `users.last_login_at = now()` after a successful authentication.
 ///
 /// # Errors

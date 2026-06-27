@@ -121,6 +121,10 @@ impl From<db::CredentialRow> for User {
     }
 }
 
+mod policy;
+
+pub use policy::{MIN_PASSWORD_LENGTH, PasswordPolicyError, validate_password};
+
 #[cfg(feature = "ssr")]
 mod backend;
 #[cfg(feature = "ssr")]
@@ -139,6 +143,8 @@ pub use bootstrap::bootstrap_admin;
 #[cfg(feature = "ssr")]
 pub use csrf::{CsrfError, CsrfToken, csrf_layer, hidden_field, rotate_csrf_token};
 #[cfg(feature = "ssr")]
-pub use layer::{AuthSession, ReauthError, build_auth_layer, cycle_session_id};
+pub use layer::{
+    AuthSession, ReauthError, build_auth_layer, cycle_session_id, rebind_after_password_change,
+};
 #[cfg(feature = "ssr")]
-pub use store::PgSessionStore;
+pub use store::{PgSessionStore, spawn_session_reaper};

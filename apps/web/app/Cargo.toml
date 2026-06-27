@@ -15,10 +15,37 @@ http.workspace = true
 cfg-if.workspace = true
 thiserror.workspace = true
 
+# Browser-only: the `CsrfClient` server-fn client reads `<meta name="csrf-token">`
+# (web-sys + wasm-bindgen) and delegates to `server_fn`'s `BrowserClient`. Gated
+# behind `hydrate` so the ssr build never pulls them in. `server_fn` is the
+# Leptos server-fn machinery (already used by every `#[server]`), so this is not a
+# new vendor surface — it is the documented client touchpoint.
+server_fn = { version = "0.8.13", optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+web-sys = { version = "0.3.103", optional = true, features = [
+    "Document",
+    "Window",
+    "HtmlMetaElement",
+    "Element",
+] }
+# `Client::send`/`open_websocket` signatures name these; pinned to the versions
+# already resolved for the server-fn browser client.
+bytes = { version = "1", optional = true }
+futures = { version = "0.3", optional = true }
+
 [features]
 default = []
-# Browser (wasm) build. `nonce` lets hydration scripts carry a CSP nonce.
-hydrate = ["leptos/hydrate", "leptos/nonce"]
+# Browser (wasm) build. `nonce` lets hydration scripts carry a CSP nonce. The
+# `CsrfClient` impl and its `<meta>` reader compile only here.
+hydrate = [
+    "leptos/hydrate",
+    "leptos/nonce",
+    "dep:server_fn",
+    "dep:wasm-bindgen",
+    "dep:web-sys",
+    "dep:bytes",
+    "dep:futures",
+]
 # Server build. `nonce` for strict CSP, `tracing` for observability, `rustls`
 # so server-function HTTP uses rustls (matches the crypto policy).
 ssr = [

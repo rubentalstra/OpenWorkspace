@@ -69,13 +69,18 @@ checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 name = "app"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "cfg-if",
+ "futures",
  "http",
  "leptos",
  "leptos_axum",
  "leptos_meta",
  "leptos_router",
+ "server_fn",
  "thiserror 2.0.18",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -3437,6 +3442,8 @@ dependencies = [
  "leptos",
  "leptos_axum",
  "observability",
+ "secrecy",
+ "serde",
  "tokio",
  "tower",
  "tower-http 0.7.0",
