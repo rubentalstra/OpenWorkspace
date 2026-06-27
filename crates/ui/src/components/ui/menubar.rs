@@ -75,7 +75,10 @@ pub fn MenubarCheckboxItem(
             on:click=move |_| checked.update(|v| *v = !*v)
         >
             <span class="flex absolute left-1.5 justify-center items-center pointer-events-none size-4">
-                <Icon icon=icondata::LuCheck attr:class="opacity-0 group-aria-checked:opacity-100 size-3.5" />
+                <Icon
+                    icon=icondata::LuCheck
+                    attr:class="opacity-0 group-aria-checked:opacity-100 size-3.5"
+                />
             </span>
             {children()}
         </li>
@@ -132,7 +135,10 @@ where
             on:click=move |_| ctx.value_signal.set(value_for_click.clone())
         >
             <span class="flex absolute left-1.5 justify-center items-center pointer-events-none size-4">
-                <Icon icon=icondata::LuCheck attr:class="opacity-0 group-aria-checked:opacity-100 size-3.5" />
+                <Icon
+                    icon=icondata::LuCheck
+                    attr:class="opacity-0 group-aria-checked:opacity-100 size-3.5"
+                />
             </span>
             {children()}
         </li>

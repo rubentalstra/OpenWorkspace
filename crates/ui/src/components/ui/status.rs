@@ -1,55 +1,50 @@
+use crate::{cn, variants};
 use leptos::prelude::*;
-use tw_merge::*;
 
-const PING_ANIMATION: &str = "animate-ping";
-const RELATIVE: &str = "relative";
-
-#[component]
-pub fn Status(
-    #[prop(into, optional)] class: String,
-    #[prop(into, optional)] variant: StatusIndactorVariant,
-    children: Children,
-) -> impl IntoView {
-    let merged_class = tw_merge!(RELATIVE, class);
-
-    view! {
-        <div class=merged_class>
-            {children()} <StatusIndactor variant=variant class=PING_ANIMATION /> <StatusIndactor variant=variant />
-        </div>
+variants! {
+    StatusIndicator {
+        variants: {
+            variant: {
+                Default: "bg-neutral-300",
+                Active: "bg-green-300",
+                Inactive: "bg-orange-300",
+                Normal: "bg-sky-300",
+            }
+        }
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
+const STATUS_INDICATOR_BASE: &str = "rounded-full size-4 shrink-0";
 
-#[derive(TwClass, Clone, Copy)]
-#[tw(class = "absolute top-0 right-0 -mt-1 -mr-1 rounded-full size-4")]
-pub struct StatusIndactorClass {
-    pub variant: StatusIndactorVariant,
-}
-
-#[derive(TwVariant)]
-pub enum StatusIndactorVariant {
-    #[tw(default, class = "bg-neutral-300")]
-    Default,
-    #[tw(class = "bg-green-300 ")]
-    Active,
-    #[tw(class = "bg-orange-300 ")]
-    Inactive,
-    #[tw(class = "bg-sky-300 ")]
-    Normal,
-}
-
+/// Coloured status dot. `variant` selects the colour; native attributes forward
+/// to the underlying element.
 #[component]
-pub fn StatusIndactor(
-    #[prop(into, optional)] variant: Signal<StatusIndactorVariant>,
-    #[prop(into, optional)] class: String,
+pub fn StatusIndicator(
+    #[prop(into, optional)] variant: Signal<StatusIndicatorVariant>,
+    #[prop(into, optional)] class: Signal<String>,
 ) -> impl IntoView {
-    let merged_class = move || {
-        let status_indicator = StatusIndactorClass { variant: variant.get() };
-        status_indicator.with_class(class.clone())
-    };
+    let merged = move || cn!(STATUS_INDICATOR_BASE, variant.get().class(), class.get());
+    view! { <div data-name="StatusIndicator" class=merged /> }
+}
 
-    view! { <div class=merged_class /> }
+/// Presence indicator: a static [`StatusIndicator`] dot with a pinging copy
+/// behind it, anchored to the top-right of its `children`.
+#[component]
+pub fn Status(
+    #[prop(into, optional)] variant: Signal<StatusIndicatorVariant>,
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let anchor = "absolute top-0 right-0 -mt-1 -mr-1";
+
+    view! {
+        <div data-name="Status" class=move || cn!("relative", class.get())>
+            {children()}
+            <StatusIndicator
+                variant=variant
+                class=Signal::derive(move || cn!(anchor, "animate-ping"))
+            />
+            <StatusIndicator variant=variant class=Signal::derive(move || anchor.to_string()) />
+        </div>
+    }
 }

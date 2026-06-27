@@ -1,37 +1,38 @@
+use crate::{clx, cn, void};
 use leptos::prelude::*;
-use crate::{clx, void};
 
-const BASE_BUTTON_GROUP: &str = "flex flex-wrap justify-center mt-2";
+const BUTTON_GROUP_BASE: &str = "flex flex-wrap justify-center mt-2";
 
-mod components {
-    use super::*;
-    clx! {RadioButtonText, span, "block cursor-pointer bg-transparent text-primary px-3 py-1.5 relative ml-px shadow-[0_0_0_1px_#b5bfd9] tracking-wider text-center transition-colors duration-500"}
+clx! {RadioButtonText, span, "block cursor-pointer bg-transparent text-primary px-3 py-1.5 relative ml-px shadow-[0_0_0_1px_#b5bfd9] tracking-wider text-center transition-colors duration-500"}
 
-    void! {RootInput, input, "radio__button", "focus:outline-0 focus:border-input/60"}
-    clx! {RootFieldset, fieldset, BASE_BUTTON_GROUP}
-    clx! {RootButtonGroup, div, BASE_BUTTON_GROUP, "[&>label:first-child>span]:rounded-l-md [&>label:last-child>span]:rounded-r-md"}
-}
+void! {RadioButtonInput, input, "radio__button", "focus:outline-0 focus:border-input/60"}
+clx! {RadioButtonFieldset, fieldset, BUTTON_GROUP_BASE}
+clx! {RadioButtonBar, div, BUTTON_GROUP_BASE, "[&>label:first-child>span]:rounded-l-md [&>label:last-child>span]:rounded-r-md"}
 
-pub use components::*;
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
+/// Segmented control that groups [`RadioButton`] children into a single
+/// horizontal bar with rounded outer edges.
 #[component]
-pub fn RadioButtonGroup(children: Children) -> impl IntoView {
+pub fn RadioButtonGroup(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
     view! {
-        <RootFieldset>
-            <RootButtonGroup attr:role="radio-button-group">{children()}</RootButtonGroup>
-        </RootFieldset>
+        <RadioButtonFieldset class=class>
+            <RadioButtonBar attr:role="radiogroup">{children()}</RadioButtonBar>
+        </RadioButtonFieldset>
     }
 }
 
+/// A single option within a [`RadioButtonGroup`]. Forward the radio's
+/// `attr:name`, `attr:value`, `attr:checked` and `bind:` at the call site.
 #[component]
-pub fn RadioButton(children: Children, #[prop(into, optional)] checked: bool) -> impl IntoView {
+pub fn RadioButton(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
     view! {
-        <label>
-            <RootInput attr:r#type="radio" attr:name="radio" attr:checked=checked />
+        <label data-name="RadioButton" class=move || cn!(class.get())>
+            <RadioButtonInput attr:r#type="radio" />
             {children()}
         </label>
     }

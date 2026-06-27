@@ -1,2 +1,3 @@
-//! Component modules. Hooks (`hooks/`) are re-added once rewritten (task #18).
+//! Component modules.
+pub(crate) mod hooks;
 pub(crate) mod ui;

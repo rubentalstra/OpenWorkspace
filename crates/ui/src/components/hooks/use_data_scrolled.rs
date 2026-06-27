@@ -1,71 +1,91 @@
 use leptos::prelude::*;
+use leptos::wasm_bindgen::JsCast as _;
 use leptos::wasm_bindgen::closure::Closure;
-use wasm_bindgen::JsCast;
 
+/// Element id of the optional scroll container that [`use_data_scrolled`]
+/// watches in preference to the window. Set `id=DATA_SCROLL_TARGET` on the
+/// scrollable element to track its `scrollTop` instead of the document scroll
+/// position.
 pub const DATA_SCROLL_TARGET: &str = "data-scroll-target";
 
+/// Tracks whether the page (or the [`DATA_SCROLL_TARGET`] container, when
+/// present) has scrolled past `threshold_px`. Returns a signal that is `false`
+/// during SSR and on first client paint, then updates as the user scrolls.
+///
+/// All browser access lives inside an [`Effect`] so it never runs on the server.
 pub fn use_data_scrolled(threshold_px: u32) -> RwSignal<bool> {
-    let is_data_scrolled_signal = RwSignal::new(false);
+    let scrolled = RwSignal::new(false);
 
     Effect::new(move |_| {
         let threshold = f64::from(threshold_px);
+        let container = document().get_element_by_id(DATA_SCROLL_TARGET);
 
-        // Try to find the scroll target, fallback to window
-        let scroll_container = window().document().and_then(|d| d.get_element_by_id(DATA_SCROLL_TARGET));
-
-        let get_scroll_pos = {
-            let container = scroll_container.clone();
-            move || -> f64 { if let Some(ref el) = container { el.scroll_top() as f64 } else { get_scroll_position() } }
+        let read_position = {
+            let container = container.clone();
+            move || match container {
+                Some(ref el) => f64::from(el.scroll_top()),
+                None => scroll_position(),
+            }
         };
 
-        // Set initial value
-        is_data_scrolled_signal.set(get_scroll_pos() > threshold);
+        scrolled.set(read_position() > threshold);
 
-        let closure = Closure::wrap(Box::new(move |_: web_sys::Event| {
-            is_data_scrolled_signal.set(get_scroll_pos() > threshold);
-        }) as Box<dyn Fn(web_sys::Event)>);
-
-        if let Some(el) = scroll_container {
-            let _ = el.add_event_listener_with_callback("scroll", closure.as_ref().unchecked_ref());
+        // `scroll` does not bubble, so a container needs a direct listener
+        // (detached when the element leaves the DOM); otherwise watch the window.
+        if let Some(el) = container {
+            attach_scroll_listener(&el, move || scrolled.set(read_position() > threshold));
         } else {
-            let _ = window().add_event_listener_with_callback("scroll", closure.as_ref().unchecked_ref());
+            let handle = window_event_listener(leptos::ev::scroll, move |_| {
+                scrolled.set(read_position() > threshold);
+            });
+            on_cleanup(move || handle.remove());
         }
-
-        closure.forget();
     });
 
-    is_data_scrolled_signal
+    scrolled
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
+/// Registers a `scroll` listener on `element`; the browser closure is owned for
+/// the element's lifetime and freed with it.
+fn attach_scroll_listener(element: &web_sys::Element, mut on_scroll: impl FnMut() + 'static) {
+    let callback = Closure::<dyn FnMut(web_sys::Event)>::new(move |_: web_sys::Event| on_scroll());
+    _ = element.add_event_listener_with_callback("scroll", callback.as_ref().unchecked_ref());
+    callback.forget();
+}
 
-/// Synchronize body's scrollbar padding compensation to Header's fixed element.
-/// When `use_lock_body_scroll_popover` applies padding-right to body, fixed elements need the same padding to prevent shifting.
+/// Mirrors the body's `padding-right` onto a fixed nav element so it does not
+/// shift when a scroll lock compensates for the removed scrollbar by padding the
+/// body.
 fn sync_header_padding_with_body(padding: &str) {
-    let _ = (|| -> Option<()> {
-        let element = window().document()?.query_selector("[data-name='NavMenuFixed']").ok()??;
-        let header_el = element.dyn_ref::<web_sys::HtmlElement>()?;
+    _ = (|| -> Option<()> {
+        let element = document()
+            .query_selector("[data-name='NavMenuFixed']")
+            .ok()??;
+        let header = element.dyn_ref::<web_sys::HtmlElement>()?;
 
-        if !padding.is_empty() && padding != "0px" {
-            header_el.style().set_property("padding-right", padding).ok()?;
+        if padding.is_empty() || padding == "0px" {
+            header.style().remove_property("padding-right").ok()?;
         } else {
-            header_el.style().remove_property("padding-right").ok()?;
+            header.style().set_property("padding-right", padding).ok()?;
         }
         Some(())
     })();
 }
 
-/// Get scroll position, accounting for when `use_lock_body_scroll_popover` fixes the body with negative top offset.
-fn get_scroll_position() -> f64 {
-    let Some(body) = window().document().and_then(|d| d.body()) else {
-        return window().scroll_y().unwrap_or(0.0);
+/// Reads the current scroll position. When the body has been pinned with
+/// `position: fixed` and a negative `top` (e.g. by a scroll lock), the body no
+/// longer scrolls, so the offset is recovered from that `top` value instead of
+/// `window.scrollY`.
+fn scroll_position() -> f64 {
+    let Some(body) = document().body() else {
+        return window().scroll_y().unwrap_or_default();
     };
 
     let style = body.style();
-    let is_fixed = style.get_property_value("position").ok() == Some("fixed".to_string());
-    let padding = style.get_property_value("padding-right").unwrap_or_default();
+    let is_fixed = style.get_property_value("position").ok().as_deref() == Some("fixed");
+    let padding = style
+        .get_property_value("padding-right")
+        .unwrap_or_default();
 
     sync_header_padding_with_body(&padding);
 
@@ -73,9 +93,9 @@ fn get_scroll_position() -> f64 {
         style
             .get_property_value("top")
             .ok()
-            .and_then(|top| top.strip_suffix("px")?.strip_prefix("-")?.parse().ok())
-            .unwrap_or(0.0)
+            .and_then(|top| top.strip_suffix("px")?.strip_prefix('-')?.parse().ok())
+            .unwrap_or_default()
     } else {
-        window().scroll_y().unwrap_or(0.0)
+        window().scroll_y().unwrap_or_default()
     }
 }

@@ -82,7 +82,10 @@ where
             }
         >
             {children()}
-            <Icon icon=icondata::LuCheck attr:class="ml-auto opacity-0 size-4 text-muted-foreground group-aria-checked:opacity-100" />
+            <Icon
+                icon=icondata::LuCheck
+                attr:class="ml-auto opacity-0 size-4 text-muted-foreground group-aria-checked:opacity-100"
+            />
         </li>
     }
 }
@@ -164,7 +167,12 @@ pub fn DropdownMenuAction(
     } else {
         // Render as <button> tag when no href
         view! {
-            <button type="button" data-name="DropdownMenuAction" class=class data-dropdown-close="true">
+            <button
+                type="button"
+                data-name="DropdownMenuAction"
+                class=class
+                data-dropdown-close="true"
+            >
                 {children()}
             </button>
         }
@@ -246,7 +254,11 @@ pub fn DropdownMenuTrigger(
 
     if as_child {
         return view! {
-            <span data-name="DropdownMenuTrigger" data-dropdown-trigger=ctx.target_id class="contents">
+            <span
+                data-name="DropdownMenuTrigger"
+                data-dropdown-trigger=ctx.target_id
+                class="contents"
+            >
                 {children()}
             </span>
         }

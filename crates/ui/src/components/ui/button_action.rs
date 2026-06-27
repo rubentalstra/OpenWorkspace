@@ -1,56 +1,47 @@
+use crate::{Button, ButtonSize, ButtonVariant, cn, use_press_hold};
 use leptos::prelude::*;
-use tw_merge::tw_merge;
 
-use crate::components::hooks::use_press_hold::use_press_hold;
-use crate::components::ui::button::{Button, ButtonSize, ButtonVariant};
+const BUTTON_ACTION_BASE: &str =
+    "relative overflow-hidden select-none transition-transform active:scale-[0.99]";
 
-/// A button that requires press-and-hold to activate.
-/// Shows a progress indicator filling from left to right.
+const PROGRESS_OVERLAY: &str =
+    "pointer-events-none absolute inset-y-0 left-0 rounded-[inherit] bg-black/25";
+
+/// Confirmation button that fires `on_complete` only after a press-and-hold of
+/// `duration_ms`. A progress overlay fills left-to-right while held and drains
+/// once released; releasing early aborts without firing. Native attributes and
+/// events forward to the underlying [`Button`].
 #[component]
 pub fn ButtonAction(
-    children: Children,
     #[prop(into)] on_complete: Callback<()>,
     #[prop(optional, default = 2000)] duration_ms: u32,
-    #[prop(optional, default = ButtonVariant::Destructive)] variant: ButtonVariant,
-    #[prop(optional, default = ButtonSize::Default)] size: ButtonSize,
-    #[prop(into, optional)] class: String,
+    #[prop(into, optional, default = ButtonVariant::Destructive.into())] variant: Signal<
+        ButtonVariant,
+    >,
+    #[prop(into, optional)] size: Signal<ButtonSize>,
+    #[prop(into, optional)] class: Signal<String>,
     #[prop(into, optional)] disabled: Signal<bool>,
+    children: Children,
 ) -> impl IntoView {
-    let press_hold = use_press_hold(duration_ms, on_complete, disabled);
+    let hold = use_press_hold(duration_ms, on_complete, disabled);
 
-    let button_class =
-        tw_merge!("relative overflow-hidden select-none active:scale-[0.99] transition-transform", class);
-
-    let progress_style = move || {
-        let width_percent = press_hold.progress_signal.get() * 100.0;
-        format!(
-            "position: absolute; left: 0; top: 0; bottom: 0; width: {width_percent:.1}%; background: rgba(0, 0, 0, 0.25); pointer-events: none; border-radius: inherit;"
-        )
-    };
-
-    let wrapper_class = move || {
-        if disabled.get() { "pointer-events-none opacity-50" } else { "" }
-    };
-
-    let ph1 = press_hold.clone();
-    let ph2 = press_hold.clone();
-    let ph3 = press_hold.clone();
-    let ph4 = press_hold;
+    let merged = move || cn!(BUTTON_ACTION_BASE, class.get());
+    let progress_style = move || format!("width: {:.1}%", hold.progress_signal.get() * 100.0);
 
     view! {
-        <span class=wrapper_class>
-            <Button
-                variant=variant
-                size=size
-                class=button_class
-                on:pointerdown=move |_| ph1.on_pointer_down()
-                on:pointerup=move |_| ph2.on_pointer_up()
-                on:pointerleave=move |_| ph3.on_pointer_up()
-                on:pointercancel=move |_| ph4.on_pointer_up()
-            >
-                <span style=progress_style></span>
-                <span class="flex relative z-10 gap-2 items-center">{children()}</span>
-            </Button>
-        </span>
+        <Button
+            variant=variant
+            size=size
+            class=merged
+            attr:data-name="ButtonAction"
+            attr:disabled=disabled
+            on:pointerdown=move |_| hold.on_pointer_down()
+            on:pointerup=move |_| hold.on_pointer_up()
+            on:pointerleave=move |_| hold.on_pointer_up()
+            on:pointercancel=move |_| hold.on_pointer_up()
+        >
+            <span aria-hidden="true" class=PROGRESS_OVERLAY style=progress_style />
+            <span class="relative z-10 inline-flex items-center gap-2">{children()}</span>
+        </Button>
     }
 }

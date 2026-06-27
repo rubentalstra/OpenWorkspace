@@ -29,8 +29,10 @@ time.workspace = true
 wasm-bindgen = { workspace = true }
 js-sys = "0.3"
 web-sys = { version = "0.3", features = [
-    "CustomEvent", "Document", "Event", "HtmlElement", "HtmlInputElement",
-    "KeyboardEvent", "MouseEvent", "Node", "NodeList", "Storage", "Window",
+    "Clipboard", "CssStyleDeclaration", "CustomEvent", "Document", "Element",
+    "Event", "HtmlElement", "HtmlInputElement", "KeyboardEvent", "MediaQueryList",
+    "MediaQueryListEvent", "MouseEvent", "Navigator", "Node", "NodeList", "Storage",
+    "Window",
 ] }
 
 [features]

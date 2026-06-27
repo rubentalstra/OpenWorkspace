@@ -57,7 +57,12 @@ pub fn CommandDialogTrigger(children: Children, #[prop(into, optional)] class: S
     let trigger_id = format!("{TRIGGER_ID_QUALIFIER}__{}", context.dialog_id);
 
     view! {
-        <Button attr:data-name="CommandDialogTrigger" class=class variant=ButtonVariant::Outline attr:id=trigger_id>
+        <Button
+            attr:data-name="CommandDialogTrigger"
+            class=class
+            variant=ButtonVariant::Outline
+            attr:id=trigger_id
+        >
             {children()}
         </Button>
     }

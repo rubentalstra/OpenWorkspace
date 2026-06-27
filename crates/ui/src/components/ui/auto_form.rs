@@ -118,7 +118,11 @@ pub fn FormTextarea(
                 let field_name = field_name.clone();
                 move || {
                     let is_touched = form_ctx.touched_signal.get().contains(&field_name);
-                    let has_error = form_ctx.errors_signal.get().get(&field_name).is_some_and(|e| e.is_some());
+                    let has_error = form_ctx
+                        .errors_signal
+                        .get()
+                        .get(&field_name)
+                        .is_some_and(|e| e.is_some());
                     (is_touched && has_error).then_some("true")
                 }
             }

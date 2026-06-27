@@ -1,45 +1,30 @@
+use crate::{clx, cn};
+use leptos::html;
 use leptos::prelude::*;
-use crate::clx;
-use tw_merge::tw_merge;
 
-mod components {
-    use super::*;
-    clx! {SwitchLabel, span, "text-sm font-medium"}
-}
+const SWITCH_BASE: &str = "peer inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none disabled:cursor-not-allowed disabled:opacity-50 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-checked:bg-primary aria-[checked=false]:bg-input dark:aria-[checked=false]:bg-input/80";
 
-pub use components::*;
+const SWITCH_THUMB: &str = "pointer-events-none block size-4 rounded-full bg-background ring-0 shadow-lg transition-transform peer-aria-checked:translate-x-[calc(100%-2px)] peer-aria-[checked=false]:translate-x-0 dark:peer-aria-checked:bg-primary-foreground dark:peer-aria-[checked=false]:bg-foreground";
 
+clx! {SwitchLabel, span, "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50"}
+
+/// Toggle switch styled as a `<button role="switch">`. Drive its state via the
+/// forwarded `aria-checked` attribute and handle `on:click` at the call site;
+/// the track and thumb restyle from `aria-checked` selectors.
 #[component]
 pub fn Switch(
-    #[prop(optional, into)] id: String,
-    #[prop(optional, default = false)] checked: bool,
-    #[prop(into, optional, default = "Toggle switch".to_string())] aria_label: String,
-    #[prop(into, optional)] class: String,
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(optional)] node_ref: NodeRef<html::Button>,
 ) -> impl IntoView {
-    let is_checked = RwSignal::new(checked);
-    let state = move || if is_checked.get() { "checked" } else { "unchecked" };
-
-    let track_class = tw_merge!(
-        "inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
-        class
-    );
-
     view! {
         <button
+            node_ref=node_ref
             data-name="Switch"
-            id=id
             type="button"
             role="switch"
-            aria-checked=move || is_checked.get().to_string()
-            aria-label=aria_label
-            data-state=state
-            class=track_class
-            on:click=move |_| is_checked.update(|c| *c = !*c)
+            class=move || cn!(SWITCH_BASE, class.get())
         >
-            <span
-                data-state=state
-                class="block rounded-full ring-0 shadow-lg transition-transform pointer-events-none size-5 bg-background data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
-            />
+            <span data-name="SwitchThumb" class=SWITCH_THUMB />
         </button>
     }
 }

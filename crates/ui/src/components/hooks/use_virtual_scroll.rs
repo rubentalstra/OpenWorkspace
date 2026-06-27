@@ -89,7 +89,7 @@ pub fn use_virtual_scroll(container_ref: NodeRef<html::Div>, total_rows: Signal<
             }) as Box<dyn Fn()>);
 
             let window = leptos::prelude::window();
-            let _ = window.request_animation_frame(measure_height.as_ref().unchecked_ref());
+            _ = window.request_animation_frame(measure_height.as_ref().unchecked_ref());
             measure_height.forget();
 
             // Set up scroll listener with mounted check
@@ -105,7 +105,7 @@ pub fn use_virtual_scroll(container_ref: NodeRef<html::Div>, total_rows: Signal<
                 }
             }) as Box<dyn Fn()>);
 
-            let _ = el.add_event_listener_with_callback("scroll", scroll_handler.as_ref().unchecked_ref());
+            _ = el.add_event_listener_with_callback("scroll", scroll_handler.as_ref().unchecked_ref());
 
             // Keep the closure alive - it will check is_mounted before accessing signals
             scroll_handler.forget();

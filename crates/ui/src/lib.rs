@@ -6,10 +6,6 @@
 //!
 //! Components are re-exported flat: `ui::Button`, `ui::Card`, `ui::Input`, … The
 //! kit grows as each component is rewritten to the house standard (tasks #13–#23).
-#![expect(
-    clippy::expl_impl_clone_on_copy,
-    reason = "tw_merge's TwVariant derive emits an explicit Clone impl on Copy enums"
-)]
 
 mod components;
 mod tw;
@@ -21,4 +17,5 @@ pub use paste;
 #[doc(hidden)]
 pub use tw_merge;
 
+pub use components::hooks::*;
 pub use components::ui::*;

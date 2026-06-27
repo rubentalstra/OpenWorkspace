@@ -1,192 +1,84 @@
-/// Generates a `tw_merge`-backed class type (and optionally a Leptos component)
-/// from a base class plus `variant`/`size` axes. The first arm of each axis is
-/// its `Default`. Six shapes are supported: variant+size, variant-only, and
-/// size-only (type-only); plus variant+size with a generated component element,
-/// optionally rendering as an `<a>` when given an `href` (with `aria-current`).
-///
-/// ```ignore
-/// variants! {
-///     Badge {
-///         base: "inline-flex items-center rounded-md border w-fit",
-///         variants: {
-///             variant: {
-///                 Default: "bg-primary text-primary-foreground",
-///                 Outline: "text-foreground border-border",
-///             },
-///             size: { Default: "px-2.5 py-0.5 text-xs", Lg: "px-3 py-1 text-sm" }
-///         }
-///     }
-/// }
-/// // => BadgeClass, BadgeVariant { Default, Outline }, BadgeSize { Default, Lg }
-/// ```
-///
-/// Add a `component: { element: span }` block to also generate a `Badge`
-/// component; `support_href: true` (and `support_aria_current: true`) make it
-/// render as a link when an `href` prop is supplied.
+//! `variants!` — generates `{Name}Variant`/`{Name}Size` enums (the first arm of
+//! each axis is its `Default`) and, when a `component` block is present, a Leptos
+//! component whose reactive class is the base merged (via `cn!`) with the selected
+//! variant/size classes and the caller's `class`. First-party: no third-party
+//! derive macros, no `use` globs, so any number of invocations can share a module.
+
+/// Generates a unit enum (first arm = `Default`) plus a private `class()` mapping
+/// each arm to its Tailwind classes. Internal to [`variants!`].
 #[macro_export]
-macro_rules! variants {
-    // variant + size + generated component element
-    (
-        $component:ident {
-            base: $base_class:literal,
-            variants: {
-                variant: {
-                    $first_variant:ident: $first_variant_class:literal
-                    $(, $variant_key:ident: $variant_class:literal)* $(,)?
-                },
-                size: {
-                    $first_size:ident: $first_size_class:literal
-                    $(, $size_key:ident: $size_class:literal)* $(,)?
-                }
-            },
-            component: {
-                element: $element:ident
-            }
-        }
-    ) => {
+#[doc(hidden)]
+macro_rules! __variants_enum {
+    ($name:ident $suffix:ident, $first:ident: $first_class:literal $(, $key:ident: $class:literal)* $(,)?) => {
         $crate::paste::paste! {
-            use $crate::tw_merge::*;
-
-            #[derive(TwClass, Clone, Copy)]
-            #[tw(class = $base_class)]
-            pub struct [<$component Class>] {
-                pub variant: [<$component Variant>],
-                pub size: [<$component Size>],
+            #[derive(Clone, Copy, PartialEq, Eq, Default)]
+            pub enum [<$name $suffix>] {
+                #[default]
+                $first,
+                $($key,)*
             }
 
-            #[derive(TwVariant)]
-            pub enum [<$component Variant>] {
-                #[tw(default, class = $first_variant_class)]
-                $first_variant,
-                $(
-                    #[tw(class = $variant_class)]
-                    $variant_key,
-                )*
-            }
-
-            #[derive(TwVariant)]
-            pub enum [<$component Size>] {
-                #[tw(default, class = $first_size_class)]
-                $first_size,
-                $(
-                    #[tw(class = $size_class)]
-                    $size_key,
-                )*
-            }
-
-            #[::leptos::component]
-            pub fn $component(
-                #[prop(into, optional)] variant: ::leptos::prelude::Signal<[<$component Variant>]>,
-                #[prop(into, optional)] size: ::leptos::prelude::Signal<[<$component Size>]>,
-                #[prop(into, optional)] class: ::leptos::prelude::Signal<String>,
-                #[prop(into, optional)] data_name: Option<String>,
-                children: ::leptos::prelude::Children,
-            ) -> impl ::leptos::prelude::IntoView {
-                use ::leptos::prelude::*;
-
-                let computed_class = move || {
-                    let variant = variant.try_get().unwrap_or_default();
-                    let size = size.try_get().unwrap_or_default();
-                    let component_class = [<$component Class>] { variant, size };
-                    component_class.with_class(class.try_get().unwrap_or_default())
-                };
-
-                let data_name = data_name.unwrap_or_else(|| stringify!($component).to_string());
-
-                view! {
-                    <$element class=computed_class data-name=data_name>
-                        {children()}
-                    </$element>
+            impl [<$name $suffix>] {
+                fn class(self) -> &'static str {
+                    match self {
+                        Self::$first => $first_class,
+                        $(Self::$key => $class,)*
+                    }
                 }
             }
         }
     };
+}
 
-    // generated component that renders as <a> with aria-current when href is set
+/// See the module docs. Supported shapes:
+/// - `variant` + `size` with a `component { element [, support_href [, support_aria_current]] }` block
+/// - `variant` + `size`, or `variant` alone — enums only (no component)
+#[macro_export]
+macro_rules! variants {
+    // variant + size + component rendered as <a> (with aria-current) when href is set
     (
-        $component:ident {
-            base: $base_class:literal,
+        $(#[$meta:meta])*
+        $name:ident {
+            base: $base:literal,
             variants: {
-                variant: {
-                    $first_variant:ident: $first_variant_class:literal
-                    $(, $variant_key:ident: $variant_class:literal)* $(,)?
-                },
-                size: {
-                    $first_size:ident: $first_size_class:literal
-                    $(, $size_key:ident: $size_class:literal)* $(,)?
-                }
+                variant: { $v0:ident: $v0c:literal $(, $vk:ident: $vc:literal)* $(,)? },
+                size: { $s0:ident: $s0c:literal $(, $sk:ident: $sc:literal)* $(,)? }
             },
-            component: {
-                element: $element:ident,
-                support_href: true,
-                support_aria_current: true
-            }
+            component: { element: $el:ident, support_href: true, support_aria_current: true }
         }
     ) => {
+        $crate::__variants_enum!($name Variant, $v0: $v0c $(, $vk: $vc)*);
+        $crate::__variants_enum!($name Size, $s0: $s0c $(, $sk: $sc)*);
         $crate::paste::paste! {
-            use $crate::tw_merge::*;
-
-            #[derive(TwClass, Clone, Copy)]
-            #[tw(class = $base_class)]
-            pub struct [<$component Class>] {
-                pub variant: [<$component Variant>],
-                pub size: [<$component Size>],
-            }
-
-            #[derive(TwVariant)]
-            pub enum [<$component Variant>] {
-                #[tw(default, class = $first_variant_class)]
-                $first_variant,
-                $(#[tw(class = $variant_class)] $variant_key,)*
-            }
-
-            #[derive(TwVariant)]
-            pub enum [<$component Size>] {
-                #[tw(default, class = $first_size_class)]
-                $first_size,
-                $(#[tw(class = $size_class)] $size_key,)*
-            }
-
-            #[::leptos::component]
-            pub fn $component(
-                #[prop(into, optional)] variant: ::leptos::prelude::Signal<[<$component Variant>]>,
-                #[prop(into, optional)] size: ::leptos::prelude::Signal<[<$component Size>]>,
-                #[prop(into, optional)] class: ::leptos::prelude::Signal<String>,
-                #[prop(into, optional)] data_name: Option<String>,
+            $(#[$meta])*
+            #[component]
+            pub fn $name(
+                #[prop(into, optional)] variant: Signal<[<$name Variant>]>,
+                #[prop(into, optional)] size: Signal<[<$name Size>]>,
+                #[prop(into, optional)] class: Signal<String>,
                 #[prop(into, optional)] href: Option<String>,
-                children: ::leptos::prelude::Children,
-            ) -> impl ::leptos::prelude::IntoView {
-                use ::leptos::prelude::*;
-
-                let computed_class = move || {
-                    let variant = variant.try_get().unwrap_or_default();
-                    let size = size.try_get().unwrap_or_default();
-                    let component_class = [<$component Class>] { variant, size };
-                    component_class.with_class(class.try_get().unwrap_or_default())
-                };
-
-                let data_name = data_name.unwrap_or_else(|| stringify!($component).to_string());
-
+                children: Children,
+            ) -> impl IntoView {
+                let computed =
+                    move || $crate::cn!($base, variant.get().class(), size.get().class(), class.get());
                 match href {
                     Some(href) => {
-                        use ::leptos_router::hooks::use_location;
-
-                        let location = use_location();
-                        let is_active = {
-                            let href = href.clone();
-                            move || {
-                                let path = location.pathname.try_get().unwrap_or_default();
-                                path == href || path.starts_with(&format!("{href}/"))
+                        let location = leptos_router::hooks::use_location();
+                        let target = href.clone();
+                        let aria_current = move || {
+                            let path = location.pathname.get();
+                            if path == target || path.starts_with(&format!("{target}/")) {
+                                "page"
+                            } else {
+                                "false"
                             }
                         };
-                        let aria_current = move || if is_active() { "page" } else { "false" };
-
                         view! {
                             <a
-                                class=computed_class
+                                class=computed
                                 href=href
                                 aria-current=aria_current
-                                data-name=data_name
+                                data-name=stringify!($name)
                             >
                                 {children()}
                             </a>
@@ -194,9 +86,9 @@ macro_rules! variants {
                         .into_any()
                     }
                     None => view! {
-                        <$element class=computed_class data-name=data_name>
+                        <$el class=computed data-name=stringify!($name)>
                             {children()}
-                        </$element>
+                        </$el>
                     }
                     .into_any(),
                 }
@@ -204,81 +96,43 @@ macro_rules! variants {
         }
     };
 
-    // generated component that renders as <a> when href is set
+    // variant + size + component rendered as <a> when href is set
     (
-        $component:ident {
-            base: $base_class:literal,
+        $(#[$meta:meta])*
+        $name:ident {
+            base: $base:literal,
             variants: {
-                variant: {
-                    $first_variant:ident: $first_variant_class:literal
-                    $(, $variant_key:ident: $variant_class:literal)* $(,)?
-                },
-                size: {
-                    $first_size:ident: $first_size_class:literal
-                    $(, $size_key:ident: $size_class:literal)* $(,)?
-                }
+                variant: { $v0:ident: $v0c:literal $(, $vk:ident: $vc:literal)* $(,)? },
+                size: { $s0:ident: $s0c:literal $(, $sk:ident: $sc:literal)* $(,)? }
             },
-            component: {
-                element: $element:ident,
-                support_href: true
-            }
+            component: { element: $el:ident, support_href: true }
         }
     ) => {
+        $crate::__variants_enum!($name Variant, $v0: $v0c $(, $vk: $vc)*);
+        $crate::__variants_enum!($name Size, $s0: $s0c $(, $sk: $sc)*);
         $crate::paste::paste! {
-            use $crate::tw_merge::*;
-
-            #[derive(TwClass, Clone, Copy)]
-            #[tw(class = $base_class)]
-            pub struct [<$component Class>] {
-                pub variant: [<$component Variant>],
-                pub size: [<$component Size>],
-            }
-
-            #[derive(TwVariant)]
-            pub enum [<$component Variant>] {
-                #[tw(default, class = $first_variant_class)]
-                $first_variant,
-                $(#[tw(class = $variant_class)] $variant_key,)*
-            }
-
-            #[derive(TwVariant)]
-            pub enum [<$component Size>] {
-                #[tw(default, class = $first_size_class)]
-                $first_size,
-                $(#[tw(class = $size_class)] $size_key,)*
-            }
-
-            #[::leptos::component]
-            pub fn $component(
-                #[prop(into, optional)] variant: ::leptos::prelude::Signal<[<$component Variant>]>,
-                #[prop(into, optional)] size: ::leptos::prelude::Signal<[<$component Size>]>,
-                #[prop(into, optional)] class: ::leptos::prelude::Signal<String>,
-                #[prop(into, optional)] data_name: Option<String>,
+            $(#[$meta])*
+            #[component]
+            pub fn $name(
+                #[prop(into, optional)] variant: Signal<[<$name Variant>]>,
+                #[prop(into, optional)] size: Signal<[<$name Size>]>,
+                #[prop(into, optional)] class: Signal<String>,
                 #[prop(into, optional)] href: Option<String>,
-                children: ::leptos::prelude::Children,
-            ) -> impl ::leptos::prelude::IntoView {
-                use ::leptos::prelude::*;
-
-                let computed_class = move || {
-                    let variant = variant.try_get().unwrap_or_default();
-                    let size = size.try_get().unwrap_or_default();
-                    let component_class = [<$component Class>] { variant, size };
-                    component_class.with_class(class.try_get().unwrap_or_default())
-                };
-
-                let data_name = data_name.unwrap_or_else(|| stringify!($component).to_string());
-
+                children: Children,
+            ) -> impl IntoView {
+                let computed =
+                    move || $crate::cn!($base, variant.get().class(), size.get().class(), class.get());
                 match href {
                     Some(href) => view! {
-                        <a class=computed_class href=href data-name=data_name>
+                        <a class=computed href=href data-name=stringify!($name)>
                             {children()}
                         </a>
                     }
                     .into_any(),
                     None => view! {
-                        <$element class=computed_class data-name=data_name>
+                        <$el class=computed data-name=stringify!($name)>
                             {children()}
-                        </$element>
+                        </$el>
                     }
                     .into_any(),
                 }
@@ -286,117 +140,59 @@ macro_rules! variants {
         }
     };
 
-    // variant + size, type only (no component)
+    // variant + size + component
     (
-        $component:ident {
-            base: $base_class:literal,
+        $(#[$meta:meta])*
+        $name:ident {
+            base: $base:literal,
             variants: {
-                variant: {
-                    $first_variant:ident: $first_variant_class:literal
-                    $(, $variant_key:ident: $variant_class:literal)* $(,)?
-                },
-                size: {
-                    $first_size:ident: $first_size_class:literal
-                    $(, $size_key:ident: $size_class:literal)* $(,)?
-                }
-            }
+                variant: { $v0:ident: $v0c:literal $(, $vk:ident: $vc:literal)* $(,)? },
+                size: { $s0:ident: $s0c:literal $(, $sk:ident: $sc:literal)* $(,)? }
+            },
+            component: { element: $el:ident }
         }
     ) => {
+        $crate::__variants_enum!($name Variant, $v0: $v0c $(, $vk: $vc)*);
+        $crate::__variants_enum!($name Size, $s0: $s0c $(, $sk: $sc)*);
         $crate::paste::paste! {
-            use $crate::tw_merge::*;
-
-            #[derive(TwClass, Clone, Copy)]
-            #[tw(class = $base_class)]
-            pub struct [<$component Class>] {
-                pub variant: [<$component Variant>],
-                pub size: [<$component Size>],
-            }
-
-            #[derive(TwVariant)]
-            pub enum [<$component Variant>] {
-                #[tw(default, class = $first_variant_class)]
-                $first_variant,
-                $(
-                    #[tw(class = $variant_class)]
-                    $variant_key,
-                )*
-            }
-
-            #[derive(TwVariant)]
-            pub enum [<$component Size>] {
-                #[tw(default, class = $first_size_class)]
-                $first_size,
-                $(
-                    #[tw(class = $size_class)]
-                    $size_key,
-                )*
+            $(#[$meta])*
+            #[component]
+            pub fn $name(
+                #[prop(into, optional)] variant: Signal<[<$name Variant>]>,
+                #[prop(into, optional)] size: Signal<[<$name Size>]>,
+                #[prop(into, optional)] class: Signal<String>,
+                children: Children,
+            ) -> impl IntoView {
+                let computed =
+                    move || $crate::cn!($base, variant.get().class(), size.get().class(), class.get());
+                view! {
+                    <$el class=computed data-name=stringify!($name)>
+                        {children()}
+                    </$el>
+                }
             }
         }
     };
 
-    // variant only, type only
+    // variant + size enums only
     (
-        $component:ident {
-            base: $base_class:literal,
+        $name:ident {
             variants: {
-                variant: {
-                    $first_variant:ident: $first_variant_class:literal
-                    $(, $variant_key:ident: $variant_class:literal)* $(,)?
-                }
+                variant: { $v0:ident: $v0c:literal $(, $vk:ident: $vc:literal)* $(,)? },
+                size: { $s0:ident: $s0c:literal $(, $sk:ident: $sc:literal)* $(,)? }
             }
         }
     ) => {
-        $crate::paste::paste! {
-            use $crate::tw_merge::*;
-
-            #[derive(TwClass, Clone, Copy)]
-            #[tw(class = $base_class)]
-            pub struct [<$component Class>] {
-                pub variant: [<$component Variant>],
-            }
-
-            #[derive(TwVariant)]
-            pub enum [<$component Variant>] {
-                #[tw(default, class = $first_variant_class)]
-                $first_variant,
-                $(
-                    #[tw(class = $variant_class)]
-                    $variant_key,
-                )*
-            }
-        }
+        $crate::__variants_enum!($name Variant, $v0: $v0c $(, $vk: $vc)*);
+        $crate::__variants_enum!($name Size, $s0: $s0c $(, $sk: $sc)*);
     };
 
-    // size only, type only
+    // variant enum only
     (
-        $component:ident {
-            base: $base_class:literal,
-            variants: {
-                size: {
-                    $first_size:ident: $first_size_class:literal
-                    $(, $size_key:ident: $size_class:literal)* $(,)?
-                }
-            }
+        $name:ident {
+            variants: { variant: { $v0:ident: $v0c:literal $(, $vk:ident: $vc:literal)* $(,)? } }
         }
     ) => {
-        $crate::paste::paste! {
-            use $crate::tw_merge::*;
-
-            #[derive(TwClass, Clone, Copy)]
-            #[tw(class = $base_class)]
-            pub struct [<$component Class>] {
-                pub size: [<$component Size>],
-            }
-
-            #[derive(TwVariant)]
-            pub enum [<$component Size>] {
-                #[tw(default, class = $first_size_class)]
-                $first_size,
-                $(
-                    #[tw(class = $size_class)]
-                    $size_key,
-                )*
-            }
-        }
+        $crate::__variants_enum!($name Variant, $v0: $v0c $(, $vk: $vc)*);
     };
 }

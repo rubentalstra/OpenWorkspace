@@ -87,7 +87,10 @@ pub fn SelectOption(
             }
         >
             {children()}
-            <Icon icon=icondata::LuCheck attr:class="ml-auto opacity-0 size-4 text-muted-foreground group-aria-selected:opacity-100" />
+            <Icon
+                icon=icondata::LuCheck
+                attr:class="ml-auto opacity-0 size-4 text-muted-foreground group-aria-selected:opacity-100"
+            />
         </li>
     }
 }

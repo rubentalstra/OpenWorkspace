@@ -1,14 +1,17 @@
 /// Defines a Tailwind-styled wrapper component whose base classes merge with a
 /// reactive `class` prop (later utilities win). Native attributes forward to the
-/// root element.
+/// root element. Leading `///` docs / attributes are applied to the component.
 ///
 /// ```ignore
-/// clx! {Card, div, "rounded-lg p-4", "bg-card"}
-/// // <Card class="p-6"/> renders <div class="rounded-lg bg-card p-6" data-name="Card">
+/// clx! {
+///     /// Surface header.
+///     CardHeader, div, "flex flex-col gap-1.5 px-6"
+/// }
 /// ```
 #[macro_export]
 macro_rules! clx {
-    ($name:ident, $element:ident, $($base_class:expr),+ $(,)?) => {
+    ($(#[$meta:meta])* $name:ident, $element:ident, $($base_class:expr),+ $(,)?) => {
+        $(#[$meta])*
         #[component]
         pub fn $name(
             #[prop(into, optional)] class: Signal<String>,
@@ -30,7 +33,8 @@ macro_rules! clx {
 /// that take no children, e.g. `input`, `img`, `hr`.
 #[macro_export]
 macro_rules! void {
-    ($name:ident, $element:ident, $($base_class:expr),+ $(,)?) => {
+    ($(#[$meta:meta])* $name:ident, $element:ident, $($base_class:expr),+ $(,)?) => {
+        $(#[$meta])*
         #[component]
         pub fn $name(#[prop(into, optional)] class: Signal<String>) -> impl IntoView {
             view! {

@@ -2,12 +2,17 @@ use leptos::prelude::*;
 
 use super::use_media_query::use_media_query;
 
-/// Mobile breakpoint in pixels (matches Tailwind's `md` breakpoint).
+/// Viewport width, in pixels, at and above which the layout is treated as
+/// non-mobile. Matches Tailwind's `md` breakpoint.
 pub const MOBILE_BREAKPOINT: u32 = 768;
 
-/// Reactive hook that returns `true` when the viewport is below the mobile breakpoint.
+/// Reactive hook that reports whether the viewport is narrower than the mobile
+/// breakpoint.
 ///
-/// Equivalent to `use_media_query("(max-width: 767px)")`.
+/// Backed by [`use_media_query`], so the returned [`Signal`] updates as the
+/// viewport is resized. During server rendering — where no viewport exists — it
+/// reports `false` and is populated on the client once the media query is
+/// evaluated.
 ///
 /// # Example
 /// ```ignore

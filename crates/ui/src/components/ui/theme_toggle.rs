@@ -1,76 +1,55 @@
-
+use crate::{Button, ButtonSize, ButtonVariant, cn, use_theme_mode};
 use leptos::prelude::*;
+use leptos_icons::Icon;
 
-use crate::components::hooks::use_theme_mode::use_theme_mode;
+const TOGGLE_BASE: &str = "relative isolate";
 
+const ICON_BASE: &str =
+    "absolute size-4 transition-all duration-500 ease-out motion-reduce:transition-none";
+
+/// Dark-mode switch wired to the shared [`crate::ThemeMode`]. Clicking flips the
+/// active theme and persists it; `aria-pressed` reflects whether dark mode is on.
+/// A sun and a moon glyph cross-fade with pure CSS so the control animates
+/// without any JavaScript. Native attributes and events forward to the button.
 #[component]
-pub fn ThemeToggle() -> impl IntoView {
-    let theme_mode = use_theme_mode();
+pub fn ThemeToggle(#[prop(into, optional)] class: Signal<String>) -> impl IntoView {
+    let theme = use_theme_mode();
+
+    let pressed = move || if theme.get() { "true" } else { "false" };
+    let sun_class = move || {
+        cn!(
+            ICON_BASE,
+            if theme.get() {
+                "scale-50 rotate-90 opacity-0"
+            } else {
+                "scale-100 rotate-0 opacity-100"
+            }
+        )
+    };
+    let moon_class = move || {
+        cn!(
+            ICON_BASE,
+            if theme.get() {
+                "scale-100 rotate-0 opacity-100"
+            } else {
+                "scale-50 -rotate-90 opacity-0"
+            }
+        )
+    };
 
     view! {
-        <style>
-            {"
-            .theme__toggle_transition {
-            -webkit-tap-highlight-color: transparent;
-            
-            svg path {
-            transform-origin: center;
-            transition: all .6s ease;
-            transform: translate3d(0,0,0);
-            backface-visibility: hidden;
-            
-            &.sun {
-            transform: scale(.4) rotate(60deg);
-            opacity: 0;
-            }
-            
-            &.moon {
-            opacity: 1;
-            }
-            }
-            
-            &.switch {
-            svg path {
-            &.sun {
-            transform: scale(1) rotate(0);
-            opacity: 1;
-            }
-            
-            &.moon {
-            transform: scale(.4) rotate(-60deg);
-            opacity: 0;
-            }
-            }
-            }
-            }
-            "}
-        </style>
-
-        <button
-            type="button"
-            aria-label="Toggle theme"
-            class=move || {
-                let base_class = "theme__toggle_transition";
-                if theme_mode.get() { format!("{base_class} switch") } else { base_class.to_string() }
-            }
-            on:click=move |_| theme_mode.toggle()
+        <Button
+            variant=ButtonVariant::Ghost
+            size=ButtonSize::Icon
+            class=move || cn!(TOGGLE_BASE, class.get())
+            attr:r#type="button"
+            attr:aria-label="Toggle dark mode"
+            attr:aria-pressed=pressed
+            attr:data-name="ThemeToggle"
+            on:click=move |_| theme.toggle()
         >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="size-4">
-                <path
-                    d="M12 1.75V3.25M12 20.75V22.25M1.75 12H3.25M20.75 12H22.25M4.75216 4.75216L5.81282 5.81282M18.1872 18.1872L19.2478 19.2478M4.75216 19.2478L5.81282 18.1872M18.1872 5.81282L19.2478 4.75216M16.25 12C16.25 14.3472 14.3472 16.25 12 16.25C9.65279 16.25 7.75 14.3472 7.75 12C7.75 9.65279 9.65279 7.75 12 7.75C14.3472 7.75 16.25 9.65279 16.25 12Z"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    class="sun text-neutral-300"
-                />
-                <path
-                    d="M2.75 12C2.75 17.1086 6.89137 21.25 12 21.25C16.7154 21.25 20.6068 17.7216 21.1778 13.161C20.1198 13.8498 18.8566 14.25 17.5 14.25C13.7721 14.25 10.75 11.2279 10.75 7.5C10.75 5.66012 11.4861 3.99217 12.6799 2.77461C12.4554 2.7583 12.2287 2.75 12 2.75C6.89137 2.75 2.75 6.89137 2.75 12Z"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linejoin="round"
-                    class="moon text-neutral-700"
-                />
-            </svg>
-        </button>
+            <Icon icon=icondata::LuSun attr:class=sun_class attr:aria-hidden="true" />
+            <Icon icon=icondata::LuMoon attr:class=moon_class attr:aria-hidden="true" />
+        </Button>
     }
 }

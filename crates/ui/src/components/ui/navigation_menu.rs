@@ -233,7 +233,10 @@ pub fn NavigationMenuTrigger(children: Children, #[prop(optional, into)] class: 
             data-state="closed"
         >
             {children()}
-            <Icon icon=icondata::LuChevronDown attr:class="relative ml-1 transition duration-300 top-[1px] size-3 group-data-[state=open]:rotate-180" />
+            <Icon
+                icon=icondata::LuChevronDown
+                attr:class="relative ml-1 transition duration-300 top-[1px] size-3 group-data-[state=open]:rotate-180"
+            />
         </button>
     }
 }
@@ -254,7 +257,12 @@ pub fn NavigationMenuContent(children: Children, #[prop(optional, into)] class: 
     );
 
     view! {
-        <div data-name="NavigationMenuContent" data-nav-content=ctx.item_id class=class data-state="closed">
+        <div
+            data-name="NavigationMenuContent"
+            data-nav-content=ctx.item_id
+            class=class
+            data-state="closed"
+        >
             {children()}
         </div>
     }

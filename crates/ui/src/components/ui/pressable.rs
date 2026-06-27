@@ -1,23 +1,38 @@
+use crate::cn;
+use leptos::html;
 use leptos::prelude::*;
 
-/// Wrapper component that adds press feedback (scale effect) to any children.
-/// Works on mobile where `:active` pseudo-class doesn't work on non-button elements.
-#[component]
-pub fn Pressable(children: Children, #[prop(into, optional)] class: String) -> impl IntoView {
-    let is_pressed_signal = RwSignal::new(false);
+const PRESSABLE_BASE: &str =
+    "transition-transform touch-manipulation [-webkit-tap-highlight-color:transparent] select-none";
 
-    let wrapper_class = move || {
-        let base = format!("transition-transform {class}");
-        if is_pressed_signal.get() { format!("{base} scale-[0.98]") } else { base }
+/// Press-feedback wrapper that scales its children down while held, giving
+/// tactile feedback on touch devices where the `:active` pseudo-class is
+/// unreliable on non-interactive elements. Native attributes, events and
+/// bindings forward to the root `<div>`.
+#[component]
+pub fn Pressable(
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(optional)] node_ref: NodeRef<html::Div>,
+    children: Children,
+) -> impl IntoView {
+    let pressed = RwSignal::new(false);
+    let merged = move || {
+        cn!(
+            PRESSABLE_BASE,
+            pressed.get().then_some("scale-[0.98]"),
+            class.get()
+        )
     };
 
     view! {
         <div
-            class=wrapper_class
-            on:pointerdown=move |_| is_pressed_signal.set(true)
-            on:pointerup=move |_| is_pressed_signal.set(false)
-            on:pointerleave=move |_| is_pressed_signal.set(false)
-            on:pointercancel=move |_| is_pressed_signal.set(false)
+            node_ref=node_ref
+            data-name="Pressable"
+            class=merged
+            on:pointerdown=move |_| pressed.set(true)
+            on:pointerup=move |_| pressed.set(false)
+            on:pointerleave=move |_| pressed.set(false)
+            on:pointercancel=move |_| pressed.set(false)
         >
             {children()}
         </div>

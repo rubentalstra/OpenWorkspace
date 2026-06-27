@@ -43,7 +43,11 @@ pub fn MultiSelectValue(#[prop(optional, into)] placeholder: String) -> impl Int
                     placeholder.clone()
                 } else {
                     let count = values.len();
-                    if count == 1 { "1 selected".to_string() } else { format!("{} selected", count) }
+                    if count == 1 {
+                        "1 selected".to_string()
+                    } else {
+                        format!("{} selected", count)
+                    }
                 }
             }}
         </span>
@@ -96,7 +100,10 @@ pub fn MultiSelectOption(
             }
         >
             {children()}
-            <Icon icon=icondata::LuCheck attr:class="ml-auto opacity-0 size-4 text-muted-foreground group-aria-selected:opacity-100" />
+            <Icon
+                icon=icondata::LuCheck
+                attr:class="ml-auto opacity-0 size-4 text-muted-foreground group-aria-selected:opacity-100"
+            />
         </button>
     }
 }

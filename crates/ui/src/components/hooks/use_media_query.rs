@@ -1,40 +1,31 @@
 use leptos::prelude::*;
+use leptos::wasm_bindgen::JsCast;
 use leptos::wasm_bindgen::closure::Closure;
-use wasm_bindgen::{JsCast, JsValue};
 
-/// Reactive hook that tracks whether a CSS media query matches.
+/// Reactively tracks whether a CSS media query matches the current viewport.
 ///
-/// Sets up a `MediaQueryList` change listener so the returned signal
-/// updates automatically when the viewport changes.
-///
-/// # Example
-/// ```ignore
-/// let is_wide = use_media_query("(min-width: 1024px)");
-///
-/// view! {
-///     {move || if is_wide.get() { "Wide layout" } else { "Narrow layout" }}
-/// }
-/// ```
+/// Returns a [`Signal<bool>`] that is `false` during server render and on the
+/// first client paint, then resolves to the live `MediaQueryList` result and
+/// updates whenever the match state changes (e.g. on resize or orientation
+/// change). The listener is registered inside an effect, so it never runs during
+/// SSR; the browser closure is owned by the page for its lifetime.
 pub fn use_media_query(query: &str) -> Signal<bool> {
-    let is_match = RwSignal::new(false);
-    let query = query.to_string();
+    let matches = RwSignal::new(false);
+    let query = query.to_owned();
 
     Effect::new(move |_| {
         let Some(mql) = window().match_media(&query).ok().flatten() else {
             return;
         };
+        matches.set(mql.matches());
 
-        is_match.set(mql.matches());
-
-        let mql_clone = mql.clone();
-        let closure = Closure::<dyn Fn(JsValue)>::new(move |_: JsValue| {
-            is_match.set(mql_clone.matches());
-        });
-
-        let _ = mql.add_event_listener_with_callback("change", closure.as_ref().unchecked_ref());
-
-        closure.forget();
+        let source = mql.clone();
+        let on_change = Closure::<dyn Fn()>::new(move || matches.set(source.matches()));
+        _ = mql.add_event_listener_with_callback("change", on_change.as_ref().unchecked_ref());
+        // The browser keeps only a weak reference, so the closure must outlive
+        // this scope; it lives for the page's lifetime alongside the query.
+        on_change.forget();
     });
 
-    is_match.into()
+    matches.into()
 }

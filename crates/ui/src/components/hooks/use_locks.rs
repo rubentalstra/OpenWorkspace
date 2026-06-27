@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use leptos::prelude::*;
 
-/// A design parameter that can be locked to prevent randomization.
+/// A design parameter that can be locked to exclude it from randomization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LockableParam {
     Style,
@@ -16,8 +16,21 @@ pub enum LockableParam {
 }
 
 impl LockableParam {
-    /// Display label for the param.
-    pub fn label(&self) -> &'static str {
+    /// Every param in canonical display order.
+    pub const ALL: &'static [Self] = &[
+        Self::Style,
+        Self::BaseColor,
+        Self::Theme,
+        Self::IconLibrary,
+        Self::Font,
+        Self::MenuAccent,
+        Self::MenuColor,
+        Self::Radius,
+    ];
+
+    /// Human-readable label for the param.
+    #[must_use]
+    pub fn label(self) -> &'static str {
         match self {
             Self::Style => "Style",
             Self::BaseColor => "Base Color",
@@ -29,97 +42,95 @@ impl LockableParam {
             Self::Radius => "Radius",
         }
     }
-
-    /// All params in display order.
-    pub const ALL: &'static [Self] = &[
-        Self::Style,
-        Self::BaseColor,
-        Self::Theme,
-        Self::IconLibrary,
-        Self::Font,
-        Self::MenuAccent,
-        Self::MenuColor,
-        Self::Radius,
-    ];
 }
 
-/// Context that tracks which design params are locked against randomization.
+/// Reactive context tracking which design params are locked against
+/// randomization. Lives entirely in client memory; no browser APIs are touched,
+/// so it is safe to construct during SSR.
 ///
-/// Call `UseLocks::init()` once at the page root, then access via `use_locks()`
-/// in any child component.
+/// Call [`UseLocks::init`] once at the page root, then read it with
+/// [`use_locks`] in any descendant.
 ///
 /// ```ignore
-/// // In page component:
-/// let _ = UseLocks::init();
+/// _ = UseLocks::init();
 ///
-/// // In child component:
 /// let locks = use_locks();
 /// let is_locked = locks.is_locked(LockableParam::Font);
-///
 /// view! {
 ///     <button on:click=move |_| locks.toggle_lock(LockableParam::Font)>
 ///         {move || if is_locked.get() { "Locked" } else { "Unlocked" }}
 ///     </button>
 /// }
 /// ```
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct UseLocks {
     locks: RwSignal<HashSet<LockableParam>>,
 }
 
 impl UseLocks {
-    /// Initialize and provide as context. No params are locked by default.
+    /// Construct the context with nothing locked and provide it to descendants.
+    /// Returns the handle for immediate use at the call site.
     #[must_use]
     pub fn init() -> Self {
-        let hook = Self { locks: RwSignal::new(HashSet::new()) };
+        let hook = Self {
+            locks: RwSignal::new(HashSet::new()),
+        };
         provide_context(hook);
         hook
     }
 
-    /// Returns a reactive signal that is `true` when `param` is locked.
+    /// Reactive signal that is `true` while `param` is locked.
+    #[must_use]
     pub fn is_locked(&self, param: LockableParam) -> Signal<bool> {
         let locks = self.locks;
-        Signal::derive(move || locks.with(|l| l.contains(&param)))
+        Signal::derive(move || locks.with(|set| set.contains(&param)))
     }
 
-    /// Toggle the lock state for `param`.
+    /// Reactive signal that is `true` while `param` is unlocked and therefore
+    /// safe to randomize.
+    #[must_use]
+    pub fn can_randomize(&self, param: LockableParam) -> Signal<bool> {
+        let locks = self.locks;
+        Signal::derive(move || locks.with(|set| !set.contains(&param)))
+    }
+
+    /// Flip the lock state of `param`.
     pub fn toggle_lock(&self, param: LockableParam) {
-        self.locks.update(|l| {
-            if l.contains(&param) {
-                l.remove(&param);
-            } else {
-                l.insert(param);
+        self.locks.update(|set| {
+            if !set.remove(&param) {
+                set.insert(param);
             }
         });
     }
 
-    /// Lock a param explicitly.
+    /// Lock `param`, excluding it from randomization.
     pub fn lock(&self, param: LockableParam) {
-        self.locks.update(|l| {
-            l.insert(param);
+        self.locks.update(|set| {
+            set.insert(param);
         });
     }
 
-    /// Unlock a param explicitly.
+    /// Unlock `param`, allowing it to be randomized again.
     pub fn unlock(&self, param: LockableParam) {
-        self.locks.update(|l| {
-            l.remove(&param);
+        self.locks.update(|set| {
+            set.remove(&param);
         });
     }
 
-    /// Returns all currently locked params. Tracked when called inside a reactive closure.
+    /// Snapshot of every currently locked param. Subscribes the caller when
+    /// invoked inside a reactive scope.
+    #[must_use]
     pub fn locked_params(&self) -> HashSet<LockableParam> {
         self.locks.get()
     }
-
-    /// `true` when `param` is NOT locked (safe to randomize).
-    pub fn can_randomize(&self, param: LockableParam) -> Signal<bool> {
-        let locks = self.locks;
-        Signal::derive(move || !locks.with(|l| l.contains(&param)))
-    }
 }
 
-/// Access the `UseLocks` context initialized by `UseLocks::init()`.
+/// Access the [`UseLocks`] context established by [`UseLocks::init`].
+///
+/// # Panics
+///
+/// Panics if no ancestor called [`UseLocks::init`] first.
+#[must_use]
 pub fn use_locks() -> UseLocks {
     expect_context::<UseLocks>()
 }

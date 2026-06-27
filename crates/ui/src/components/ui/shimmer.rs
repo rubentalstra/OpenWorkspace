@@ -1,52 +1,51 @@
+use crate::cn;
+use leptos::html;
 use leptos::prelude::*;
-use tw_merge::*;
 
-use crate::components::hooks::use_random::use_random_id_for;
+const SHIMMER_BASE: &str = "relative isolate overflow-hidden \
+[--shimmer-color:rgba(255,255,255,0.15)] [--shimmer-bg:rgba(255,255,255,0.08)] \
+[--shimmer-duration:1.5s]";
 
+const SHIMMER_WAVE: &str = "pointer-events-none absolute inset-0 -translate-x-full \
+bg-[var(--shimmer-bg)] bg-[linear-gradient(90deg,transparent,var(--shimmer-color),transparent)] \
+[animation:ow_shimmer_var(--shimmer-duration)_infinite] motion-reduce:animate-none";
+
+/// CSS keyframes powering the shimmer sweep. Emitted once per [`Shimmer`];
+/// identical blocks collapse harmlessly. Driving the animation from CSS keeps
+/// the component script-free and SSR-safe.
+const SHIMMER_KEYFRAMES: &str = "@keyframes ow_shimmer { to { transform: translateX(100%); } }";
+
+/// Loading wrapper that sweeps a highlight across its children while `loading`
+/// is true and reveals them unchanged once it is false. The sweep is pure CSS:
+/// an absolutely-positioned overlay animates `translateX`.
+///
+/// Colour and timing are CSS custom properties on the root, so callers tune them
+/// through `class` or inline `style` (`[--shimmer-duration:2s]`,
+/// `[--shimmer-color:theme(colors.white/20%)]`). Respects
+/// `prefers-reduced-motion`. Native attributes, events and bindings forward to
+/// the root.
 #[component]
 pub fn Shimmer(
-    /// Controls shimmer visibility (works with any bool signal)
+    /// Whether the sweep is active. When false the children render without an
+    /// overlay.
     #[prop(into)]
     loading: Signal<bool>,
-
-    /// Color of the shimmer wave (default: "rgba(255,255,255,0.15)")
-    #[prop(into, optional)]
-    shimmer_color: Option<String>,
-
-    /// Background color of shimmer blocks (default: "rgba(255,255,255,0.08)")
-    #[prop(into, optional)]
-    background_color: Option<String>,
-
-    /// Animation duration in seconds (default: 1.5)
-    #[prop(optional)]
-    duration: Option<f64>,
-
-    /// Fallback border-radius for text elements in px (default: 4)
-    #[prop(optional)]
-    fallback_border_radius: Option<f64>,
-
-    /// Additional classes
-    #[prop(into, optional)]
-    class: String,
-
-    /// Children to wrap
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(optional)] node_ref: NodeRef<html::Div>,
     children: Children,
 ) -> impl IntoView {
-    let shimmer_id = use_random_id_for("Shimmer");
-    let merged_class = tw_merge!("relative", class);
-
     view! {
         <div
-            id=shimmer_id
-            class=merged_class
+            node_ref=node_ref
             data-name="Shimmer"
-            data-shimmer-loading=move || loading.get().to_string()
-            data-shimmer-color=shimmer_color
-            data-shimmer-bg-color=background_color
-            data-shimmer-duration=duration.map(|d| d.to_string())
-            data-shimmer-fallback-radius=fallback_border_radius.map(|r| r.to_string())
+            data-loading=move || loading.get().then_some("true")
+            class=move || cn!(SHIMMER_BASE, class.get())
         >
+            <style>{SHIMMER_KEYFRAMES}</style>
             {children()}
+            <Show when=move || loading.get()>
+                <span aria-hidden="true" data-name="ShimmerWave" class=SHIMMER_WAVE />
+            </Show>
         </div>
     }
 }

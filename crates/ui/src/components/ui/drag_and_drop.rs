@@ -1,115 +1,123 @@
+use crate::{clx, cn};
 use leptos::prelude::*;
-use leptos::wasm_bindgen::closure::Closure;
-use crate::clx;
-use wasm_bindgen::JsCast;
-use web_sys::{DragEvent, Element, HtmlElement};
 
-mod components {
-    use super::*;
-    clx! {DraggableZone, div, "dragabble__container", "bg-neutral-600 p-4 mt-4"}
+/// Shared reorder state for a [`Draggable`] list. Tracks the item currently
+/// being dragged and the item the pointer is hovering over, and forwards
+/// completed drops to the caller-supplied `on_reorder` callback.
+#[derive(Clone, Copy)]
+pub struct DragDropContext {
+    dragging: RwSignal<Option<usize>>,
+    over: RwSignal<Option<usize>>,
+    on_reorder: StoredValue<Callback<(usize, usize)>>,
 }
 
-pub use components::*;
+impl DragDropContext {
+    fn start(self, id: usize) {
+        self.dragging.set(Some(id));
+    }
 
-/* ========================================================== */
-/*                     ✨ COMPONENTS ✨                       */
-/* ========================================================== */
+    fn enter(self, id: usize) {
+        if self.dragging.get_untracked().is_some() {
+            self.over.set(Some(id));
+        }
+    }
 
-/// Outer wrapper. Sets up drag event delegation on `document` via `Effect::new`,
-/// which runs after Leptos WASM hydration — so listeners are never stripped by
-/// node replacement the way vanilla JS attached-at-parse-time listeners are.
+    fn end(self) {
+        self.dragging.set(None);
+        self.over.set(None);
+    }
+
+    fn drop_on(self, target: usize) {
+        if let Some(source) = self.dragging.get_untracked()
+            && source != target
+        {
+            self.on_reorder.get_value().run((source, target));
+        }
+        self.end();
+    }
+}
+
+clx! {
+    /// Drop region inside a [`Draggable`] list — a styled surface that holds the
+    /// reorderable items.
+    DraggableZone, div, "flex flex-col gap-2 rounded-md border border-input bg-muted/40 p-4"
+}
+
+/// Reorderable list root. Provides [`DragDropContext`] to descendant
+/// [`DraggableItem`]s and emits `on_reorder` with `(source_index, target_index)`
+/// when an item is dropped onto another. Reordering is the caller's data
+/// concern — keep the rendered order driven by your own signal so the DOM stays
+/// owned by the reactive graph rather than mutated out of band.
 #[component]
-pub fn Draggable(#[prop(into, optional)] class: String, children: Children) -> impl IntoView {
-    Effect::new(move |_| {
-        let Some(document) = window().document() else { return };
-
-        // dragstart — mark the element being dragged
-        let dragstart = Closure::<dyn Fn(DragEvent)>::new(|e: DragEvent| {
-            let Some(target) = e.target() else { return };
-            let Some(el) = target.dyn_ref::<HtmlElement>() else { return };
-            if el.class_list().contains("draggable") {
-                let _ = el.class_list().add_1("dragging");
-            }
-        });
-        let _ = document.add_event_listener_with_callback("dragstart", dragstart.as_ref().unchecked_ref());
-        dragstart.forget();
-
-        // dragend — unmark the dragged element
-        let dragend = Closure::<dyn Fn(DragEvent)>::new(|e: DragEvent| {
-            let Some(target) = e.target() else { return };
-            let Some(el) = target.dyn_ref::<HtmlElement>() else { return };
-            if el.class_list().contains("draggable") {
-                let _ = el.class_list().remove_1("dragging");
-            }
-        });
-        let _ = document.add_event_listener_with_callback("dragend", dragend.as_ref().unchecked_ref());
-        dragend.forget();
-
-        // dragover — move the dragging element to the correct position in the zone
-        let dragover = Closure::<dyn Fn(DragEvent)>::new(move |e: DragEvent| {
-            let Some(target) = e.target() else { return };
-            let Some(el) = target.dyn_ref::<Element>() else { return };
-            let Ok(Some(container)) = el.closest(".dragabble__container") else { return };
-            e.prevent_default();
-
-            let Some(doc) = window().document() else { return };
-            let Ok(Some(dragging)) = doc.query_selector(".dragging") else { return };
-
-            let after = get_drag_after_element(&container, f64::from(e.client_y()));
-            if let Some(after_el) = after {
-                let _ = container.insert_before(dragging.unchecked_ref(), Some(after_el.unchecked_ref()));
-            } else {
-                let _ = container.append_child(dragging.unchecked_ref());
-            }
-        });
-        let _ = document.add_event_listener_with_callback("dragover", dragover.as_ref().unchecked_ref());
-        dragover.forget();
+pub fn Draggable(
+    /// Invoked with `(source_index, target_index)` on a completed drop.
+    #[prop(into)]
+    on_reorder: Callback<(usize, usize)>,
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    provide_context(DragDropContext {
+        dragging: RwSignal::new(None),
+        over: RwSignal::new(None),
+        on_reorder: StoredValue::new(on_reorder),
     });
 
-    let merged = tw_merge::tw_merge!("flex flex-col gap-4 w-full max-w-4xl", class);
     view! {
-        <div class=merged data-name="Draggable">
+        <div
+            data-name="Draggable"
+            class=move || cn!("flex w-full max-w-4xl flex-col gap-4", class.get())
+        >
             {children()}
         </div>
     }
 }
 
+/// A draggable entry within a [`Draggable`] list. `index` is its position in the
+/// caller's ordered data and is reported back through `on_reorder`. Drag, hover
+/// and drop are handled in Rust via the native HTML drag events; visual state is
+/// driven by reactive classes, so no out-of-band DOM mutation occurs.
 #[component]
-pub fn DraggableItem(#[prop(into)] text: String) -> impl IntoView {
+pub fn DraggableItem(
+    /// Position of this item in the caller's ordered data.
+    index: usize,
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let ctx = expect_context::<DragDropContext>();
+
+    let is_dragging = move || ctx.dragging.get() == Some(index);
+    let is_over = move || ctx.over.get() == Some(index) && ctx.dragging.get() != Some(index);
+
+    let merged = move || {
+        cn!(
+            "flex cursor-move touch-none items-center rounded-md border border-input bg-card p-4 transition-[opacity,box-shadow] [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
+            is_dragging().then_some("opacity-50"),
+            is_over().then_some("ring-2 ring-ring ring-offset-2"),
+            class.get(),
+        )
+    };
+
     view! {
         <div
-            class="p-4 border cursor-move border-input bg-card draggable [&.dragging]:opacity-50"
+            data-name="DraggableItem"
+            class=merged
             draggable="true"
             tabindex="0"
-            data-name="DraggableItem"
+            aria-grabbed=move || if is_dragging() { "true" } else { "false" }
+            on:dragstart=move |_| ctx.start(index)
+            on:dragend=move |_| ctx.end()
+            on:dragenter=move |_| ctx.enter(index)
+            on:dragover=move |ev| {
+                if ctx.dragging.get_untracked().is_some() {
+                    ev.prevent_default();
+                }
+            }
+            on:drop=move |ev| {
+                ev.prevent_default();
+                ctx.drop_on(index);
+            }
         >
-            {text}
+            {children()}
         </div>
     }
-}
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
-/// Returns the element after which the dragged item should be inserted,
-/// based on the cursor's Y position. Returns `None` to append at the end.
-fn get_drag_after_element(container: &Element, y: f64) -> Option<HtmlElement> {
-    let items = container.query_selector_all(".draggable:not(.dragging)").ok()?;
-
-    let mut closest_offset = f64::NEG_INFINITY;
-    let mut closest: Option<HtmlElement> = None;
-
-    for i in 0..items.length() {
-        let Some(node) = items.get(i) else { continue };
-        let Ok(el) = node.dyn_into::<HtmlElement>() else { continue };
-        let rect = el.get_bounding_client_rect();
-        let offset = y - rect.top() - rect.height() / 2.0;
-        if offset < 0.0 && offset > closest_offset {
-            closest_offset = offset;
-            closest = Some(el);
-        }
-    }
-
-    closest
 }

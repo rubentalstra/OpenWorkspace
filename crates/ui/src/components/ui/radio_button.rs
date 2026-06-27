@@ -1,58 +1,62 @@
+use crate::cn;
 use leptos::prelude::*;
-use tw_merge::tw_merge;
 
+const RADIO_GROUP_BASE: &str = "flex flex-col gap-3";
+const RADIO_ITEM_BASE: &str = "aspect-square size-4 shrink-0 rounded-full border border-input shadow-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary";
+
+/// Selection state shared from a [`RadioGroup`] to its [`RadioGroupItem`]s.
+#[derive(Clone, Copy)]
+pub struct RadioGroupValue(pub RwSignal<String>);
+
+/// Single-selection radio group. Binds the chosen option's value to `value` and
+/// exposes it to descendant [`RadioGroupItem`]s through context.
 #[component]
-pub fn RadioGroup(#[prop(into, optional)] class: String, value: RwSignal<String>, children: Children) -> impl IntoView {
-    provide_context(value);
-
-    let class = tw_merge!("flex flex-col gap-3", class);
+pub fn RadioGroup(
+    value: RwSignal<String>,
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    provide_context(RadioGroupValue(value));
 
     view! {
-        <div data-name="RadioGroup" class=class role="radiogroup">
+        <div
+            data-name="RadioGroup"
+            role="radiogroup"
+            class=move || cn!(RADIO_GROUP_BASE, class.get())
+        >
             {children()}
         </div>
     }
 }
 
+/// One option within a [`RadioGroup`]; selecting it sets the group's value to
+/// `value`. Forward `attr:id`, `attr:disabled` and other native attributes at
+/// the call site.
 #[component]
 pub fn RadioGroupItem(
-    #[prop(into, optional)] class: String,
     #[prop(into)] value: String,
-    #[prop(into, optional)] id: String,
-    #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] class: Signal<String>,
 ) -> impl IntoView {
-    let selected = expect_context::<RwSignal<String>>();
-    let value_for_check = value.clone();
-    let value_for_click = value;
-
-    let is_checked = Memo::new(move |_| selected.get() == value_for_check);
-
-    let radio_class = tw_merge!(
-        "aspect-square size-4 shrink-0 rounded-full border border-input shadow-xs transition-colors",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        "data-[state=checked]:border-primary",
-        class
-    );
+    let RadioGroupValue(selected) = expect_context::<RadioGroupValue>();
+    let option = StoredValue::new(value);
+    let is_checked = Memo::new(move |_| option.with_value(|v| selected.get() == *v));
 
     view! {
         <button
             data-name="RadioGroupItem"
             type="button"
             role="radio"
-            id=id
-            class=radio_class
+            class=move || cn!(RADIO_ITEM_BASE, class.get())
             aria-checked=move || is_checked.get().to_string()
             data-state=move || if is_checked.get() { "checked" } else { "unchecked" }
-            disabled=move || disabled.get()
-            on:click=move |_| {
-                if !disabled.get() {
-                    selected.set(value_for_click.clone());
-                }
-            }
+            on:click=move |_| selected.set(option.get_value())
         >
-            <span class="flex justify-center items-center">
-                {move || is_checked.get().then(|| view! { <span class="rounded-full size-2.5 bg-primary"></span> })}
+            <span class="flex items-center justify-center">
+                {move || {
+                    is_checked
+                        .get()
+                        .then(|| view! { <span class="size-2.5 rounded-full bg-primary" /> })
+                }}
             </span>
         </button>
     }

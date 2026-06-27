@@ -54,7 +54,9 @@ fn CountryItem(country: Country, selected_country: RwSignal<Country>) -> impl In
         >
             <span class="text-base">{country.flag_emoji()}</span>
             <span class="flex-1 truncate">{country.name()}</span>
-            <span class="w-12 text-right text-muted-foreground">{country.dial_code_formatted()}</span>
+            <span class="w-12 text-right text-muted-foreground">
+                {country.dial_code_formatted()}
+            </span>
         </CommandItem>
     }
 }
@@ -94,7 +96,10 @@ pub fn InputPhone(
                 <PopoverContent class="p-0 w-[280px]">
                     <Command>
                         <div class="flex gap-2 items-center px-2 border-b">
-                            <Icon icon=icondata::LuSearch attr:class="size-4 text-muted-foreground shrink-0" />
+                            <Icon
+                                icon=icondata::LuSearch
+                                attr:class="size-4 text-muted-foreground shrink-0"
+                            />
                             <CommandInput attr:placeholder="Search country..." />
                         </div>
                         <CommandList class="min-h-0 max-h-[280px]">
@@ -132,7 +137,9 @@ pub fn InputPhone(
                     class="pr-8 w-full rounded-l-none"
                     attr:r#type="tel"
                     attr:inputmode="numeric"
-                    attr:placeholder=move || PhoneFormat::for_country(selected_country.get()).placeholder()
+                    attr:placeholder=move || {
+                        PhoneFormat::for_country(selected_country.get()).placeholder()
+                    }
                     attr:disabled=disabled
                     attr:aria-label="Phone number"
                     attr:aria-invalid=move || invalid.get().unwrap_or(false)

@@ -394,7 +394,9 @@ where
                 let start = virtual_scroll.start_index.get();
                 let end = virtual_scroll.end_index.get();
                 data.with(|rows| {
-                    (start..end).filter_map(|idx| rows.get(idx).map(|row| (idx, row.clone()))).collect::<Vec<_>>()
+                    (start..end)
+                        .filter_map(|idx| rows.get(idx).map(|row| (idx, row.clone())))
+                        .collect::<Vec<_>>()
                 })
             }
             // Key by (index, item_key) so views update when items move position
@@ -731,11 +733,17 @@ where
             <DropdownMenuContent>
                 <DropdownMenuRadioGroup value=sort_signal>
                     <DropdownMenuRadioItem value=SortDirection::Asc>
-                        <Icon icon=icondata::LuArrowUpNarrowWide attr:class="text-muted-foreground" />
+                        <Icon
+                            icon=icondata::LuArrowUpNarrowWide
+                            attr:class="text-muted-foreground"
+                        />
                         <span>"Sort asc"</span>
                     </DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value=SortDirection::Desc>
-                        <Icon icon=icondata::LuArrowDownWideNarrow attr:class="text-muted-foreground" />
+                        <Icon
+                            icon=icondata::LuArrowDownWideNarrow
+                            attr:class="text-muted-foreground"
+                        />
                         <span>"Sort desc"</span>
                     </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
@@ -743,9 +751,14 @@ where
                     (sort_signal.get() != SortDirection::None)
                         .then(|| {
                             view! {
-                                <DropdownMenuItem on:click=move |_| sort_signal.set(SortDirection::None)>
+                                <DropdownMenuItem on:click=move |_| {
+                                    sort_signal.set(SortDirection::None)
+                                }>
                                     <DropdownMenuAction>
-                                        <Icon icon=icondata::LuCircleX attr:class="text-muted-foreground" />
+                                        <Icon
+                                            icon=icondata::LuCircleX
+                                            attr:class="text-muted-foreground"
+                                        />
                                         <span>"Remove sort"</span>
                                     </DropdownMenuAction>
                                 </DropdownMenuItem>
@@ -763,7 +776,10 @@ where
                                     })
                             }>
                                 <DropdownMenuAction>
-                                    <Icon icon=icondata::LuPanelLeftClose attr:class="text-muted-foreground" />
+                                    <Icon
+                                        icon=icondata::LuPanelLeftClose
+                                        attr:class="text-muted-foreground"
+                                    />
                                     <span>"Unpin from left"</span>
                                 </DropdownMenuAction>
                             </DropdownMenuItem>
@@ -778,7 +794,10 @@ where
                                     })
                             }>
                                 <DropdownMenuAction>
-                                    <Icon icon=icondata::LuPanelLeft attr:class="text-muted-foreground" />
+                                    <Icon
+                                        icon=icondata::LuPanelLeft
+                                        attr:class="text-muted-foreground"
+                                    />
                                     <span>"Pin to left"</span>
                                 </DropdownMenuAction>
                             </DropdownMenuItem>
@@ -798,7 +817,10 @@ where
                                         })
                                 }>
                                     <DropdownMenuAction>
-                                        <Icon icon=icondata::LuEyeOff attr:class="text-muted-foreground" />
+                                        <Icon
+                                            icon=icondata::LuEyeOff
+                                            attr:class="text-muted-foreground"
+                                        />
                                         <span>"Hide Column"</span>
                                     </DropdownMenuAction>
                                 </DropdownMenuItem>
@@ -897,7 +919,12 @@ pub fn DataGridToolbar(children: Children, #[prop(optional, into)] class: String
     let merged_class = tw_merge!("flex gap-4 justify-between items-center mb-4", class);
 
     view! {
-        <div data-name="DataGridToolbar" role="toolbar" aria-orientation="horizontal" class=merged_class>
+        <div
+            data-name="DataGridToolbar"
+            role="toolbar"
+            aria-orientation="horizontal"
+            class=merged_class
+        >
             {children()}
         </div>
     }
@@ -922,8 +949,18 @@ where
     C: DataGridColumn + std::fmt::Display + 'static,
 {
     view! {
-        <div role="rowgroup" data-slot="grid-header" class="grid sticky top-0 z-10 border-b bg-background">
-            <div role="row" aria-rowindex="1" data-slot="grid-header-row" tabindex="-1" class="flex w-full">
+        <div
+            role="rowgroup"
+            data-slot="grid-header"
+            class="grid sticky top-0 z-10 border-b bg-background"
+        >
+            <div
+                role="row"
+                aria-rowindex="1"
+                data-slot="grid-header-row"
+                tabindex="-1"
+                class="flex w-full"
+            >
                 // Select header (always sticky)
                 <GridSelectHeaderCell>
                     <div class="py-1.5 px-3 size-full">
@@ -940,7 +977,10 @@ where
 
                 // Pinned headers (dynamic loop)
                 <For
-                    each=move || get_pinned_visible_columns(pinned_columns_signal, visible_columns_signal)
+                    each=move || get_pinned_visible_columns(
+                        pinned_columns_signal,
+                        visible_columns_signal,
+                    )
                     key=|(col, _)| *col
                     children=move |(col, _width)| {
                         let sort_signal = sort_signals.with_value(|s| s.get(&col).copied());
@@ -979,7 +1019,8 @@ where
                             <GridHeaderCell
                                 colindex=col.colindex()
                                 column=col.css_safe_name()
-                                visible=col.is_visible(pinned_columns_signal, visible_columns_signal)
+                                visible=col
+                                    .is_visible(pinned_columns_signal, visible_columns_signal)
                             >
                                 <PinnableSortableHeaderCell
                                     column=col

@@ -1,271 +1,212 @@
+use crate::{cn, variants};
+use leptos::html;
 use leptos::prelude::*;
-use strum::Display;
-use tw_merge::*;
 
-#[derive(TwClass, Clone, Copy)]
-#[tw(class = "flex justify-center items-center w-full")]
-pub struct Animate {
-    pub variant: AnimateVariant,
-    pub hover_variant: AnimateHoverVariant,
+variants! {
+    Animate {
+        variants: {
+            variant: {
+                None: "",
+                FadeUp: "opacity-0 animate-fade_up",
+                ScrollFadeOut: "animate-fade_out_down [animation-range:0px_300px] [animation-timeline:scroll()] supports-no-scroll-driven-animations:animate-none",
+                ScrollBigger: "animate-make_it_bigger [animation-range:0%_60%] [animation-timeline:--quote] [view-timeline-name:--quote] supports-no-scroll-driven-animations:animate-none",
+            }
+        }
+    }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
+variants! {
+    AnimateHover {
+        variants: {
+            variant: {
+                None: "",
+                Blink: "hover:animate-Blink",
+                BlurredFadeIn: "hover:animate-BlurredFadeIn",
+                BounceFadeIn: "hover:animate-BounceFadeIn",
+                BounceHorizontal: "hover:animate-BounceHorizontal",
+                BounceVertical: "hover:animate-BounceVertical",
+                ContractHorizontally: "hover:animate-ContractHorizontally",
+                ContractVertically: "hover:animate-ContractVertically",
+                ExpandHorizontally: "hover:animate-ExpandHorizontally",
+                ExpandVertically: "hover:animate-ExpandVertically",
+                FadeIn: "hover:animate-FadeIn",
+                FadeInDown: "hover:animate-FadeInDown",
+                FadeInLeft: "hover:animate-FadeInLeft",
+                FadeInRight: "hover:animate-FadeInRight",
+                FadeInUp: "hover:animate-FadeInUp",
+                FadeOut: "hover:animate-FadeOut",
+                FadeOutUp: "hover:animate-FadeOutUp",
+                FadeOutLeft: "hover:animate-FadeOutLeft",
+                FadeOutRight: "hover:animate-FadeOutRight",
+                Flash: "hover:animate-Flash",
+                FlipHorizontal: "hover:animate-FlipHorizontal",
+                FlipVertical: "hover:animate-FlipVertical",
+                FlipX: "hover:animate-FlipX",
+                FlipY: "hover:animate-FlipY",
+                FlipInX: "hover:animate-FlipInX",
+                FlipInY: "hover:animate-FlipInY",
+                FlipOutX: "hover:animate-FlipOutX",
+                FlipOutY: "hover:animate-FlipOutY",
+                Float: "hover:animate-Float",
+                Hang: "hover:animate-Hang",
+                Heartbeat: "hover:animate-Heartbeat",
+                HorizontalVibration: "hover:animate-HorizontalVibration",
+                Jiggle: "hover:animate-Jiggle",
+                Jump: "hover:animate-Jump",
+                Pop: "hover:animate-Pop",
+                PulseFadeIn: "hover:animate-PulseFadeIn",
+                Rise: "hover:animate-Rise",
+                RollIn: "hover:animate-RollIn",
+                RollOut: "hover:animate-RollOut",
+                Rotate90: "hover:animate-Rotate90",
+                Rotate180: "hover:animate-Rotate180",
+                Rotate360: "hover:animate-Rotate360",
+                RotateIn: "hover:animate-RotateIn",
+                RotateOut: "hover:animate-RotateOut",
+                RotationalWave: "hover:animate-RotationalWave",
+                RubberBand: "hover:animate-RubberBand",
+                Shake: "hover:animate-Shake",
+                Sink: "hover:animate-Sink",
+                Skew: "hover:animate-Skew",
+                SlideDown: "hover:animate-SlideDown",
+                SlideDownAndFade: "hover:animate-SlideDownAndFade",
+                SlideInBottom: "hover:animate-SlideInBottom",
+                SlideInLeft: "hover:animate-SlideInLeft",
+                SlideInRight: "hover:animate-SlideInRight",
+                SlideInTop: "hover:animate-SlideInTop",
+                SlideLeft: "hover:animate-SlideLeft",
+                SlideLeftAndFade: "hover:animate-SlideLeftAndFade",
+                SlideOutBottom: "hover:animate-SlideOutBottom",
+                SlideOutLeft: "hover:animate-SlideOutLeft",
+                SlideOutTop: "hover:animate-SlideOutTop",
+                SlideRight: "hover:animate-SlideRight",
+                SlideRightAndFade: "hover:animate-SlideRightAndFade",
+                SlideRotateIn: "hover:animate-SlideRotateIn",
+                SlideRotateOut: "hover:animate-SlideRotateOut",
+                SlideUp: "hover:animate-SlideUp",
+                SlideUpAndFade: "hover:animate-SlideUpAndFade",
+                SlideUpFade: "hover:animate-SlideUpFade",
+                SpinClockwise: "hover:animate-SpinClockwise",
+                SpinCounterClockwise: "hover:animate-SpinCounterClockwise",
+                Squeeze: "hover:animate-Squeeze",
+                Sway: "hover:animate-Sway",
+                Swing: "hover:animate-Swing",
+                SwingDropIn: "hover:animate-SwingDropIn",
+                Tada: "hover:animate-Tada",
+                TiltHorizontal: "hover:animate-TiltHorizontal",
+                Vibrate: "hover:animate-Vibrate",
+                Wobble: "hover:animate-Wobble",
+                ZoomIn: "hover:animate-ZoomIn",
+                ZoomOut: "hover:animate-ZoomOut",
+            }
+        }
+    }
+}
 
+const ANIMATE_BASE: &str = "flex w-full items-center justify-center";
+
+/// Which animation frame an [`AnimateGroupItem`] retains before it starts and
+/// after it ends, mapped to the CSS `animation-fill-mode` keyword.
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+pub enum AnimationFillMode {
+    None,
+    Backwards,
+    Both,
+    #[default]
+    Forwards,
+}
+
+impl AnimationFillMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Backwards => "backwards",
+            Self::Both => "both",
+            Self::Forwards => "forwards",
+        }
+    }
+}
+
+/// Wraps content in an animated container. `variant` drives an enter/scroll
+/// animation, `hover_variant` an on-hover animation; both default to no
+/// animation. Native attributes, events and bindings forward to the root.
 #[component]
 pub fn Animate(
     #[prop(into, optional)] variant: Signal<AnimateVariant>,
     #[prop(into, optional)] hover_variant: Signal<AnimateHoverVariant>,
-    #[prop(into, optional)] class: String,
-    #[prop(into, optional)] style: Signal<String>,
-
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(optional)] node_ref: NodeRef<html::Div>,
     children: Children,
 ) -> impl IntoView {
-    let merged_class = move || {
-        let animate = Animate { variant: variant.get(), hover_variant: hover_variant.get() };
-        animate.with_class(class.clone())
+    let merged = move || {
+        cn!(
+            ANIMATE_BASE,
+            variant.get().class(),
+            hover_variant.get().class(),
+            class.get()
+        )
     };
 
     view! {
-        <div class=merged_class style=style>
+        <div node_ref=node_ref data-name="Animate" class=merged>
             {children()}
         </div>
     }
 }
 
-#[component]
-pub fn AnimateGroup(#[prop(into, optional)] class: String, children: Children) -> impl IntoView {
-    let merged_class = tw_merge!("w-full", class);
+const ANIMATE_GROUP_BASE: &str = "w-full";
 
-    view! { <div class=merged_class>{children()}</div> }
+/// Layout wrapper for a sequence of [`AnimateGroupItem`]s. Native attributes,
+/// events and bindings forward to the root.
+#[component]
+pub fn AnimateGroup(
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(optional)] node_ref: NodeRef<html::Div>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <div
+            node_ref=node_ref
+            data-name="AnimateGroup"
+            class=move || cn!(ANIMATE_GROUP_BASE, class.get())
+        >
+            {children()}
+        </div>
+    }
 }
 
+/// A single animated child within an [`AnimateGroup`]. `delay_ms` staggers the
+/// animation start and `fill_mode` controls the retained frame. Native
+/// attributes, events and bindings forward to the root.
 #[component]
 pub fn AnimateGroupItem(
     #[prop(into, optional)] variant: Signal<AnimateVariant>,
     #[prop(into, optional)] hover_variant: Signal<AnimateHoverVariant>,
-    #[prop(into, optional)] class: String,
-    #[prop(into)] delay_ms: Signal<u32>,
-    #[prop(default = "forwards")] fill_mode: &'static str,
-
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(into, optional)] delay_ms: Signal<u32>,
+    #[prop(into, optional)] fill_mode: Signal<AnimationFillMode>,
+    #[prop(optional)] node_ref: NodeRef<html::Div>,
     children: Children,
 ) -> impl IntoView {
-    let merged_class = move || {
-        let animate = Animate { variant: variant.get(), hover_variant: hover_variant.get() };
-        animate.with_class(class.clone())
+    let merged = move || {
+        cn!(
+            ANIMATE_BASE,
+            variant.get().class(),
+            hover_variant.get().class(),
+            class.get()
+        )
     };
-
     let style = move || {
-        let delay = delay_ms.get();
-        format!("animation-delay: {delay}ms; animation-fill-mode: {fill_mode};")
+        format!(
+            "animation-delay: {}ms; animation-fill-mode: {};",
+            delay_ms.get(),
+            fill_mode.get().as_str()
+        )
     };
 
     view! {
-        <div class=merged_class style=style>
+        <div node_ref=node_ref data-name="AnimateGroupItem" class=merged style=style>
             {children()}
         </div>
     }
-}
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
-// TODO later.
-
-#[derive(TwVariant)]
-pub enum AnimateVariant {
-    #[tw(default, class = "")]
-    Default,
-    #[tw(class = "opacity-0 animate-fade_up")]
-    FadeUp,
-    #[tw(
-        class = "animate-fade_out_down   [animation-range:0px_300px] [animation-timeline:scroll()] supports-no-scroll-driven-animations:animate-none"
-    )]
-    AnimateScrollFadeOut,
-    #[tw(
-        class = "animate-make_it_bigger   [animation-range:0%_60%] [animation-timeline:--quote] [view-timeline-name:--quote] supports-no-scroll-driven-animations:animate-none"
-    )]
-    AnimateScrollBigger,
-}
-
-#[derive(TwVariant, Display)]
-pub enum AnimateHoverVariant {
-    #[tw(default, class = "")]
-    Default,
-    #[tw(class = "hover:animate-Blink")]
-    Blink,
-    #[tw(class = "hover:animate-BlurredFadeIn")]
-    BlurredFadeIn,
-    #[tw(class = "hover:animate-BounceFadeIn")]
-    BounceFadeIn,
-    #[tw(class = "hover:animate-BounceHorizontal")]
-    BounceHorizontal,
-    #[tw(class = "hover:animate-BounceVertical")]
-    BounceVertical,
-    #[tw(class = "hover:animate-BounceCustom")] // TODO: check
-    BounceCustom,
-    #[tw(class = "hover:animate-ContractHorizontally")]
-    ContractHorizontally,
-    #[tw(class = "hover:animate-ContractVertically")]
-    ContractVertically,
-    #[tw(class = "hover:animate-ExpandHorizontally")]
-    ExpandHorizontally,
-    #[tw(class = "hover:animate-ExpandVertically")]
-    ExpandVertically,
-    #[tw(class = "hover:animate-FadeIn")]
-    FadeIn,
-    #[tw(class = "hover:animate-FadeInDown")]
-    FadeInDown,
-    #[tw(class = "hover:animate-FadeInLeft")]
-    FadeInLeft,
-    #[tw(class = "hover:animate-FadeInRight")]
-    FadeInRight,
-    #[tw(class = "hover:animate-FadeInUp")]
-    FadeInUp,
-    #[tw(class = "hover:animate-FadeOut")]
-    FadeOut,
-    #[tw(class = "hover:animate-FadeOutUp")]
-    FadeOutUp,
-    #[tw(class = "hover:animate-FadeOutDownV2")] // TODO: V2
-    FadeOutDownV2,
-    #[tw(class = "hover:animate-FadeOutLeft")]
-    FadeOutLeft,
-    #[tw(class = "hover:animate-FadeOutRight")]
-    FadeOutRight,
-    #[tw(class = "hover:animate-Flash")]
-    Flash,
-    #[tw(class = "hover:animate-FlashV0")] // TODO
-    FlashV0,
-    #[tw(class = "hover:animate-FlipHorizontal")]
-    FlipHorizontal,
-    #[tw(class = "hover:animate-FlipVertical")]
-    FlipVertical,
-    #[tw(class = "hover:animate-FlipX")]
-    FlipX,
-    #[tw(class = "hover:animate-FlipY")]
-    FlipY,
-    #[tw(class = "hover:animate-FlipInY")]
-    FlipInY,
-    #[tw(class = "hover:animate-FlipInX")]
-    FlipInX,
-    #[tw(class = "hover:animate-FlipOutY")]
-    FlipOutY,
-    #[tw(class = "hover:animate-FlipOutX")]
-    FlipOutX,
-    #[tw(class = "hover:animate-Float")]
-    Float,
-    #[tw(class = "hover:animate-Hang")]
-    Hang,
-    #[tw(class = "hover:animate-Heartbeat")]
-    Heartbeat,
-    #[tw(class = "hover:animate-HorizontalVibration")]
-    HorizontalVibration,
-    #[tw(class = "hover:animate-Jiggle")]
-    Jiggle,
-    #[tw(class = "hover:animate-JiggleV0")] // TODO
-    JiggleV0,
-    #[tw(class = "hover:animate-Jump")]
-    Jump,
-    #[tw(class = "hover:animate-Pop")]
-    Pop,
-    #[tw(class = "hover:animate-PulseCustom")] // TODO: custom
-    PulseCustom,
-    #[tw(class = "hover:animate-PulseFadeIn")]
-    PulseFadeIn,
-    #[tw(class = "hover:animate-Rise")]
-    Rise,
-    #[tw(class = "hover:animate-RollIn")]
-    RollIn,
-    #[tw(class = "hover:animate-RollOut")]
-    RollOut,
-    #[tw(class = "hover:animate-Rotate180")]
-    Rotate180,
-    #[tw(class = "hover:animate-Rotate360")]
-    Rotate360,
-    #[tw(class = "hover:animate-Rotate90")]
-    Rotate90,
-    #[tw(class = "hover:animate-RotateIn")]
-    RotateIn,
-    #[tw(class = "hover:animate-RotateOut")]
-    RotateOut,
-    #[tw(class = "hover:animate-RotationalWave")]
-    RotationalWave,
-    #[tw(class = "hover:animate-RubberBand")]
-    RubberBand,
-    #[tw(class = "hover:animate-RubberBandV0")] // TODO
-    RubberBandV0,
-    #[tw(class = "hover:animate-Scale")] // TODO
-    Scale,
-    #[tw(class = "hover:animate-Shake")]
-    Shake,
-    #[tw(class = "hover:animate-ShakeV0")] // TODO
-    ShakeV0,
-    #[tw(class = "hover:animate-Sink")]
-    Sink,
-    #[tw(class = "hover:animate-Skew")]
-    Skew,
-    #[tw(class = "hover:animate-SlideDown")]
-    SlideDown,
-    #[tw(class = "hover:animate-SlideDownAndFade")]
-    SlideDownAndFade,
-    #[tw(class = "hover:animate-SlideInBottom")]
-    SlideInBottom,
-    #[tw(class = "hover:animate-SlideInLeft")]
-    SlideInLeft,
-    #[tw(class = "hover:animate-SlideInRight")]
-    SlideInRight,
-    #[tw(class = "hover:animate-SlideInTop")]
-    SlideInTop,
-    #[tw(class = "hover:animate-SlideLeft")]
-    SlideLeft,
-    #[tw(class = "hover:animate-SlideLeftAndFade")]
-    SlideLeftAndFade,
-    #[tw(class = "hover:animate-SlideOutBottom")]
-    SlideOutBottom,
-    #[tw(class = "hover:animate-SlideOutLeft")]
-    SlideOutLeft,
-    #[tw(class = "hover:animate-SlideOutTop")]
-    SlideOutTop,
-    #[tw(class = "hover:animate-SlideRight")]
-    SlideRight,
-    #[tw(class = "hover:animate-SlideRightAndFade")]
-    SlideRightAndFade,
-    #[tw(class = "hover:animate-SlideRotateIn")]
-    SlideRotateIn,
-    #[tw(class = "hover:animate-SlideRotateOut")]
-    SlideRotateOut,
-    #[tw(class = "hover:animate-SlideUp")]
-    SlideUp,
-    #[tw(class = "hover:animate-SlideUpAndFade")]
-    SlideUpAndFade,
-    #[tw(class = "hover:animate-SlideUpFade")]
-    SlideUpFade,
-    #[tw(class = "hover:animate-SpinClockwise")]
-    SpinClockwise,
-    #[tw(class = "hover:animate-SpinCounterClockwise")]
-    SpinCounterClockwise,
-    #[tw(class = "hover:animate-Sway")]
-    Sway,
-    #[tw(class = "hover:animate-Swing")]
-    Swing,
-    #[tw(class = "hover:animate-SwingDropIn")]
-    SwingDropIn,
-    #[tw(class = "hover:animate-SwingV0")] // TODO
-    SwingV0,
-    #[tw(class = "hover:animate-Squeeze")]
-    Squeeze,
-    #[tw(class = "hover:animate-Tada")]
-    Tada,
-    #[tw(class = "hover:animate-TiltHorizontal")]
-    TiltHorizontal,
-    #[tw(class = "hover:animate-Vibrate")]
-    Vibrate,
-    #[tw(class = "hover:animate-Wobble")]
-    Wobble,
-    #[tw(class = "hover:animate-ZoomIn")]
-    ZoomIn,
-    #[tw(class = "hover:animate-ZoomOut")]
-    ZoomOut,
 }

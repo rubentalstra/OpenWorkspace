@@ -1,8 +1,10 @@
 use std::cell::RefCell;
 
-use wasm_bindgen::JsCast;
-use wasm_bindgen::closure::Closure;
-use web_sys::{Element, Event, EventTarget};
+use leptos::ev;
+use leptos::prelude::*;
+use leptos::wasm_bindgen::JsCast;
+use leptos::wasm_bindgen::closure::Closure;
+use web_sys::{Element, Event, EventTarget, Node, NodeList};
 
 const CAROUSEL_ROOT: &str = r#"[data-name="CardCarousel"]"#;
 const CAROUSEL_TRACK: &str = r#"[data-name="CardCarouselTrack"]"#;
@@ -10,70 +12,78 @@ const CAROUSEL_NAV_BUTTON: &str = r#"[data-name="CardCarouselNavButton"]"#;
 const CAROUSEL_INDICATOR: &str = r#"[data-name="CardCarouselIndicator"]"#;
 
 thread_local! {
-    static LISTENERS: RefCell<Option<Listeners>> = const { RefCell::new(None) };
+    static REGISTERED: RefCell<Option<Registration>> = const { RefCell::new(None) };
 }
 
-struct Listeners {
-    _click: Closure<dyn FnMut(Event)>,
+/// Live listeners for the page-wide carousel controller, parked in a
+/// `thread_local` so the click handle and captured scroll closure outlive every
+/// individual carousel. Dropping them would unbind the listeners while
+/// carousels are still mounted, so the controller is never torn down for the
+/// life of the page.
+struct Registration {
+    _click: WindowListenerHandle,
     _scroll: Closure<dyn FnMut(Event)>,
 }
 
-/// Register delegated event listeners on `document` for all `CardCarousel`
-/// instances on the page. Safe to call multiple times — subsequent calls are no-ops.
+/// Wire up the single delegated controller that drives every `CardCarousel` on
+/// the page: nav-button clicks scroll the track, and track scrolling updates the
+/// indicator dots and the nav-button disabled state.
+///
+/// Idempotent — the first call on the client registers the listeners and later
+/// calls are no-ops, so every `CardCarouselTrack` may call it freely. The work
+/// runs inside an [`Effect`], which never executes during server rendering, so
+/// no browser API is touched at hook-invocation time.
 pub fn init() {
-    LISTENERS.with(|cell| {
-        if cell.borrow().is_some() {
-            return;
-        }
-        if let Some(listeners) = setup_listeners() {
-            *cell.borrow_mut() = Some(listeners);
-        }
+    Effect::new(move |_| {
+        REGISTERED.with(|cell| {
+            if cell.borrow().is_some() {
+                return;
+            }
+            if let Some(registration) = register() {
+                *cell.borrow_mut() = Some(registration);
+            }
+        });
     });
 }
 
-fn document() -> Option<web_sys::Document> {
-    web_sys::window().and_then(|w| w.document())
+fn register() -> Option<Registration> {
+    let target: EventTarget = document().dyn_into().ok()?;
+
+    let click = window_event_listener(ev::click, handle_click);
+
+    let scroll = Closure::new(handle_scroll);
+    // Capture phase: scroll on an overflow-scroll track does not bubble, so a
+    // bubble-phase document listener would never observe it.
+    target
+        .add_event_listener_with_callback_and_bool("scroll", scroll.as_ref().unchecked_ref(), true)
+        .ok()?;
+
+    Some(Registration { _click: click, _scroll: scroll })
 }
 
-// ── Setup ─────────────────────────────────────────────────────────────────────
-
-fn setup_listeners() -> Option<Listeners> {
-    let target: EventTarget = document()?.unchecked_into();
-
-    let click_cb = Closure::new(handle_click);
-    let scroll_cb = Closure::new(handle_scroll);
-
-    let _ = target.add_event_listener_with_callback("click", click_cb.as_ref().unchecked_ref());
-    // Capture phase: scroll events on overflow-scroll track don't bubble.
-    let _ = target.add_event_listener_with_callback_and_bool("scroll", scroll_cb.as_ref().unchecked_ref(), true);
-
-    Some(Listeners { _click: click_cb, _scroll: scroll_cb })
-}
-
-// ── Click handler ─────────────────────────────────────────────────────────────
-
-fn handle_click(event: Event) {
+fn handle_click(event: ev::MouseEvent) {
     let Some(target) = event.target() else { return };
     let Ok(el) = target.dyn_into::<Element>() else { return };
-    let Some(btn) = el.closest(CAROUSEL_NAV_BUTTON).ok().flatten() else { return };
+    let Some(button) = el.closest(CAROUSEL_NAV_BUTTON).ok().flatten() else { return };
 
-    // Prevent navigation when NavButton is inside an <a> tag.
     event.stop_propagation();
     event.prevent_default();
 
-    let Some(root) = btn.closest(CAROUSEL_ROOT).ok().flatten() else { return };
+    let Some(root) = button.closest(CAROUSEL_ROOT).ok().flatten() else { return };
     let Some(track) = root.query_selector(CAROUSEL_TRACK).ok().flatten() else { return };
     let Ok(buttons) = root.query_selector_all(CAROUSEL_NAV_BUTTON) else { return };
 
-    let is_prev = buttons.item(0).and_then(|n| n.dyn_into::<Element>().ok()).is_some_and(|first| first == btn);
+    let is_prev = buttons
+        .item(0)
+        .and_then(|node| node.dyn_into::<Element>().ok())
+        .is_some_and(|first| first == button);
 
     let delta = f64::from(track.client_width()) * if is_prev { -1.0 } else { 1.0 };
-    // No explicit behavior — CSS scroll-smooth on the track handles the animation,
-    // and avoids a known WebKit bug where behavior:'smooth' breaks snap-mandatory.
+    // No explicit behavior argument: CSS `scroll-smooth` on the track animates
+    // the move and dodges a WebKit bug where `behavior: 'smooth'` breaks
+    // `scroll-snap-type: mandatory`.
     track.scroll_by_with_x_and_y(delta, 0.0);
 }
-
-// ── Scroll handler ────────────────────────────────────────────────────────────
 
 fn handle_scroll(event: Event) {
     let Some(target) = event.target() else { return };
@@ -84,34 +94,43 @@ fn handle_scroll(event: Event) {
     let Ok(indicators) = root.query_selector_all(CAROUSEL_INDICATOR) else { return };
     let Ok(buttons) = root.query_selector_all(CAROUSEL_NAV_BUTTON) else { return };
 
-    let client_width = track.client_width();
-    let index =
-        if client_width > 0 { (f64::from(track.scroll_left()) / f64::from(client_width)).round() as u32 } else { 0 };
-
+    let index = active_index(track.scroll_left(), track.client_width());
     let count = indicators.length();
 
-    for i in 0..count {
-        let Some(node) = indicators.item(i) else { continue };
-        let Ok(dot) = node.dyn_into::<Element>() else { continue };
-        if i == index {
-            let _ = dot.set_attribute("aria-current", "true");
-        } else {
-            let _ = dot.remove_attribute("aria-current");
-        }
-    }
+    sync_indicators(&indicators, index);
 
     set_aria_disabled(buttons.item(0), index == 0);
     set_aria_disabled(buttons.item(1), count > 0 && index >= count - 1);
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+/// Page index nearest the current scroll offset, clamped to a non-negative
+/// whole number of pages. Returns `0` when the track has no measurable width.
+fn active_index(scroll_left: i32, client_width: i32) -> u32 {
+    if client_width <= 0 {
+        return 0;
+    }
+    let pages = (f64::from(scroll_left) / f64::from(client_width)).round();
+    if pages.is_sign_positive() { pages.min(f64::from(u32::MAX)) as u32 } else { 0 }
+}
 
-fn set_aria_disabled(node: Option<web_sys::Node>, disabled: bool) {
+fn sync_indicators(indicators: &NodeList, active: u32) {
+    for i in 0..indicators.length() {
+        let Some(node) = indicators.item(i) else { continue };
+        let Ok(dot) = node.dyn_into::<Element>() else { continue };
+        if i == active {
+            _ = dot.set_attribute("aria-current", "true");
+        } else {
+            _ = dot.remove_attribute("aria-current");
+        }
+    }
+}
+
+fn set_aria_disabled(node: Option<Node>, disabled: bool) {
     let Some(node) = node else { return };
     let Ok(el) = node.dyn_into::<Element>() else { return };
     if disabled {
-        let _ = el.set_attribute("aria-disabled", "true");
+        _ = el.set_attribute("aria-disabled", "true");
     } else {
-        let _ = el.remove_attribute("aria-disabled");
+        _ = el.remove_attribute("aria-disabled");
     }
 }

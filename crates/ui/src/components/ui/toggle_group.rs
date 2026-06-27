@@ -1,11 +1,20 @@
+use crate::{clx, cn};
+use leptos::html;
 use leptos::prelude::*;
-use crate::clx;
-use tw_merge::*;
 
-/* ========================================================== */
-/*                       Enums                                */
-/* ========================================================== */
+const GROUP_BASE: &str =
+    "group/toggle-group flex w-fit items-center rounded-md data-[orientation=vertical]:flex-col";
 
+const ITEM_BASE: &str = "inline-flex h-9 min-w-0 flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap bg-transparent px-2 text-sm font-medium shadow-none outline-none transition-[color,box-shadow] hover:bg-muted hover:text-muted-foreground focus:z-10 focus-visible:z-10 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+
+clx! {
+    /// Action affordance rendered alongside a [`ToggleGroup`], styled to match
+    /// its items but semantically a link rather than a toggle.
+    ToggleGroupAction, a,
+    "inline-flex size-6 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm p-0 text-sm font-medium outline-none transition-all hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 dark:hover:bg-accent/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+}
+
+/// Visual style of a [`ToggleGroup`].
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub enum ToggleGroupVariant {
     #[default]
@@ -13,6 +22,7 @@ pub enum ToggleGroupVariant {
     Outline,
 }
 
+/// Layout axis of a [`ToggleGroup`].
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub enum ToggleGroupOrientation {
     #[default]
@@ -20,112 +30,153 @@ pub enum ToggleGroupOrientation {
     Vertical,
 }
 
-/* ========================================================== */
-/*                       Context                              */
-/* ========================================================== */
+/// Selection cardinality of a [`ToggleGroup`].
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+pub enum ToggleGroupSelection {
+    /// At most one item is pressed at a time; pressing it again clears the
+    /// selection.
+    #[default]
+    Single,
+    /// Any number of items may be pressed independently.
+    Multiple,
+}
 
-#[derive(Clone, Copy, Default)]
+/// Pressed-item state shared from a [`ToggleGroup`] to its descendant
+/// [`ToggleGroupItem`]s, along with the styling axes each item reads back to
+/// match the group chrome.
+#[derive(Clone, Copy)]
 struct ToggleGroupCtx {
     variant: ToggleGroupVariant,
     orientation: ToggleGroupOrientation,
-    spacing: i32,
+    selection: ToggleGroupSelection,
+    grouped: bool,
+    pressed: RwSignal<Vec<String>>,
 }
 
-/* ========================================================== */
-/*                     Components (clx!)                      */
-/* ========================================================== */
+impl ToggleGroupCtx {
+    fn is_pressed(&self, value: &str) -> bool {
+        self.pressed.with(|set| set.iter().any(|v| v == value))
+    }
 
-mod components {
-    use super::*;
-    clx! {ToggleGroupAction, a, "inline-flex gap-2 justify-center items-center p-0 text-sm font-medium whitespace-nowrap rounded-sm transition-all outline-none disabled:opacity-50 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 aria-invalid:ring-destructive/20 aria-invalid:border-destructive size-6 dark:aria-invalid:ring-destructive/40 dark:hover:bg-accent/50 hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"}
+    fn toggle(&self, value: &str) {
+        let already = self.is_pressed(value);
+        self.pressed.update(|set| match self.selection {
+            ToggleGroupSelection::Single => {
+                set.clear();
+                if !already {
+                    set.push(value.to_owned());
+                }
+            }
+            ToggleGroupSelection::Multiple => {
+                if already {
+                    set.retain(|v| v != value);
+                } else {
+                    set.push(value.to_owned());
+                }
+            }
+        });
+    }
 }
 
-pub use components::*;
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
+/// A set of related toggle buttons. Tracks pressed items in shared state and
+/// exposes the selection through `value`, restyling each [`ToggleGroupItem`]
+/// from its `aria-pressed` state. `spacing` of `0` fuses items into a single
+/// segmented bar with shared borders and rounded outer edges. Native
+/// attributes, events and bindings forward to the root element.
 #[component]
 pub fn ToggleGroup(
-    children: Children,
-    #[prop(optional, into)] class: String,
+    #[prop(into, optional)] class: Signal<String>,
     #[prop(optional)] variant: ToggleGroupVariant,
     #[prop(optional)] orientation: ToggleGroupOrientation,
-    #[prop(optional, default = 1i32)] spacing: i32,
+    #[prop(optional)] selection: ToggleGroupSelection,
+    #[prop(into, default = RwSignal::new(Vec::new()))] value: RwSignal<Vec<String>>,
+    #[prop(optional, default = 1)] spacing: i32,
+    #[prop(optional)] node_ref: NodeRef<html::Div>,
+    children: Children,
 ) -> impl IntoView {
-    provide_context(ToggleGroupCtx { variant, orientation, spacing });
+    let grouped = spacing == 0;
+    provide_context(ToggleGroupCtx {
+        variant,
+        orientation,
+        selection,
+        grouped,
+        pressed: value,
+    });
 
-    let is_vertical = orientation == ToggleGroupOrientation::Vertical;
-
-    let gap_style = if spacing == 0 { "gap: 0px".to_string() } else { format!("gap: {}rem", spacing as f64 * 0.25) };
-
-    let class = tw_merge!(
-        "flex items-center rounded-md group/toggle-group w-fit",
-        if is_vertical { "flex-col" } else { "" },
-        if variant == ToggleGroupVariant::Outline { "shadow-xs" } else { "" },
-        class
-    );
+    let vertical = orientation == ToggleGroupOrientation::Vertical;
+    let outline = variant == ToggleGroupVariant::Outline;
+    let gap = move || {
+        if grouped {
+            "gap:0".to_owned()
+        } else {
+            format!("gap:{}rem", f64::from(spacing) * 0.25)
+        }
+    };
+    let merged = move || cn!(GROUP_BASE, outline.then_some("shadow-xs"), class.get());
 
     view! {
         <div
-            class=class
-            style=gap_style
-            data-variant=if variant == ToggleGroupVariant::Outline { "Outline" } else { "Default" }
-            data-orientation=if is_vertical { "Vertical" } else { "Horizontal" }
+            node_ref=node_ref
+            data-name="ToggleGroup"
+            role="group"
+            data-variant=if outline { "outline" } else { "default" }
+            data-orientation=if vertical { "vertical" } else { "horizontal" }
             data-spacing=spacing.to_string()
+            style=gap
+            class=merged
         >
             {children()}
         </div>
     }
 }
 
+/// A single button within a [`ToggleGroup`]. Clicking it toggles `value` in the
+/// group's selection and flips `aria-pressed`; the enclosing group restyles the
+/// pressed state. Native attributes, events and bindings forward to the root.
 #[component]
 pub fn ToggleGroupItem(
+    #[prop(into)] value: String,
+    #[prop(into, optional)] class: Signal<String>,
+    #[prop(optional)] node_ref: NodeRef<html::Button>,
     children: Children,
-    #[prop(optional, into)] class: String,
-    #[prop(into)] title: String,
-    #[prop(optional, into)] pressed: Signal<bool>,
 ) -> impl IntoView {
-    let ctx = use_context::<ToggleGroupCtx>().unwrap_or_default();
+    let ctx = use_context::<ToggleGroupCtx>();
 
-    let is_vertical = ctx.orientation == ToggleGroupOrientation::Vertical;
-    let is_grouped = ctx.spacing == 0;
-    let is_outline = ctx.variant == ToggleGroupVariant::Outline;
+    let select_value = value.clone();
+    let pressed_value = value;
+    let pressed = move || ctx.is_some_and(|c| c.is_pressed(&pressed_value));
 
-    let rounded = match (is_grouped, is_vertical) {
+    let vertical = ctx.is_some_and(|c| c.orientation == ToggleGroupOrientation::Vertical);
+    let grouped = ctx.is_some_and(|c| c.grouped);
+    let outline = ctx.is_some_and(|c| c.variant == ToggleGroupVariant::Outline);
+
+    let rounded = match (grouped, vertical) {
         (true, true) => "rounded-none first:rounded-t-md last:rounded-b-md",
         (true, false) => "rounded-none first:rounded-l-md last:rounded-r-md",
         (false, _) => "rounded-md",
     };
-
-    let border = if is_outline && is_grouped {
-        if is_vertical { "border border-t-0 first:border-t" } else { "border border-l-0 first:border-l" }
-    } else if is_outline {
-        "border"
-    } else {
-        ""
+    let border = match (outline, grouped, vertical) {
+        (true, true, true) => "border border-t-0 first:border-t",
+        (true, true, false) => "border border-l-0 first:border-l",
+        (true, false, _) => "border",
+        (false, _, _) => "",
     };
+    let width = vertical.then_some("w-full");
 
-    let width = if is_vertical { "w-full" } else { "" };
-
-    let merged_class = tw_merge!(
-        "inline-flex flex-1 gap-2 justify-center items-center px-2 min-w-0 h-9 text-sm font-medium whitespace-nowrap bg-transparent shadow-none outline-none focus:z-10 focus-visible:z-10 disabled:opacity-50 disabled:pointer-events-none data-[state=on]:bg-accent data-[state=on]:text-accent-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 transition-[color,box-shadow] aria-invalid:ring-destructive/20 aria-invalid:border-destructive shrink-0 dark:aria-invalid:ring-destructive/40 hover:bg-muted hover:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        rounded,
-        border,
-        width,
-        class
-    );
+    let merged = move || cn!(ITEM_BASE, rounded, border, width, class.get());
 
     view! {
         <button
-            type="button"
+            node_ref=node_ref
             data-name="ToggleGroupItem"
-            class=merged_class
-            role="radio"
-            tabindex="-1"
-            title=title
-            data-state=move || if pressed.get() { "on" } else { "off" }
+            type="button"
+            class=merged
+            aria-pressed=move || if pressed() { "true" } else { "false" }
+            on:click=move |_| {
+                if let Some(ctx) = ctx {
+                    ctx.toggle(&select_value);
+                }
+            }
         >
             {children()}
         </button>

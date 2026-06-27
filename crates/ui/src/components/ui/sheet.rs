@@ -62,7 +62,13 @@ pub fn SheetTrigger(
     let trigger_id = format!("trigger_{}", ctx.target_id);
 
     view! {
-        <Button class=class attr:id=trigger_id attr:data-sheet-trigger=ctx.target_id variant=variant size=size>
+        <Button
+            class=class
+            attr:id=trigger_id
+            attr:data-sheet-trigger=ctx.target_id
+            variant=variant
+            size=size
+        >
             {children()}
         </Button>
     }
@@ -78,7 +84,13 @@ pub fn SheetClose(
     let ctx = expect_context::<SheetContext>();
 
     view! {
-        <Button class=class attr:data-sheet-close=ctx.target_id attr:aria-label="Close sheet" variant=variant size=size>
+        <Button
+            class=class
+            attr:data-sheet-close=ctx.target_id
+            attr:aria-label="Close sheet"
+            variant=variant
+            size=size
+        >
             {children()}
         </Button>
     }

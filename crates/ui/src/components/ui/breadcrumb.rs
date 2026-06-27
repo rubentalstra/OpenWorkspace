@@ -1,60 +1,66 @@
-use leptos_icons::Icon;
+use crate::{clx, cn};
 use leptos::prelude::*;
-use crate::clx;
+use leptos_icons::Icon;
 
-mod components {
-    use super::*;
-    clx! {Breadcrumb, nav, ""}
-    clx! {BreadcrumbList, ol, "flex flex-wrap gap-1 items-center text-sm break-words sm:gap-2 text-muted-foreground"}
-    clx! {BreadcrumbItem, li, "inline-flex gap-1 items-center [&_svg:not([class*='size-'])]:size-4"}
-    clx! {BreadcrumbLink, a, "transition-colors hover:text-foreground"}
-    clx! {RootSeparator, li, "[&>svg]:size-3.5 [&_svg:not([class*='size-'])]:size-4"}
-    clx! {RootPage, span, "font-normal text-foreground"}
-    clx! {RootEllipsisBtn, button, "flex items-center gap-1"}
-    clx! {RootEllipsis, span, "flex items-center justify-center size-4"}
+clx! {Breadcrumb, nav, "[&_svg:not([class*='size-'])]:size-4"}
+clx! {BreadcrumbList, ol, "text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm break-words sm:gap-2.5"}
+clx! {BreadcrumbItem, li, "inline-flex items-center gap-1.5"}
+clx! {BreadcrumbLink, a, "hover:text-foreground transition-colors"}
+
+/// Terminal breadcrumb representing the current page; non-interactive and
+/// marked `aria-current="page"`.
+#[component]
+pub fn BreadcrumbPage(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <span
+            data-name="BreadcrumbPage"
+            role="link"
+            aria-disabled="true"
+            aria-current="page"
+            class=move || cn!("text-foreground font-normal", class.get())
+        >
+            {children()}
+        </span>
+    }
 }
 
-pub use components::*;
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
+/// Visual divider between breadcrumb items. Defaults to a chevron; pass children
+/// to override the glyph.
 #[component]
 pub fn BreadcrumbSeparator(
-    #[prop(into, optional)] class: String,
+    #[prop(into, optional)] class: Signal<String>,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     view! {
-        <RootSeparator class=class attr:role="presentation" attr:aria-hidden="true">
+        <li
+            data-name="BreadcrumbSeparator"
+            role="presentation"
+            aria-hidden="true"
+            class=move || cn!("[&>svg]:size-3.5", class.get())
+        >
             {match children {
-                Some(c) => c().into_any(),
+                Some(children) => children().into_any(),
                 None => view! { <Icon icon=icondata::LuChevronRight /> }.into_any(),
             }}
-        </RootSeparator>
+        </li>
     }
 }
 
+/// Collapsed-items indicator rendered as an ellipsis glyph.
 #[component]
-pub fn BreadcrumbPage(#[prop(into, optional)] class: String, children: Children) -> impl IntoView {
-    // TODO. aria_disabled
+pub fn BreadcrumbEllipsis(#[prop(into, optional)] class: Signal<String>) -> impl IntoView {
     view! {
-        <RootPage class=class attr:role="link" attr:aria-disabled="true" attr:aria-current="page">
-            {children()}
-        </RootPage>
-    }
-}
-
-#[component]
-pub fn BreadcrumbEllipsis(#[prop(into, optional)] class: String) -> impl IntoView {
-    // TODO. data_state
-    view! {
-        <RootEllipsisBtn attr:aria-haspopup="menu" attr:aria-expanded="false" attr:data-state="closed">
-            <RootEllipsis attr:role="presentation" attr:aria-hidden="true">
-                <Icon icon=icondata::LuEllipsis attr:class=class />
-                <span class="hidden">More</span>
-            </RootEllipsis>
-            <span class="hidden">Toggle menu</span>
-        </RootEllipsisBtn>
+        <span
+            data-name="BreadcrumbEllipsis"
+            role="presentation"
+            aria-hidden="true"
+            class=move || cn!("flex size-9 items-center justify-center", class.get())
+        >
+            <Icon icon=icondata::LuEllipsis attr:class="size-4" />
+            <span class="sr-only">More</span>
+        </span>
     }
 }

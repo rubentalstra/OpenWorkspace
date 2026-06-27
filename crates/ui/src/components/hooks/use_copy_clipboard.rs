@@ -1,39 +1,32 @@
 use leptos::prelude::*;
-use wasm_bindgen::prelude::*;
-use web_sys::window;
+use std::time::Duration;
 
-const DEFAULT_TIMEOUT_MS: i32 = 2000;
+const DEFAULT_TIMEOUT_MS: u64 = 2000;
 
-/// Hook for copying text to clipboard with optional delay
+/// Writes text to the system clipboard and flags it as recently copied.
 ///
-/// Returns a tuple of (copy_fn, copied_signal) where:
-/// - `copy_fn`: Function that takes text to copy
-/// - `copied_signal`: ReadSignal<bool> indicating if text was recently copied
-pub fn use_copy_clipboard(timeout_ms: Option<i32>) -> (impl Fn(&str) + Clone, ReadSignal<bool>) {
-    let copied_signal = RwSignal::new(false);
-    let timeout = timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS);
+/// Returns `(copy, copied)`:
+/// - `copy` accepts the text to place on the clipboard via the async Clipboard
+///   API and sets `copied` to `true`.
+/// - `copied` reports whether a copy happened within the last `timeout`; it
+///   reverts to `false` once the timeout elapses. It stays `false` during
+///   server rendering, where no clipboard exists.
+///
+/// `timeout` defaults to two seconds when `None`.
+pub fn use_copy_clipboard(timeout: Option<Duration>) -> (impl Fn(&str) + Clone, ReadSignal<bool>) {
+    let copied = RwSignal::new(false);
+    let reset_after = timeout.unwrap_or(Duration::from_millis(DEFAULT_TIMEOUT_MS));
 
-    let copy_to_clipboard = {
-        move |text: &str| {
-            if let Some(window) = window() {
-                let navigator = window.navigator();
-                let clipboard = navigator.clipboard();
-                let _ = clipboard.write_text(text);
+    let copy = move |text: &str| {
+        // Runs only from a client event handler, so `window()` and the clipboard
+        // are present; the returned Promise is left unawaited because the flag is
+        // optimistic and a rejection cannot be surfaced through this signature.
+        _ = window().navigator().clipboard().write_text(text);
+        copied.set(true);
 
-                // Set copied state to true
-                copied_signal.set(true);
-
-                // Reset to false after timeout
-                // Use try_set to avoid panic if component is unmounted before timeout fires
-                let copied_clone = copied_signal;
-                let closure = Closure::once_into_js(move || {
-                    let _ = copied_clone.try_set(false);
-                });
-                let _ = window
-                    .set_timeout_with_callback_and_timeout_and_arguments_0(closure.as_ref().unchecked_ref(), timeout);
-            }
-        }
+        // `try_set` because the reactive owner may be gone when the timer fires.
+        set_timeout(move || _ = copied.try_set(false), reset_after);
     };
 
-    (copy_to_clipboard, copied_signal.read_only())
+    (copy, copied.read_only())
 }
