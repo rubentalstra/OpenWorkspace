@@ -15,6 +15,10 @@ env:
   # sccache caches per-rustc-invocation objects, not incremental fragments, so
   # incremental builds would bypass it. Disable it everywhere to feed the cache.
   CARGO_INCREMENTAL: 0
+  # Route every compile through sccache. fmt/supply-chain never invoke rustc, so
+  # they ignore this even though sccache isn't installed there.
+  RUSTC_WRAPPER: sccache
+  SCCACHE_GHA_ENABLED: "true"
 
 jobs:
   # No compilation: rustfmt/leptosfmt parse, they don't build. Stays parallel.
@@ -43,16 +47,52 @@ jobs:
       - run: cargo deny check
       - run: cargo audit
 
-  # clippy + nextest share one workspace compile: both build the default-feature
-  # workspace, so running them in a single job compiles the dependency graph once
-  # (sccache also dedupes it against the `build` job and previous runs).
-  check:
-    name: clippy + nextest
+  # Single compile of the whole workspace, shared with clippy/nextest/build via
+  # the `shared-key` rust-cache (warm target dir) and sccache (objects). Covers
+  # both the host target (--all-targets) and the wasm/ssr targets (cargo leptos),
+  # so the three downstream jobs restore artifacts instead of recompiling deps.
+  compile:
+    name: compile (warm cache)
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgres://openworkspace:dev@localhost:5432/openworkspace
-      RUSTC_WRAPPER: sccache
-      SCCACHE_GHA_ENABLED: "true"
+      SQLX_OFFLINE: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup show
+      - uses: mozilla-actions/sccache-action@v0.0.10
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: workspace
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-leptos
+      - run: cargo build --workspace --all-targets --locked
+      - run: cargo leptos build
+      - run: sccache --show-stats
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    needs: compile
+    # No database: the committed .sqlx offline cache backs the compile-time
+    # query!/query_as! checks.
+    env:
+      SQLX_OFFLINE: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup show
+      - uses: mozilla-actions/sccache-action@v0.0.10
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: workspace
+      # NOTE: not --all-features — that enables ssr+hydrate together on `app`, which conflict.
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: sccache --show-stats
+
+  nextest:
+    name: nextest
+    runs-on: ubuntu-latest
+    needs: compile
     services:
       postgres:
         image: postgres:18
@@ -67,23 +107,23 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+    env:
+      DATABASE_URL: postgres://openworkspace:dev@localhost:5432/openworkspace
     steps:
       - uses: actions/checkout@v7
       - run: rustup show
       - uses: mozilla-actions/sccache-action@v0.0.10
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: workspace
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest
-      # Prebuilt sqlx-cli (no source compile). binstall falls back to source only
-      # if no prebuilt artifact exists for the runner target.
-      - uses: cargo-bins/cargo-binstall@main
+      # Prebuilt sqlx-cli (no source compile).
+      - uses: cargo-bins/cargo-binstall@v1.20.1
       - run: cargo binstall sqlx-cli@0.9.0 --no-confirm
       - name: Apply migrations
         run: cargo sqlx migrate run --source crates/db/migrations
-      # Lint against the live schema (query!/query_as! resolve via DATABASE_URL).
-      # NOTE: not --all-features — that enables ssr+hydrate together on `app`, which conflict.
-      - run: cargo clippy --workspace --all-targets -- -D warnings
       # Fail the build on a stale offline cache (the committed .sqlx must match
       # the live schema + queries).
       - run: cargo sqlx prepare --workspace --check
@@ -93,17 +133,18 @@ jobs:
   build:
     name: leptos build
     runs-on: ubuntu-latest
+    needs: compile
     # No database in this job: the committed .sqlx offline cache backs the
     # compile-time query!/query_as! checks.
     env:
       SQLX_OFFLINE: "true"
-      RUSTC_WRAPPER: sccache
-      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v7
       - run: rustup show
       - uses: mozilla-actions/sccache-action@v0.0.10
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: workspace
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-leptos
