@@ -591,6 +591,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -3796,8 +3797,10 @@ dependencies = [
  "app",
  "auth",
  "axum",
+ "chrono",
  "config 0.1.0",
  "db",
+ "domain",
  "leptos",
  "leptos_axum",
  "observability",
@@ -3806,6 +3809,7 @@ dependencies = [
  "tokio",
  "tower",
  "tower-http 0.7.0",
+ "uuid",
 ]
 
 [[package]]
