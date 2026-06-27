@@ -1,0 +1,448 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id,\n            slug::text AS \"slug!\",\n            display_name,\n            issuer_url,\n            use_discovery,\n            authorization_endpoint,\n            token_endpoint,\n            userinfo_endpoint,\n            jwks_uri,\n            end_session_endpoint,\n            metadata_cache_seconds,\n            client_id,\n            client_auth_method,\n            client_secret_encrypted,\n            client_assertion_key_id,\n            scopes,\n            response_mode,\n            prompt,\n            acr_values,\n            max_age_seconds,\n            id_token_signed_response_alg,\n            clock_skew_seconds,\n            email_claim,\n            email_verified_claim,\n            name_claim,\n            username_claim,\n            groups_claim,\n            enabled,\n            jit_provisioning,\n            default_role_id,\n            default_organization_id,\n            allowed_email_domains,\n            account_linking,\n            update_profile_on_login,\n            sync_roles_on_login,\n            rp_initiated_logout\n        FROM oidc_providers\n        WHERE slug = $1::citext AND enabled\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "slug!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "display_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "display_name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "issuer_url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "issuer_url"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "use_discovery",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "use_discovery"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "authorization_endpoint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "authorization_endpoint"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "token_endpoint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "token_endpoint"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "userinfo_endpoint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "userinfo_endpoint"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "jwks_uri",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "jwks_uri"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "end_session_endpoint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "end_session_endpoint"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "metadata_cache_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "metadata_cache_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "client_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "client_id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "client_auth_method",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "client_auth_method"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "client_secret_encrypted",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "client_secret_encrypted"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "client_assertion_key_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "client_assertion_key_id"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "scopes",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "scopes"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "response_mode",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "response_mode"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "prompt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "prompt"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "acr_values",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "acr_values"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "max_age_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "max_age_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "id_token_signed_response_alg",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "id_token_signed_response_alg"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "clock_skew_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "clock_skew_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "email_claim",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "email_claim"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "email_verified_claim",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "email_verified_claim"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "name_claim",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "name_claim"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "username_claim",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "username_claim"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "groups_claim",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "groups_claim"
+          }
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "enabled",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "enabled"
+          }
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "jit_provisioning",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "jit_provisioning"
+          }
+        }
+      },
+      {
+        "ordinal": 29,
+        "name": "default_role_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "default_role_id"
+          }
+        }
+      },
+      {
+        "ordinal": 30,
+        "name": "default_organization_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "default_organization_id"
+          }
+        }
+      },
+      {
+        "ordinal": 31,
+        "name": "allowed_email_domains",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "allowed_email_domains"
+          }
+        }
+      },
+      {
+        "ordinal": 32,
+        "name": "account_linking",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "account_linking"
+          }
+        }
+      },
+      {
+        "ordinal": 33,
+        "name": "update_profile_on_login",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "update_profile_on_login"
+          }
+        }
+      },
+      {
+        "ordinal": 34,
+        "name": "sync_roles_on_login",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "sync_roles_on_login"
+          }
+        }
+      },
+      {
+        "ordinal": 35,
+        "name": "rp_initiated_logout",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "oidc_providers",
+            "name": "rp_initiated_logout"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "712c84a09ff9649581a7be143ab33fa89044013c2057ac0e88c503308caf2222"
+}

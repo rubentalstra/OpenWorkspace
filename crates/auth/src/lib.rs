@@ -126,6 +126,8 @@ impl From<db::CredentialRow> for User {
 // `mfa` are ssr-only. The public surface is re-exported flat at the crate root.
 #[cfg(feature = "ssr")]
 mod mfa;
+#[cfg(feature = "ssr")]
+mod oidc;
 mod password;
 #[cfg(feature = "ssr")]
 mod session;
@@ -148,6 +150,24 @@ pub use mfa::webauthn::{
     PasskeyCandidate, PasskeyRegistration, PublicKeyCredential, RegisterPublicKeyCredential,
     RegisteredPasskey, RequestChallengeResponse, WebauthnService,
 };
+#[cfg(feature = "ssr")]
+pub use oidc::error::OidcError;
+#[cfg(feature = "ssr")]
+pub use oidc::flow::{
+    AuthRequest, OidcCallback, OidcTransaction, VerifiedIdentity, begin_login, complete_login,
+};
+#[cfg(feature = "ssr")]
+pub use oidc::http::OidcHttpClient;
+#[cfg(feature = "ssr")]
+pub use oidc::logout::logout_url;
+#[cfg(feature = "ssr")]
+pub use oidc::provider::{
+    DiscoveredProvider, ProviderButton, ProviderRegistry, seal_client_secret,
+};
+#[cfg(feature = "ssr")]
+pub use oidc::provision::provision_user;
+#[cfg(feature = "ssr")]
+pub use oidc::session::{LogoutHint, OidcSession};
 #[cfg(feature = "ssr")]
 pub use password::backend::{AuthError, Backend};
 #[cfg(feature = "ssr")]

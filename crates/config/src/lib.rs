@@ -113,6 +113,26 @@ pub struct AuthConfig {
     /// Human-readable relying-party name shown by authenticators during a
     /// ceremony. Env: `APP_AUTH__WEBAUTHN_RP_NAME`.
     pub webauthn_rp_name: String,
+    /// Public origin the app is reached at (scheme/host[/port], no trailing slash),
+    /// e.g. `https://workspace.example`. OIDC redirect and post-logout URIs are
+    /// derived from it as `{base}/auth/{slug}/callback` and `{base}/auth/{slug}/logged-out`,
+    /// and must exactly match what each provider has registered. Env:
+    /// `APP_AUTH__PUBLIC_BASE_URL`.
+    pub public_base_url: String,
+    /// How long discovery metadata and JWKS are cached before a refresh. Parsed
+    /// from a humantime string (e.g. `1h`). Env: `APP_AUTH__OIDC_DISCOVERY_CACHE`.
+    #[serde(with = "humantime_serde")]
+    pub oidc_discovery_cache: Duration,
+    /// Per-request timeout for outbound OIDC HTTP calls (discovery, JWKS, token,
+    /// userinfo). Parsed from a humantime string (e.g. `10s`). Env:
+    /// `APP_AUTH__OIDC_HTTP_TIMEOUT`.
+    #[serde(with = "humantime_serde")]
+    pub oidc_http_timeout: Duration,
+    /// Default leeway allowed on ID-token `exp`/`iat`/`nbf` to tolerate clock drift,
+    /// when a provider row does not set its own `clock_skew_seconds`. Parsed from a
+    /// humantime string (e.g. `60s`). Env: `APP_AUTH__OIDC_DEFAULT_CLOCK_SKEW`.
+    #[serde(with = "humantime_serde")]
+    pub oidc_default_clock_skew: Duration,
 }
 
 impl Default for AuthConfig {
@@ -127,6 +147,10 @@ impl Default for AuthConfig {
             webauthn_rp_id: "localhost".to_owned(),
             webauthn_rp_origin: "http://localhost:3000".to_owned(),
             webauthn_rp_name: "OpenWorkspace".to_owned(),
+            public_base_url: "http://localhost:3000".to_owned(),
+            oidc_discovery_cache: Duration::from_hours(1),
+            oidc_http_timeout: Duration::from_secs(10),
+            oidc_default_clock_skew: Duration::from_mins(1),
         }
     }
 }

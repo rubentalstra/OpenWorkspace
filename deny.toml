@@ -7,11 +7,25 @@
 all-features = false
 
 [advisories]
-# RustSec advisories. Only `unmaintained` notices on transitive Leptos deps are
-# ignored (not vulnerabilities, and not removable until Leptos drops them).
+# RustSec advisories. POLICY (see CLAUDE.md "Security advisories"): fix first — an
+# advisory may be ignored ONLY when it cannot be fixed and is justified, with a
+# reason and a revisit trigger. Two classes qualify: (a) `unmaintained` notices on
+# transitive deps we do not control; (b) a vulnerability whose vulnerable code path
+# our usage never exercises AND for which no compatible patched release exists.
+# Never ignore an exploitable, fixable vulnerability.
 ignore = [
-    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained (not vulnerable); transitive via leptos -> either_of" },
-    { id = "RUSTSEC-2026-0173", reason = "proc-macro-error2: unmaintained (not vulnerable); transitive via leptos_macro" },
+    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained (not vulnerable); transitive via leptos -> either_of. Revisit when Leptos drops paste." },
+    { id = "RUSTSEC-2026-0173", reason = "proc-macro-error2: unmaintained (not vulnerable); transitive via leptos_macro. Revisit when Leptos drops it." },
+    # rsa Marvin timing attack: leaks an RSA PRIVATE key via decryption/signing timing.
+    # OpenWorkspace is an OIDC relying party that only VERIFIES ID-token signatures with
+    # the IdP's PUBLIC key — it performs no RSA private-key operation through this crate
+    # (private_key_jwt client auth, the one path that would, is rejected at runtime). rsa
+    # is a non-optional, non-feature-gated dependency of openidconnect 4.0.1 (the newest
+    # release, pinning rsa ^0.9.2); the only fixed code is rsa 0.10.0-rc.* which is
+    # semver-incompatible, so no fix can be applied without dropping openidconnect (which
+    # the spec forbids — "write no protocol code"). Revisit when rsa ships a constant-time
+    # stable release that openidconnect adopts.
+    { id = "RUSTSEC-2023-0071", reason = "rsa Marvin attack: private-key-only; this RP verifies with public keys (private_key_jwt deferred/rejected). No compatible patched release; non-optional transitive dep of openidconnect. Revisit when openidconnect adopts a fixed rsa." },
 ]
 
 [licenses]
