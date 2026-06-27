@@ -96,6 +96,23 @@ pub struct AuthConfig {
     /// no-op (with a warning) when the email is set but this is not. `None` skips
     /// it. Env: `APP_AUTH__BOOTSTRAP_ADMIN_PASSWORD`.
     pub bootstrap_admin_password: Option<SecretString>,
+    /// Root key-encryption key for field encryption (TOTP secrets today), as
+    /// base64 of exactly 32 bytes. Wraps the per-purpose data keys in
+    /// `crypto_keys`. A secret: redacted. Empty disables field encryption and
+    /// makes TOTP enrolment fail with a clear error. Env:
+    /// `APP_AUTH__FIELD_ENCRYPTION_KEY`.
+    pub field_encryption_key: SecretString,
+    /// WebAuthn relying-party id: the registrable domain passkeys are bound to
+    /// (e.g. `localhost`, `openworkspace.example`). Must be an effective domain
+    /// of [`AuthConfig::webauthn_rp_origin`]. Env: `APP_AUTH__WEBAUTHN_RP_ID`.
+    pub webauthn_rp_id: String,
+    /// WebAuthn relying-party origin: the exact scheme/host/port the app is
+    /// served from (e.g. `http://localhost:3000`). Env:
+    /// `APP_AUTH__WEBAUTHN_RP_ORIGIN`.
+    pub webauthn_rp_origin: String,
+    /// Human-readable relying-party name shown by authenticators during a
+    /// ceremony. Env: `APP_AUTH__WEBAUTHN_RP_NAME`.
+    pub webauthn_rp_name: String,
 }
 
 impl Default for AuthConfig {
@@ -106,6 +123,10 @@ impl Default for AuthConfig {
             session_idle_timeout: Duration::from_hours(8),
             bootstrap_admin_email: None,
             bootstrap_admin_password: None,
+            field_encryption_key: SecretString::from(String::new()),
+            webauthn_rp_id: "localhost".to_owned(),
+            webauthn_rp_origin: "http://localhost:3000".to_owned(),
+            webauthn_rp_name: "OpenWorkspace".to_owned(),
         }
     }
 }
@@ -153,5 +174,10 @@ mod tests {
         assert!(cfg.auth.bootstrap_admin_password.is_none());
         assert_eq!(cfg.auth.session_idle_timeout, Duration::from_hours(8));
         assert!(cfg.auth.session_key.expose_secret().is_empty());
+        // Field encryption is off by default (empty key); WebAuthn RP defaults to localhost.
+        assert!(cfg.auth.field_encryption_key.expose_secret().is_empty());
+        assert_eq!(cfg.auth.webauthn_rp_id, "localhost");
+        assert_eq!(cfg.auth.webauthn_rp_origin, "http://localhost:3000");
+        assert_eq!(cfg.auth.webauthn_rp_name, "OpenWorkspace");
     }
 }
