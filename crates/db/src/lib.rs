@@ -2,6 +2,8 @@
 
 mod bookings;
 mod credentials;
+mod crypto_keys;
+mod mfa;
 
 pub use bookings::{
     Booking, BookingSourceRow, BookingStatusRow, BookingVisibilityRow, CreatedBooking, NewBooking,
@@ -10,6 +12,15 @@ pub use bookings::{
 pub use credentials::{
     CredentialRow, UserStatusRow, change_password, insert_bootstrap_admin, instance_admin_exists,
     load_credential_by_email, load_credential_by_id, touch_last_login, update_password_hash,
+};
+pub use crypto_keys::{CryptoKeyRow, insert_crypto_key, load_active_crypto_key};
+pub use mfa::{
+    MfaSettings, NewPasskey, PasskeyRow, PasskeySummary, TotpRow, WebauthnIdentity, confirm_totp,
+    consume_recovery_code, count_passkeys, count_unused_recovery_codes, delete_passkey,
+    delete_totp, insert_passkey, list_passkeys, load_confirmed_totp, load_mfa_settings,
+    load_passkey_by_credential_id, load_passkeys_for_user, load_totp, load_user_id_by_webauthn_handle,
+    load_webauthn_identity, replace_recovery_codes, totp_is_confirmed, update_passkey_after_auth,
+    upsert_totp_pending,
 };
 
 use secrecy::{ExposeSecret, SecretString};

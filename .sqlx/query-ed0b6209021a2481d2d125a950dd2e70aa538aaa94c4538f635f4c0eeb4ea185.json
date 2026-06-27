@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, purpose, suite_id, wrapped_key, kek_label, created_at\n        FROM crypto_keys\n        WHERE purpose = $1 AND active\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "purpose",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "purpose"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "suite_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "suite_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "wrapped_key",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "wrapped_key"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "kek_label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "kek_label"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "ed0b6209021a2481d2d125a950dd2e70aa538aaa94c4538f635f4c0eeb4ea185"
+}

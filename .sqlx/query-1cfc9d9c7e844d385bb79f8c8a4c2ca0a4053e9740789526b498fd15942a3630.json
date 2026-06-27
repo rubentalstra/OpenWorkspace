@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT user_id, secret_encrypted, digits, period_seconds, algorithm, confirmed_at\n        FROM totp_credentials\n        WHERE user_id = $1 AND confirmed_at IS NOT NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "totp_credentials",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "secret_encrypted",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "totp_credentials",
+            "name": "secret_encrypted"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "digits",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "totp_credentials",
+            "name": "digits"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "period_seconds",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "totp_credentials",
+            "name": "period_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "algorithm",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "totp_credentials",
+            "name": "algorithm"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "confirmed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "totp_credentials",
+            "name": "confirmed_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "1cfc9d9c7e844d385bb79f8c8a4c2ca0a4053e9740789526b498fd15942a3630"
+}
