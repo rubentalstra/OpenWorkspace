@@ -79,6 +79,35 @@ pub async fn rebind_after_password_change(
     Ok(())
 }
 
+/// Completes a login for a user already proven by a non-password factor (a TOTP
+/// code, a recovery code, or a passkey assertion) — the second step of the MFA
+/// flow, and the only sign-in path for passwordless passkeys.
+///
+/// The caller verifies the factor, then calls this with the user's id. It reloads
+/// the user from the backend and logs them in; because the pending session is not
+/// yet authenticated, `axum-login`'s `login` cycles the session id itself,
+/// retiring the pre-auth (MFA-pending) id. The caller should rotate the CSRF
+/// token afterwards, as on the password path. The `login` call stays inside the
+/// facade so no `axum-login` method is invoked from app code.
+///
+/// # Errors
+///
+/// Returns [`ReauthError`] if the user cannot be reloaded (including a vanished
+/// user) or the login fails.
+pub async fn login_verified_user(
+    auth_session: &mut AuthSession,
+    user_id: domain::UserId,
+) -> Result<(), ReauthError> {
+    let user = auth_session
+        .backend
+        .get_user(&user_id.as_uuid())
+        .await
+        .map_err(|_| ReauthError)?
+        .ok_or(ReauthError)?;
+    auth_session.login(&user).await.map_err(|_| ReauthError)?;
+    Ok(())
+}
+
 /// Builds the auth-manager layer: an [`AuthManagerLayer`] wrapping the
 /// [`Backend`] and the first-party [`PgSessionStore`].
 ///
@@ -1006,6 +1035,184 @@ mod tests {
             status,
             StatusCode::FORBIDDEN,
             "change-password without a CSRF token must be 403"
+        );
+    }
+
+    // --- P6: the two-step MFA login -----------------------------------------
+    //
+    // Mirrors the server binary's `/api/login` + `/api/mfa/*` handlers so the
+    // session state machine — password verified → pending second factor (not yet
+    // signed in) → factor cleared → signed in — is covered as an integration test
+    // (the binary is not unit-testable). The factor itself is stubbed; its own
+    // verification lives in the `totp`/`recovery` unit tests.
+
+    use axum::extract::State;
+
+    use crate::{MfaSession, PendingMfa, login_verified_user, second_factor_required};
+
+    /// Seed a user that already has a confirmed TOTP enrolment, so the login flow
+    /// demands a second factor.
+    async fn seed_user_with_totp(pool: &PgPool, password: &str) -> String {
+        let email = seed_user(pool, password).await;
+        let user_id: Uuid = sqlx::query_scalar("SELECT id FROM users WHERE email = $1::citext")
+            .bind(&email)
+            .fetch_one(pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO totp_credentials (user_id, secret_encrypted, confirmed_at) \
+             VALUES ($1, $2, now())",
+        )
+        .bind(user_id)
+        .bind(vec![0u8; 16])
+        .execute(pool)
+        .await
+        .unwrap();
+        email
+    }
+
+    async fn mfa_login_handler(
+        mut auth_session: AuthSession,
+        mfa: MfaSession,
+        State(pool): State<PgPool>,
+        Form(creds): Form<Credentials>,
+    ) -> StatusCode {
+        let user = match auth_session.authenticate(creds).await {
+            Ok(Some(user)) => user,
+            Ok(None) => return StatusCode::UNAUTHORIZED,
+            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        match second_factor_required(&pool, user.id.as_uuid()).await {
+            Ok(true) => {
+                let pending = PendingMfa {
+                    user_id: user.id.as_uuid(),
+                    totp: true,
+                };
+                if mfa.set_pending_mfa(&pending).await.is_err() {
+                    return StatusCode::INTERNAL_SERVER_ERROR;
+                }
+                StatusCode::ACCEPTED // 202: a second factor is required
+            }
+            Ok(false) => match auth_session.login(&user).await {
+                Ok(()) => StatusCode::OK,
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            },
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    /// Completes the login from the pending marker (the factor is taken as passed).
+    async fn mfa_complete_handler(mut auth_session: AuthSession, mfa: MfaSession) -> StatusCode {
+        let Ok(Some(pending)) = mfa.peek_pending_mfa().await else {
+            return StatusCode::BAD_REQUEST;
+        };
+        if mfa.take_pending_mfa().await.is_err()
+            || login_verified_user(&mut auth_session, domain::UserId::new(pending.user_id))
+                .await
+                .is_err()
+            || crate::rotate_csrf_token(&auth_session).await.is_err()
+        {
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
+        StatusCode::OK
+    }
+
+    fn build_mfa_router(pool: PgPool) -> Router {
+        let auth_layer = build_auth_layer(pool.clone(), None, Duration::from_hours(8));
+        Router::new()
+            .route("/probe", get(probe))
+            .route("/whoami", get(whoami))
+            .route("/api/login", post(mfa_login_handler))
+            .route("/api/mfa/complete", post(mfa_complete_handler))
+            .layer(axum::middleware::from_fn(csrf_layer))
+            .layer(auth_layer)
+            .with_state(pool)
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn password_login_requires_second_factor_then_completes(pool: PgPool) {
+        let email = seed_user_with_totp(&pool, "correct horse").await;
+        let router = build_mfa_router(pool);
+
+        // First factor: correct password, but a confirmed TOTP exists → 202, and
+        // the session must NOT be authenticated yet.
+        let (cookie, _id, token) = prime(&router).await;
+        let resp = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/login")
+                    .header(header::COOKIE, &cookie)
+                    .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Body::from(login_body(&email, &token)))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.status(),
+            StatusCode::ACCEPTED,
+            "a password alone must not sign in an MFA-enrolled user"
+        );
+        let cookie = session_cookie(resp.headers()).unwrap_or(cookie);
+        assert_eq!(
+            whoami_status(&router, &cookie).await,
+            StatusCode::UNAUTHORIZED,
+            "the pending-MFA session must not authenticate"
+        );
+
+        // Second factor clears → the login completes and the session authenticates.
+        let (cookie, token) = probe_with(&router, &cookie).await;
+        let resp = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/mfa/complete")
+                    .header(header::COOKIE, &cookie)
+                    .header("x-csrf-token", &token)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.status(),
+            StatusCode::OK,
+            "second factor completes login"
+        );
+        let cookie = session_cookie(resp.headers()).unwrap_or(cookie);
+        assert_eq!(
+            whoami_status(&router, &cookie).await,
+            StatusCode::OK,
+            "the session must authenticate after the second factor"
+        );
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn mfa_complete_without_pending_is_rejected(pool: PgPool) {
+        let router = build_mfa_router(pool);
+        let (cookie, _id, token) = prime(&router).await;
+        // No prior password step → no pending marker → 400.
+        let status = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/mfa/complete")
+                    .header(header::COOKIE, &cookie)
+                    .header("x-csrf-token", &token)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+            .status();
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "completing MFA with no pending marker must be rejected"
         );
     }
 }

@@ -10,14 +10,16 @@
 //! The `db` crate owns the persistence-mapped row enums and converts to/from
 //! the plain enums re-exported here.
 
-pub mod authz;
-mod enums;
-mod ids;
-pub mod recurrence;
-pub mod segmentation;
-pub mod state_machine;
-mod time_range;
-pub mod validation;
+mod access;
+mod booking;
+mod model;
+
+// Module re-exports preserve the public paths (`domain::authz::…`,
+// `domain::recurrence::…`, etc.) and the internal `crate::ids`/`crate::enums`/
+// `crate::time_range` paths, independent of where each file now lives.
+pub use access::{authz, segmentation};
+pub use booking::{recurrence, state_machine, validation};
+pub use model::{enums, ids, time_range};
 
 pub use enums::{
     BookingSource, BookingStatus, BookingVisibility, OccurrenceKind, ResourceKind, SegmentationMode,

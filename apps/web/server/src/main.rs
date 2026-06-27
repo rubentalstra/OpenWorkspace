@@ -1,11 +1,11 @@
 use anyhow::Context;
 use app::{App, CsrfToken, shell};
-use auth::{AuthSession, Credentials};
-use axum::Form;
-use axum::Router;
+use auth::{AuthSession, Credentials, MfaSession, TotpService, WebauthnService};
 use axum::extract::{FromRef, State};
 use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
+use axum::{Form, Json, Router};
 use db::Db;
 use leptos::logging::log;
 use leptos::prelude::*;
@@ -13,12 +13,16 @@ use leptos_axum::{LeptosRoutes, generate_route_list};
 use secrecy::SecretString;
 use tower_http::trace::TraceLayer;
 
-/// Shared web state. `FromRef` lets Leptos pull `LeptosOptions` and handlers pull
-/// the `Db` from the one combined state.
+mod mfa;
+
+/// Shared web state. `FromRef` lets Leptos pull `LeptosOptions` and the handlers
+/// pull the `Db`, the WebAuthn engine and the TOTP service from the one state.
 #[derive(Clone)]
 struct AppState {
     leptos_options: LeptosOptions,
     db: Db,
+    webauthn: WebauthnService,
+    totp: TotpService,
 }
 
 impl FromRef<AppState> for LeptosOptions {
@@ -30,6 +34,18 @@ impl FromRef<AppState> for LeptosOptions {
 impl FromRef<AppState> for Db {
     fn from_ref(state: &AppState) -> Self {
         state.db.clone()
+    }
+}
+
+impl FromRef<AppState> for WebauthnService {
+    fn from_ref(state: &AppState) -> Self {
+        state.webauthn.clone()
+    }
+}
+
+impl FromRef<AppState> for TotpService {
+    fn from_ref(state: &AppState) -> Self {
+        state.totp.clone()
     }
 }
 
@@ -61,6 +77,22 @@ async fn main() -> anyhow::Result<()> {
         cfg.auth.session_idle_timeout,
     );
 
+    // Field-encryption keyring (unwraps the TOTP-secret data key under the root
+    // KEK), the TOTP service that seals secrets with it, and the WebAuthn engine.
+    let keyring = auth::FieldKeyring::load(&pool, &cfg.auth.field_encryption_key)
+        .await
+        .context("loading the field-encryption keyring")?;
+    let totp = TotpService::new(
+        cfg.auth.webauthn_rp_name.clone(),
+        keyring.totp_dek().clone(),
+    );
+    let webauthn = WebauthnService::new(
+        &cfg.auth.webauthn_rp_id,
+        &cfg.auth.webauthn_rp_origin,
+        &cfg.auth.webauthn_rp_name,
+    )
+    .context("building the webauthn relying party")?;
+
     let conf = get_configuration(None).context("loading Leptos configuration")?;
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
@@ -69,6 +101,8 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         leptos_options: leptos_options.clone(),
         db: pool,
+        webauthn,
+        totp,
     };
 
     // Operational probes live outside the auth/session/CSRF stack.
@@ -98,6 +132,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/login", post(login))
         .route("/api/logout", post(logout))
         .route("/api/change-password", post(change_password))
+        .merge(mfa::routes())
         .leptos_routes_with_context(&state, routes, provide_csrf_context, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())
@@ -129,26 +164,52 @@ fn provide_csrf_context() {
     }
 }
 
-/// Login endpoint: authenticates the submitted credentials and, on success,
-/// logs the user in (which cycles the session id, defeating fixation) and rotates
-/// the CSRF token across the auth boundary so no pre-auth token survives.
+/// Login endpoint (first factor). Verifies the password; if the account has a
+/// confirmed second factor it stops short of signing in, records a pending-MFA
+/// marker in the session, and answers `{ "mfa_required": true }` so the client
+/// continues to `/api/mfa/totp/verify` or `/api/mfa/recovery/verify`. Otherwise
+/// it signs the user in (cycling the session id, defeating fixation) and rotates
+/// the CSRF token across the auth boundary.
 ///
 /// If the session is already authenticated (re-auth/step-up), the existing
 /// session is flushed first so the id always rotates afresh.
-async fn login(mut auth_session: AuthSession, Form(creds): Form<Credentials>) -> StatusCode {
+async fn login(
+    mut auth_session: AuthSession,
+    mfa_session: MfaSession,
+    State(db): State<Db>,
+    Form(creds): Form<Credentials>,
+) -> Response {
     if auth_session.user.is_some() && auth::cycle_session_id(&auth_session).await.is_err() {
-        return StatusCode::INTERNAL_SERVER_ERROR;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
-    match auth_session.authenticate(creds).await {
-        Ok(Some(user)) => match auth_session.login(&user).await {
+    let user = match auth_session.authenticate(creds).await {
+        Ok(Some(user)) => user,
+        Ok(None) => return StatusCode::UNAUTHORIZED.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
+    match auth::second_factor_required(&db, user.id.as_uuid()).await {
+        Ok(true) => {
+            if mfa_session
+                .set_pending_mfa(&mfa::pending_for(user.id.as_uuid()))
+                .await
+                .is_err()
+            {
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            Json(mfa::LoginResponse { mfa_required: true }).into_response()
+        }
+        Ok(false) => match auth_session.login(&user).await {
             Ok(()) => match auth::rotate_csrf_token(&auth_session).await {
-                Ok(()) => StatusCode::OK,
-                Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                Ok(()) => Json(mfa::LoginResponse {
+                    mfa_required: false,
+                })
+                .into_response(),
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             },
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
-        Ok(None) => StatusCode::UNAUTHORIZED,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 

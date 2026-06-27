@@ -1,0 +1,91 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO crypto_keys (purpose, suite_id, wrapped_key, kek_label)\n        VALUES ($1, $2, $3, $4)\n        RETURNING id, purpose, suite_id, wrapped_key, kek_label, created_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "purpose",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "purpose"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "suite_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "suite_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "wrapped_key",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "wrapped_key"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "kek_label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "kek_label"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "crypto_keys",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Bytea",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "bc39f6bd256c77348baa1f4543ceae2b8183eb6350e2472f558851ef36f38f8b"
+}

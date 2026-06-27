@@ -14,6 +14,14 @@ service_name = "openworkspace-dev"
 log_filter = "info,openworkspace=debug,sqlx=warn"
 metrics_enabled = true
 
+[dev.auth]
+# Dev-only root key-encryption key (base64 of 32 bytes). Production supplies this
+# via APP_AUTH__FIELD_ENCRYPTION_KEY; never reuse this value outside local dev.
+field_encryption_key = "TVQh4Ye4yQtl6ma/awrxgWSmo3JS5dUwkuVtBtda+70="
+webauthn_rp_id = "localhost"
+webauthn_rp_origin = "http://localhost:3000"
+webauthn_rp_name = "OpenWorkspace"
+
 [prod.observability]
 service_name = "openworkspace"
 log_filter = "info"
