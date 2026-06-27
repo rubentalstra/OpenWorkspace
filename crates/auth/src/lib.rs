@@ -132,9 +132,19 @@ mod bootstrap;
 #[cfg(feature = "ssr")]
 mod csrf;
 #[cfg(feature = "ssr")]
+mod keyring;
+#[cfg(feature = "ssr")]
 mod layer;
 #[cfg(feature = "ssr")]
+mod mfa;
+#[cfg(feature = "ssr")]
+mod recovery;
+#[cfg(feature = "ssr")]
 mod store;
+#[cfg(feature = "ssr")]
+mod totp;
+#[cfg(feature = "ssr")]
+mod webauthn;
 
 #[cfg(feature = "ssr")]
 pub use backend::{AuthError, Backend};
@@ -143,8 +153,24 @@ pub use bootstrap::bootstrap_admin;
 #[cfg(feature = "ssr")]
 pub use csrf::{CsrfError, CsrfToken, csrf_layer, hidden_field, rotate_csrf_token};
 #[cfg(feature = "ssr")]
+pub use keyring::FieldKeyring;
+#[cfg(feature = "ssr")]
 pub use layer::{
     AuthSession, ReauthError, build_auth_layer, cycle_session_id, rebind_after_password_change,
 };
 #[cfg(feature = "ssr")]
+pub use mfa::{MfaSession, PendingMfa, second_factor_required};
+#[cfg(feature = "ssr")]
+pub use recovery::{
+    RECOVERY_CODE_COUNT, RecoveryCodes, generate_recovery_codes, hash_submitted_code,
+};
+#[cfg(feature = "ssr")]
 pub use store::{PgSessionStore, spawn_session_reaper};
+#[cfg(feature = "ssr")]
+pub use totp::{StoredTotp, TotpEnrollment, TotpService};
+#[cfg(feature = "ssr")]
+pub use webauthn::{
+    AuthOutcome, CreationChallengeResponse, DiscoverableAuthentication, PasskeyAuthentication,
+    PasskeyCandidate, PasskeyRegistration, PublicKeyCredential, RegisterPublicKeyCredential,
+    RegisteredPasskey, RequestChallengeResponse, WebauthnService,
+};

@@ -41,11 +41,12 @@ impl Backend {
 /// Errors raised by the authentication backend. A bad password or unknown user
 /// is **not** an error — it is `Ok(None)` (uniform failure, no enumeration).
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum AuthError {
     /// A database error.
     #[error(transparent)]
     Db(#[from] db::DbError),
-    /// A password-hashing error (e.g. a malformed stored hash).
+    /// A password-hashing or field-encryption error (e.g. a malformed stored hash).
     #[error(transparent)]
     Crypto(#[from] crypto::CryptoError),
     /// The blocking verification task failed to join.
@@ -61,6 +62,26 @@ pub enum AuthError {
     /// The targeted user has no password credential to change.
     #[error("no password credential for user")]
     NoCredential,
+    /// A WebAuthn ceremony failed. The vendor cause is logged inside the facade
+    /// and never surfaced, so the client learns nothing it can exploit.
+    #[error("webauthn ceremony failed")]
+    Webauthn,
+    /// A TOTP operation failed (secret generation, parsing, or the system clock).
+    #[error("totp operation failed")]
+    Totp,
+    /// The signature counter did not advance past the stored value — a possible
+    /// cloned authenticator. The credential is rejected.
+    #[error("credential counter regressed; possible cloned authenticator")]
+    ClonedCredential,
+    /// Required in-progress ceremony state was absent or expired from the session.
+    #[error("no in-progress ceremony state")]
+    CeremonyState,
+    /// A stored credential blob failed to serialize or deserialize.
+    #[error("credential serialization failed")]
+    Serialization,
+    /// Field-encryption or relying-party configuration was missing or invalid.
+    #[error("authentication configuration is invalid")]
+    Config,
 }
 
 impl AuthnBackend for Backend {

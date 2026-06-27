@@ -49,6 +49,8 @@ webauthn-rs = { version = "0.5.5", features = ["danger-allow-state-serialisation
 # TOTP second factor. `qr` (which pulls in `otpauth`) renders the enrolment QR
 # and otpauth URL; `gen_secret` generates the shared secret; `zeroize` wipes it.
 totp-rs = { version = "5.7.2", features = ["qr", "gen_secret", "zeroize"], optional = true }
+# Carries the serialized webauthn-rs Passkey opaquely to/from the db jsonb column.
+serde_json = { version = "1", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
@@ -93,6 +95,7 @@ ssr = [
     "dep:form_urlencoded",
     "dep:webauthn-rs",
     "dep:totp-rs",
+    "dep:serde_json",
 ]
 
 [lints]
