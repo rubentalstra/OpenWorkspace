@@ -110,6 +110,20 @@ pub async fn load_user_id_by_webauthn_handle(
     Ok(id)
 }
 
+/// Resolve a user id by email (case-insensitive) without requiring a password
+/// credential — the lookup for username-first passkey login, where the account
+/// may be passwordless. `None` if no such user.
+///
+/// # Errors
+///
+/// [`DbError::Sqlx`] on any database error.
+pub async fn load_user_id_by_email(pool: &Db, email: &str) -> Result<Option<Uuid>, DbError> {
+    let id = sqlx::query_scalar!(r#"SELECT id FROM users WHERE email = $1::citext"#, email)
+        .fetch_optional(pool)
+        .await?;
+    Ok(id)
+}
+
 /// A stored passkey with its serialized webauthn-rs `Passkey` and live counter.
 #[derive(Clone, Debug)]
 pub struct PasskeyRow {

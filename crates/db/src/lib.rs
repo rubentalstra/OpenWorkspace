@@ -16,7 +16,7 @@ pub use identity::mfa::{
     MfaSettings, NewPasskey, PasskeyRow, PasskeySummary, TotpRow, WebauthnIdentity, confirm_totp,
     consume_recovery_code, count_passkeys, count_unused_recovery_codes, delete_passkey,
     delete_totp, insert_passkey, list_passkeys, load_confirmed_totp, load_mfa_settings,
-    load_passkey_by_credential_id, load_passkeys_for_user, load_totp,
+    load_passkey_by_credential_id, load_passkeys_for_user, load_totp, load_user_id_by_email,
     load_user_id_by_webauthn_handle, load_webauthn_identity, replace_recovery_codes,
     totp_is_confirmed, update_passkey_after_auth, upsert_totp_pending,
 };

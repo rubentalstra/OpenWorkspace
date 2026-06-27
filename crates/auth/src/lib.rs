@@ -156,7 +156,8 @@ pub use password::bootstrap::bootstrap_admin;
 pub use session::csrf::{CsrfError, CsrfToken, csrf_layer, hidden_field, rotate_csrf_token};
 #[cfg(feature = "ssr")]
 pub use session::layer::{
-    AuthSession, ReauthError, build_auth_layer, cycle_session_id, rebind_after_password_change,
+    AuthSession, ReauthError, build_auth_layer, cycle_session_id, login_verified_user,
+    rebind_after_password_change,
 };
 #[cfg(feature = "ssr")]
 pub use session::store::{PgSessionStore, spawn_session_reaper};
