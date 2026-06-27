@@ -1,9 +1,19 @@
 use leptos::prelude::*;
-use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
+use leptos_meta::{Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
     StaticSegment,
     components::{Route, Router, Routes},
 };
+
+mod csrf_client;
+pub use csrf_client::CsrfClient;
+
+/// The per-request CSRF token, provided as Leptos context by the server so the
+/// `App` can render it into `<head>` as `<meta name="csrf-token">`. Defined here
+/// (not in `auth`) so the app crate stays free of the ssr-only auth facade and
+/// hydrates cleanly when the context is absent.
+#[derive(Clone, Debug)]
+pub struct CsrfToken(pub String);
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -28,8 +38,15 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
+    // On SSR the server provides the per-request CSRF token; emit it into <head>
+    // so both the header (JS) and hidden-field (no-JS) paths can read it. Absent
+    // during hydration, where it is unneeded.
+    let csrf = use_context::<CsrfToken>().map(|t| t.0);
+
     view! {
         <Stylesheet id="leptos" href="/pkg/openworkspace.css" />
+
+        {csrf.map(|token| view! { <Meta name="csrf-token" content=token /> })}
 
         // sets the document title
         <Title text="Welcome to Leptos" />

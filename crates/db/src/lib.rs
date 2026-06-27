@@ -1,10 +1,15 @@
 //! PostgreSQL access and migrations (sqlx), behind a thin facade.
 
 mod bookings;
+mod credentials;
 
 pub use bookings::{
     Booking, BookingSourceRow, BookingStatusRow, BookingVisibilityRow, CreatedBooking, NewBooking,
     OccurrenceKindRow, apply_transition, auto_release, cancel, check_in, check_out, create_booking,
+};
+pub use credentials::{
+    CredentialRow, UserStatusRow, change_password, insert_bootstrap_admin, instance_admin_exists,
+    load_credential_by_email, load_credential_by_id, touch_last_login, update_password_hash,
 };
 
 use secrecy::{ExposeSecret, SecretString};
@@ -119,6 +124,34 @@ mod tests {
 
         // Roll all migrations back down to version 0.
         MIGRATOR.undo(&pool, 0).await?;
+        Ok(())
+    }
+
+    /// The `session_expiry_index` migration must create `idx_session_expiry_date`
+    /// on up, and its down must drop it (the reaper's `expiry_date < now()` would
+    /// otherwise full-scan).
+    #[sqlx::test(migrations = false)]
+    async fn session_expiry_index_up_creates_and_down_drops(pool: Db) -> Result<(), DbError> {
+        run_migrations(&pool).await?;
+        let exists_after_up: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM pg_indexes \
+             WHERE schemaname = 'tower_sessions' AND tablename = 'session' \
+             AND indexname = 'idx_session_expiry_date')",
+        )
+        .fetch_one(&pool)
+        .await?;
+        assert!(exists_after_up, "up must create idx_session_expiry_date");
+
+        // Revert just the index migration; the session table itself remains.
+        MIGRATOR.undo(&pool, 20_260_627_073_831).await?;
+        let exists_after_down: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM pg_indexes \
+             WHERE schemaname = 'tower_sessions' AND tablename = 'session' \
+             AND indexname = 'idx_session_expiry_date')",
+        )
+        .fetch_one(&pool)
+        .await?;
+        assert!(!exists_after_down, "down must drop idx_session_expiry_date");
         Ok(())
     }
 

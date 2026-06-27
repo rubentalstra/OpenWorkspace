@@ -4,6 +4,8 @@
 //! (organised as `[default]`/`[dev]`/`[prod]`/`[global]` profile tables), then
 //! `APP_`-prefixed environment variables (`APP_DATABASE__URL`, `__` = nesting).
 
+use std::time::Duration;
+
 use figment::Figment;
 use figment::providers::{Env, Format, Toml};
 use secrecy::SecretString;
@@ -16,6 +18,7 @@ pub struct AppConfig {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
     pub observability: ObservabilityConfig,
+    pub auth: AuthConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -70,6 +73,43 @@ impl Default for ObservabilityConfig {
     }
 }
 
+/// Authentication and session configuration.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct AuthConfig {
+    /// Cookie-signing key. Reserved for P7+ (signed/encrypted cookies); unused in
+    /// P5, where session data lives server-side in Postgres. A secret: redacted.
+    pub session_key: SecretString,
+    /// Optional Argon2 pepper: a server-held secret keyed into every password
+    /// hash so a stolen database alone cannot be brute-forced. `None` disables it.
+    pub argon2_pepper: Option<SecretString>,
+    /// Sliding idle timeout: a session expires this long after the last request.
+    /// Parsed from a humantime string (e.g. `8h`, `30m`). Defaults to 8 hours.
+    #[serde(with = "humantime_serde")]
+    pub session_idle_timeout: Duration,
+    /// Email of the first-boot instance admin. Bootstrap runs only when this AND
+    /// [`AuthConfig::bootstrap_admin_password`] are set and no instance admin yet
+    /// exists. `None` skips it. Env: `APP_AUTH__BOOTSTRAP_ADMIN_EMAIL`.
+    pub bootstrap_admin_email: Option<String>,
+    /// Operator-supplied password for the first-boot instance admin. A secret:
+    /// redacted in `Debug`/logs and never logged in plaintext. Bootstrap is a
+    /// no-op (with a warning) when the email is set but this is not. `None` skips
+    /// it. Env: `APP_AUTH__BOOTSTRAP_ADMIN_PASSWORD`.
+    pub bootstrap_admin_password: Option<SecretString>,
+}
+
+impl Default for AuthConfig {
+    fn default() -> Self {
+        Self {
+            session_key: SecretString::from(String::new()),
+            argon2_pepper: None,
+            session_idle_timeout: Duration::from_hours(8),
+            bootstrap_admin_email: None,
+            bootstrap_admin_password: None,
+        }
+    }
+}
+
 /// Errors raised while loading configuration.
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
@@ -102,5 +142,16 @@ mod tests {
         assert_eq!(cfg.database.max_connections, 5);
         assert!(cfg.observability.metrics_enabled);
         assert!(cfg.database.url.expose_secret().is_empty());
+    }
+
+    #[test]
+    fn auth_defaults_are_safe() {
+        let cfg = AppConfig::default();
+        // An absent Option<SecretString> defaults to None (pepper disabled).
+        assert!(cfg.auth.argon2_pepper.is_none());
+        assert!(cfg.auth.bootstrap_admin_email.is_none());
+        assert!(cfg.auth.bootstrap_admin_password.is_none());
+        assert_eq!(cfg.auth.session_idle_timeout, Duration::from_hours(8));
+        assert!(cfg.auth.session_key.expose_secret().is_empty());
     }
 }
