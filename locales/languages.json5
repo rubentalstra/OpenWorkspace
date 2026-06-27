@@ -1,0 +1,11 @@
+// Supported UI languages: [BCP-47 code, endonym]. Order = display order.
+// The seven first-release languages (master plan §4).
+[
+  ["en", "English"],
+  ["de", "Deutsch"],
+  ["fr", "Français"],
+  ["es", "Español"],
+  ["it", "Italiano"],
+  ["nl", "Nederlands"],
+  ["pl", "Polski"],
+]

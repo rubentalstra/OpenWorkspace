@@ -24,3 +24,6 @@ target
 node_modules/
 end2end/test-results/
 end2end/playwright-report/
+
+# Claude Code personal settings (machine-local env, e.g. DATABASE_URL)
+.claude/settings.local.json

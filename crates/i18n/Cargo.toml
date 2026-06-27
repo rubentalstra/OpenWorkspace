@@ -1,0 +1,24 @@
+[package]
+name = "i18n"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+leptos.workspace = true
+fluent-templates.workspace = true
+# `json5` lets the macro read `locales/languages.json5`. Hydrate/CSR is the
+# default build; `ssr` is the only opt-in (no `hydrate` feature exists upstream).
+leptos-fluent = { workspace = true, features = ["json5"] }
+# The `leptos_fluent!` ssr expansion (Accept-Language header reading) refers to
+# `axum` directly, so it must be a dependency of this crate under `ssr`.
+axum = { workspace = true, optional = true }
+
+[features]
+default = []
+hydrate = ["leptos/hydrate"]
+ssr = ["leptos-fluent/ssr", "leptos-fluent/axum", "leptos/ssr", "dep:axum"]
+
+[lints]
+workspace = true

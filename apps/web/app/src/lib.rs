@@ -1,4 +1,6 @@
+use i18n::I18nProvider;
 use leptos::prelude::*;
+use leptos_fluent::move_tr;
 use leptos_meta::{Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
     StaticSegment,
@@ -52,13 +54,15 @@ pub fn App() -> impl IntoView {
         <Title text="Welcome to Leptos" />
 
         // content for this welcome page
-        <Router>
-            <main>
-                <Routes fallback=|| "Page not found.".into_view()>
-                    <Route path=StaticSegment("") view=HomePage />
-                </Routes>
-            </main>
-        </Router>
+        <I18nProvider>
+            <Router>
+                <main>
+                    <Routes fallback=|| "Page not found.".into_view()>
+                        <Route path=StaticSegment("") view=HomePage />
+                    </Routes>
+                </main>
+            </Router>
+        </I18nProvider>
     }
 }
 
@@ -70,7 +74,7 @@ fn HomePage() -> impl IntoView {
     let on_click = move |_| *count.write() += 1;
 
     view! {
-        <h1>"Welcome to Leptos!"</h1>
-        <button on:click=on_click>"Click Me: " {count}</button>
+        <h1>{move_tr!("home-title")}</h1>
+        <button on:click=on_click>{move_tr!("home-count", { "count" => count.get() })}</button>
     }
 }
