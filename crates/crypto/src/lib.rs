@@ -12,6 +12,13 @@ use argon2::password_hash::{PasswordHash, PasswordHasher as _, PasswordVerifier 
 use argon2::{Algorithm, Argon2, Params, Version};
 use secrecy::{ExposeSecret, SecretString};
 
+mod field;
+
+pub use field::{
+    DataKey, RootKey, SUITE_ID_AES_256_GCM_V1, TokenHash, decrypt_field, encrypt_field,
+    generate_data_key, hash_token, unwrap_key, wrap_key,
+};
+
 /// A PHC-format password hash (e.g. `$argon2id$v=19$m=19456,t=2,p=1$…`). Store this.
 ///
 /// `Debug` is redacted so the PHC string (salt + digest) never reaches logs or
@@ -57,13 +64,24 @@ pub enum VerifyOutcome {
     Mismatch,
 }
 
-/// Crypto facade errors — never carries or leaks an argon2 type.
-#[derive(Debug, thiserror::Error)]
+/// Crypto facade errors — never carries or leaks a vendor crypto type.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
 pub enum CryptoError {
     #[error("password hashing failed")]
     Hash,
     #[error("stored password hash is malformed")]
     Parse,
+    #[error("field encryption failed")]
+    Encrypt,
+    #[error("field decryption failed")]
+    Decrypt,
+    #[error("key wrap or unwrap failed")]
+    KeyWrap,
+    #[error("key has an invalid length")]
+    KeyLength,
+    #[error("secure random generation failed")]
+    Rng,
 }
 
 /// The active Argon2 suite — the single place hashing cost is defined.
