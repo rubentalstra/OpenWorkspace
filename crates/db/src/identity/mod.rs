@@ -5,3 +5,4 @@
 pub(crate) mod credentials;
 pub(crate) mod crypto_keys;
 pub(crate) mod mfa;
+pub(crate) mod oidc;

@@ -1,4 +1,8 @@
-# cargo-audit config. Ignore the same unmaintained (non-vulnerable) transitive
-# advisories as deny.toml — they come from the Leptos tree and aren't removable by us.
+# cargo-audit config. Must mirror deny.toml's advisory ignores (see CLAUDE.md
+# "Security advisories" for the policy and the per-advisory rationale).
+#   RUSTSEC-2024-0436  paste            unmaintained (not vulnerable); via Leptos
+#   RUSTSEC-2026-0173  proc-macro-error2 unmaintained (not vulnerable); via Leptos
+#   RUSTSEC-2023-0071  rsa Marvin       private-key-only; this RP verifies with public
+#                                       keys; no compatible fix; transitive via openidconnect
 [advisories]
-ignore = ["RUSTSEC-2024-0436", "RUSTSEC-2026-0173"]
+ignore = ["RUSTSEC-2024-0436", "RUSTSEC-2026-0173", "RUSTSEC-2023-0071"]

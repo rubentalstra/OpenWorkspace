@@ -51,6 +51,24 @@ webauthn-rs = { version = "0.5.5", features = ["danger-allow-state-serialisation
 totp-rs = { version = "5.7.2", features = ["qr", "gen_secret", "zeroize"], optional = true }
 # Carries the serialized webauthn-rs Passkey opaquely to/from the db jsonb column.
 serde_json = { version = "1", optional = true }
+# OIDC SSO (P7). openidconnect drives the whole flow (discovery, JWKS, Authorization
+# Code + PKCE S256, full ID-token validation); its `reqwest` feature provides the
+# AsyncHttpClient impl for reqwest::Client. We DROP its default `rustls-tls` feature
+# (which turns on oauth2/reqwest's `ring`-bearing rustls path) and supply TLS via the
+# direct reqwest dep below, so the whole tree stays on a single aws-lc-rs provider
+# (matching sqlx's tls-rustls-aws-lc-rs) — no `ring`, no OpenSSL.
+openidconnect = { version = "4.0.1", default-features = false, features = ["reqwest", "timing-resistant-secret-traits", "accept-rfc3339-timestamps", "accept-string-booleans"], optional = true }
+# reqwest 0.12.x (NOT 0.13: oauth2 5.0.0 pins reqwest ^0.12 and its AsyncHttpClient
+# impl only accepts a 0.12 Client). The `*-no-provider` rustls feature ships rustls
+# without a CryptoProvider and skips the `ring`-bearing feature chain; we install the
+# aws-lc-rs provider at startup instead.
+reqwest = { version = "0.12.28", default-features = false, features = ["json", "rustls-tls-webpki-roots-no-provider"], optional = true }
+# Installs aws-lc-rs as the process-wide rustls CryptoProvider once at startup (the
+# -no-provider reqwest feature ships rustls without one). Same rustls 0.23 the sqlx
+# pool uses, so there is a single rustls in the tree.
+rustls = { version = "0.23.41", optional = true }
+# URL parsing/validation for the redirect/return-to allow-list and authorize URL.
+url = { version = "2.5", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
@@ -77,6 +95,13 @@ tracing-subscriber = { version = "0.3.23", features = ["fmt"] }
 # Software authenticator that drives the WebAuthn register/authenticate
 # ceremonies in-process (the P6 "virtual authenticator" the spec asks for).
 webauthn-authenticator-rs = { version = "0.5.5", features = ["softpasskey"] }
+# --- oidc-it (real-Keycloak integration tests; compiled only under that feature) ---
+# Ephemeral Keycloak via a GenericImage (no Keycloak module exists in
+# testcontainers-modules). The headless-login browser client needs reqwest's cookie
+# store; serde_json parses discovery/JWKS bodies in assertions.
+testcontainers = { version = "0.27.3", features = ["http_wait"] }
+reqwest = { version = "0.12.28", default-features = false, features = ["json", "cookies", "rustls-tls-webpki-roots-no-provider"] }
+base64 = "0.22"
 
 [features]
 ssr = [
@@ -96,7 +121,14 @@ ssr = [
     "dep:webauthn-rs",
     "dep:totp-rs",
     "dep:serde_json",
+    "dep:openidconnect",
+    "dep:reqwest",
+    "dep:rustls",
+    "dep:url",
 ]
+# Gates the real-Keycloak integration tests (crates/auth/tests/oidc_flow.rs). Implies
+# `ssr` so the OIDC facade is built. Run with: cargo nextest run -p auth --features oidc-it
+oidc-it = ["ssr"]
 
 [lints]
 workspace = true

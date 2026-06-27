@@ -20,6 +20,12 @@ pub use identity::mfa::{
     load_user_id_by_webauthn_handle, load_webauthn_identity, replace_recovery_codes,
     totp_is_confirmed, update_passkey_after_auth, upsert_totp_pending,
 };
+pub use identity::oidc::{
+    OidcIdentityRow, OidcProviderRow, OidcProviderSummary, OidcRoleMappingRow, assign_membership,
+    find_oidc_identity, jit_create_user, link_oidc_identity, load_enabled_provider_by_slug,
+    load_enabled_provider_summaries, load_role_mappings, touch_oidc_identity,
+    update_user_display_name,
+};
 
 use secrecy::{ExposeSecret, SecretString};
 use sqlx::error::ErrorKind;

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Context;
 use app::{App, CsrfToken, shell};
 use auth::{AuthSession, Credentials, MfaSession, TotpService, WebauthnService};
@@ -14,6 +16,7 @@ use secrecy::SecretString;
 use tower_http::trace::TraceLayer;
 
 mod mfa;
+mod oidc;
 
 /// Shared web state. `FromRef` lets Leptos pull `LeptosOptions` and the handlers
 /// pull the `Db`, the WebAuthn engine and the TOTP service from the one state.
@@ -23,11 +26,18 @@ struct AppState {
     db: Db,
     webauthn: WebauthnService,
     totp: TotpService,
+    oidc: oidc::OidcServices,
 }
 
 impl FromRef<AppState> for LeptosOptions {
     fn from_ref(state: &AppState) -> Self {
         state.leptos_options.clone()
+    }
+}
+
+impl FromRef<AppState> for oidc::OidcServices {
+    fn from_ref(state: &AppState) -> Self {
+        state.oidc.clone()
     }
 }
 
@@ -93,6 +103,17 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("building the webauthn relying party")?;
 
+    // OIDC SSO services: one outbound HTTP client (aws-lc-rs rustls, redirects off)
+    // and the provider registry that discovers + caches each IdP. The keyring is
+    // moved in last; it also seals/opens OIDC client secrets.
+    let oidc_http = auth::OidcHttpClient::new(cfg.auth.oidc_http_timeout)
+        .context("building the OIDC HTTP client")?;
+    let oidc = oidc::OidcServices {
+        registry: auth::ProviderRegistry::new(pool.clone(), oidc_http.clone(), keyring),
+        http: oidc_http,
+        base_url: Arc::from(cfg.auth.public_base_url.trim_end_matches('/')),
+    };
+
     let conf = get_configuration(None).context("loading Leptos configuration")?;
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
@@ -103,6 +124,7 @@ async fn main() -> anyhow::Result<()> {
         db: pool,
         webauthn,
         totp,
+        oidc,
     };
 
     // Operational probes live outside the auth/session/CSRF stack.
@@ -130,9 +152,10 @@ async fn main() -> anyhow::Result<()> {
     // `/api/*` from CSRF to work around a 403 — see csrf.rs.
     let app = Router::new()
         .route("/api/login", post(login))
-        .route("/api/logout", post(logout))
+        .route("/api/logout", post(oidc::logout))
         .route("/api/change-password", post(change_password))
         .merge(mfa::routes())
+        .merge(oidc::routes())
         .leptos_routes_with_context(&state, routes, provide_csrf_context, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())
@@ -210,17 +233,6 @@ async fn login(
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
-}
-
-/// Logout endpoint: rotates the CSRF token then flushes the current session.
-async fn logout(mut auth_session: AuthSession) -> StatusCode {
-    if auth::rotate_csrf_token(&auth_session).await.is_err() {
-        return StatusCode::INTERNAL_SERVER_ERROR;
-    }
-    match auth_session.logout().await {
-        Ok(_) => StatusCode::OK,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 

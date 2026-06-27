@@ -16,11 +16,14 @@ use crate::AuthError;
 
 /// Logical purpose tag for the TOTP-secret data key in `crypto_keys`.
 const TOTP_SECRET_PURPOSE: &str = "totp_secret";
+/// Logical purpose tag for the OIDC-client-secret data key in `crypto_keys`.
+const OIDC_CLIENT_SECRET_PURPOSE: &str = "oidc_client_secret";
 
 /// In-memory field-encryption keys, unwrapped once at startup.
 #[derive(Clone, Debug)]
 pub struct FieldKeyring {
     totp_dek: DataKey,
+    oidc_dek: DataKey,
 }
 
 impl FieldKeyring {
@@ -34,13 +37,20 @@ impl FieldKeyring {
     pub async fn load(db: &Db, root_key_base64: &SecretString) -> Result<Self, AuthError> {
         let kek = decode_root_key(root_key_base64)?;
         let totp_dek = load_or_create_dek(db, &kek, TOTP_SECRET_PURPOSE).await?;
-        Ok(Self { totp_dek })
+        let oidc_dek = load_or_create_dek(db, &kek, OIDC_CLIENT_SECRET_PURPOSE).await?;
+        Ok(Self { totp_dek, oidc_dek })
     }
 
     /// The data key that seals TOTP secrets.
     #[must_use]
     pub fn totp_dek(&self) -> &DataKey {
         &self.totp_dek
+    }
+
+    /// The data key that seals OIDC client secrets (`oidc_providers.client_secret_encrypted`).
+    #[must_use]
+    pub fn oidc_dek(&self) -> &DataKey {
+        &self.oidc_dek
     }
 }
 
