@@ -15,10 +15,6 @@ env:
   # sccache caches per-rustc-invocation objects, not incremental fragments, so
   # incremental builds would bypass it. Disable it everywhere to feed the cache.
   CARGO_INCREMENTAL: 0
-  # Route every compile through sccache. fmt/supply-chain never invoke rustc, so
-  # they ignore this even though sccache isn't installed there.
-  RUSTC_WRAPPER: sccache
-  SCCACHE_GHA_ENABLED: "true"
 
 jobs:
   # No compilation: rustfmt/leptosfmt parse, they don't build. Stays parallel.
@@ -56,6 +52,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SQLX_OFFLINE: "true"
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v7
       - run: rustup show
@@ -78,6 +76,8 @@ jobs:
     # query!/query_as! checks.
     env:
       SQLX_OFFLINE: "true"
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v7
       - run: rustup show
@@ -109,6 +109,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://openworkspace:dev@localhost:5432/openworkspace
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v7
       - run: rustup show
@@ -138,6 +140,8 @@ jobs:
     # compile-time query!/query_as! checks.
     env:
       SQLX_OFFLINE: "true"
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v7
       - run: rustup show
