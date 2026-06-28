@@ -15,6 +15,11 @@ env:
   # sccache caches per-rustc-invocation objects, not incremental fragments, so
   # incremental builds would bypass it. Disable it everywhere to feed the cache.
   CARGO_INCREMENTAL: 0
+  # Pin the Tailwind binary cargo-leptos downloads. Unset, cargo-leptos resolves
+  # "latest" via the GitHub API, which rate-limits on shared CI runner IPs and
+  # leaves no binary to spawn (the build then fails with ENOENT in build_tailwind).
+  # Setting this skips the API call and downloads the release asset directly.
+  LEPTOS_TAILWIND_VERSION: v4.2.1
 
 jobs:
   # No compilation: rustfmt/leptosfmt parse, they don't build. Stays parallel.
