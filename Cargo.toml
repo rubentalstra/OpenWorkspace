@@ -90,10 +90,10 @@ lib-package = "frontend"
 site-root = "target/site"
 site-pkg-dir = "pkg"
 watch-additional-files = ["locales"]
-style-file = "apps/web/style/main.css"
-# Tailwind v4 entry (Pipeline A): cargo-leptos runs its bundled Tailwind binary on
-# this file and concatenates the result with style-file into pkg/openworkspace.css.
-tailwind-input-file = "apps/web/style/tailwind.css"
+# Single self-contained Tailwind v4 entry (Pipeline A): cargo-leptos runs its
+# bundled Tailwind binary on this file into pkg/openworkspace.css. No `style-file`
+# — main.css is the only stylesheet (shadcn Base UI / nova).
+tailwind-input-file = "apps/web/style/main.css"
 assets-dir = "apps/web/public"
 site-addr = "127.0.0.1:3000"
 reload-port = 3001
