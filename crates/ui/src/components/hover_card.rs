@@ -1,10 +1,12 @@
 use crate::cn;
+use crate::hooks::use_anchored_position::use_anchor_rect;
 use crate::hooks::use_dismiss::use_dismiss;
 use leptos::prelude::*;
 
 #[derive(Clone, Copy)]
 struct HoverCardCtx {
     open: RwSignal<bool>,
+    anchor: NodeRef<leptos::html::Div>,
 }
 
 /// HoverCard — shadcn Base UI `hover-card` (PreviewCard primitive). An anchored
@@ -20,7 +22,7 @@ pub fn HoverCard(
 ) -> impl IntoView {
     let open = open.unwrap_or_else(|| RwSignal::new(default_open));
     let root = NodeRef::<leptos::html::Div>::new();
-    provide_context(HoverCardCtx { open });
+    provide_context(HoverCardCtx { open, anchor: root });
     use_dismiss(open, root);
     view! {
         <div
@@ -62,15 +64,17 @@ pub fn HoverCardContent(
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<HoverCardCtx>();
+    let position = use_anchor_rect(ctx.open, ctx.anchor).below_center();
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
             <div
                 data-slot="hover-card-content"
                 data-open="true"
                 data-side="bottom"
+                style=move || position.get()
                 class=move || {
                     cn!(
-                        "cn-hover-card-content cn-hover-card-content-logical absolute top-full left-1/2 z-50 mt-1 w-64 -translate-x-1/2 origin-(--transform-origin) outline-hidden",
+                        "cn-hover-card-content cn-hover-card-content-logical z-50 origin-(--transform-origin) outline-hidden",
                         class.get(),
                     )
                 }

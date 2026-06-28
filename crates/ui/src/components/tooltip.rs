@@ -1,10 +1,12 @@
 use crate::cn;
+use crate::hooks::use_anchored_position::use_anchor_rect;
 use leptos::ev;
 use leptos::prelude::*;
 
 #[derive(Clone, Copy)]
 struct TooltipCtx {
     open: RwSignal<bool>,
+    anchor: NodeRef<leptos::html::Div>,
 }
 
 /// Tooltip placement relative to the trigger, surfaced as `data-side` so the nova
@@ -31,15 +33,6 @@ impl TooltipSide {
             Self::Right => "right",
         }
     }
-
-    fn position(self) -> &'static str {
-        match self {
-            Self::Top => "bottom-full left-1/2 mb-1 -translate-x-1/2",
-            Self::Bottom => "top-full left-1/2 mt-1 -translate-x-1/2",
-            Self::Left => "right-full top-1/2 mr-1 -translate-y-1/2",
-            Self::Right => "left-full top-1/2 ml-1 -translate-y-1/2",
-        }
-    }
 }
 
 /// TooltipProvider — shadcn Base UI `tooltip` provider. A passthrough grouping
@@ -61,7 +54,8 @@ pub fn Tooltip(
     children: Children,
 ) -> impl IntoView {
     let open = open.unwrap_or_else(|| RwSignal::new(default_open));
-    provide_context(TooltipCtx { open });
+    let root = NodeRef::<leptos::html::Div>::new();
+    provide_context(TooltipCtx { open, anchor: root });
     let on_key = window_event_listener(ev::keydown, move |event| {
         if open.get_untracked() && event.key() == "Escape" {
             open.set(false);
@@ -70,6 +64,7 @@ pub fn Tooltip(
     on_cleanup(move || on_key.remove());
     view! {
         <div
+            node_ref=root
             data-slot="tooltip"
             class=move || cn!("relative inline-block", class.get())
             on:pointerenter=move |_| open.set(true)
@@ -111,6 +106,29 @@ pub fn TooltipContent(
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<TooltipCtx>();
+    let rect = use_anchor_rect(ctx.open, ctx.anchor);
+    let position = Signal::derive(move || match side.get() {
+        TooltipSide::Top => format!(
+            "position:fixed;top:{}px;left:{}px;transform:translate(-50%,calc(-100% - 6px));",
+            rect.top(),
+            rect.center_x(),
+        ),
+        TooltipSide::Bottom => format!(
+            "position:fixed;top:{}px;left:{}px;transform:translate(-50%,6px);",
+            rect.bottom(),
+            rect.center_x(),
+        ),
+        TooltipSide::Left => format!(
+            "position:fixed;top:{}px;left:{}px;transform:translate(calc(-100% - 6px),-50%);",
+            rect.center_y(),
+            rect.left(),
+        ),
+        TooltipSide::Right => format!(
+            "position:fixed;top:{}px;left:{}px;transform:translate(6px,-50%);",
+            rect.center_y(),
+            rect.right(),
+        ),
+    });
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
             <div
@@ -118,10 +136,10 @@ pub fn TooltipContent(
                 data-slot="tooltip-content"
                 data-open="true"
                 data-side=move || side.get().as_str()
+                style=move || position.get()
                 class=move || {
                     cn!(
-                        "cn-tooltip-content cn-tooltip-content-logical absolute z-50 w-fit max-w-xs origin-(--transform-origin) bg-foreground text-background outline-hidden",
-                        side.get().position(),
+                        "cn-tooltip-content cn-tooltip-content-logical z-50 w-fit max-w-xs origin-(--transform-origin) bg-foreground text-background",
                         class.get(),
                     )
                 }

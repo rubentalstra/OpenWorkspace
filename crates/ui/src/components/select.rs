@@ -1,3 +1,4 @@
+use crate::hooks::use_anchored_position::use_anchor_rect;
 use crate::hooks::use_dismiss::use_dismiss;
 use crate::{cn, slot};
 use leptos::prelude::*;
@@ -8,6 +9,7 @@ use std::collections::HashMap;
 struct SelectCtx {
     value: RwSignal<String>,
     open: RwSignal<bool>,
+    anchor: NodeRef<leptos::html::Div>,
     labels: RwSignal<HashMap<String, String>>,
     on_change: StoredValue<Option<Callback<String>>>,
 }
@@ -33,6 +35,7 @@ pub fn Select(
     provide_context(SelectCtx {
         value,
         open,
+        anchor: root,
         labels,
         on_change: StoredValue::new(on_change),
     });
@@ -141,6 +144,7 @@ pub fn SelectContent(
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<SelectCtx>();
+    let position = use_anchor_rect(ctx.open, ctx.anchor).below();
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
             <div
@@ -148,9 +152,10 @@ pub fn SelectContent(
                 data-slot="select-content"
                 data-open="true"
                 data-side="bottom"
+                style=move || position.get()
                 class=move || {
                     cn!(
-                        "cn-select-content cn-select-content-logical absolute top-full left-0 z-50 mt-1 max-h-96 min-w-(--anchor-width) origin-(--transform-origin) overflow-x-hidden overflow-y-auto outline-hidden",
+                        "cn-select-content cn-select-content-logical cn-menu-target cn-menu-translucent isolate z-50 max-h-96 origin-(--transform-origin) overflow-x-hidden overflow-y-auto data-[align-trigger=true]:animate-none",
                         class.get(),
                     )
                 }

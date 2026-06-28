@@ -1,3 +1,4 @@
+use crate::hooks::use_anchored_position::use_anchor_rect;
 use crate::hooks::use_dismiss::use_dismiss;
 use crate::{cn, slot};
 use leptos::prelude::*;
@@ -6,6 +7,7 @@ use leptos_icons::Icon;
 #[derive(Clone, Copy)]
 struct DropdownMenuCtx {
     open: RwSignal<bool>,
+    anchor: NodeRef<leptos::html::Div>,
 }
 
 #[derive(Clone, Copy)]
@@ -44,7 +46,7 @@ pub fn DropdownMenu(
 ) -> impl IntoView {
     let open = open.unwrap_or_else(|| RwSignal::new(default_open));
     let root = NodeRef::<leptos::html::Div>::new();
-    provide_context(DropdownMenuCtx { open });
+    provide_context(DropdownMenuCtx { open, anchor: root });
     use_dismiss(open, root);
     view! {
         <div
@@ -85,6 +87,7 @@ pub fn DropdownMenuContent(
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<DropdownMenuCtx>();
+    let position = use_anchor_rect(ctx.open, ctx.anchor).below();
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
             <div
@@ -92,9 +95,10 @@ pub fn DropdownMenuContent(
                 role="menu"
                 data-open="true"
                 data-side="bottom"
+                style=move || position.get()
                 class=move || {
                     cn!(
-                        "cn-dropdown-menu-content cn-dropdown-menu-content-logical cn-menu-target cn-menu-translucent absolute top-full left-0 z-50 mt-1 max-h-(--available-height) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto outline-none data-closed:overflow-hidden",
+                        "cn-dropdown-menu-content cn-dropdown-menu-content-logical cn-menu-target cn-menu-translucent z-50 max-h-96 min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto outline-none data-closed:overflow-hidden",
                         class.get(),
                     )
                 }
@@ -294,7 +298,7 @@ pub fn DropdownMenuSub(
 ) -> impl IntoView {
     let open = open.unwrap_or_else(|| RwSignal::new(default_open));
     let root = NodeRef::<leptos::html::Div>::new();
-    provide_context(DropdownMenuCtx { open });
+    provide_context(DropdownMenuCtx { open, anchor: root });
     use_dismiss(open, root);
     view! {
         <div node_ref=root data-slot="dropdown-menu-sub" class=move || cn!("relative", class.get())>
@@ -342,6 +346,7 @@ pub fn DropdownMenuSubContent(
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<DropdownMenuCtx>();
+    let position = use_anchor_rect(ctx.open, ctx.anchor).right_of();
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
             <div
@@ -349,9 +354,10 @@ pub fn DropdownMenuSubContent(
                 role="menu"
                 data-open="true"
                 data-side="right"
+                style=move || position.get()
                 class=move || {
                     cn!(
-                        "cn-dropdown-menu-content cn-dropdown-menu-content-logical cn-dropdown-menu-sub-content cn-menu-target cn-menu-translucent absolute top-0 left-full z-50 ml-1 w-auto origin-(--transform-origin) overflow-x-hidden overflow-y-auto outline-none data-closed:overflow-hidden",
+                        "cn-dropdown-menu-content cn-dropdown-menu-content-logical cn-dropdown-menu-sub-content cn-menu-target cn-menu-translucent z-50 w-auto origin-(--transform-origin) overflow-x-hidden overflow-y-auto outline-none data-closed:overflow-hidden",
                         class.get(),
                     )
                 }

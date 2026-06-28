@@ -1,3 +1,4 @@
+use crate::hooks::use_anchored_position::use_anchor_rect;
 use crate::hooks::use_dismiss::use_dismiss;
 use crate::{cn, slot};
 use leptos::prelude::*;
@@ -5,6 +6,7 @@ use leptos::prelude::*;
 #[derive(Clone, Copy)]
 struct PopoverCtx {
     open: RwSignal<bool>,
+    anchor: NodeRef<leptos::html::Div>,
 }
 
 /// Popover — shadcn Base UI `popover`. An anchored, dismissible popup. Controlled
@@ -19,7 +21,7 @@ pub fn Popover(
 ) -> impl IntoView {
     let open = open.unwrap_or_else(|| RwSignal::new(default_open));
     let root = NodeRef::<leptos::html::Div>::new();
-    provide_context(PopoverCtx { open });
+    provide_context(PopoverCtx { open, anchor: root });
     use_dismiss(open, root);
     view! {
         <div
@@ -60,15 +62,17 @@ pub fn PopoverContent(
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<PopoverCtx>();
+    let position = use_anchor_rect(ctx.open, ctx.anchor).below_center();
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
             <div
                 data-slot="popover-content"
                 data-open="true"
                 data-side="bottom"
+                style=move || position.get()
                 class=move || {
                     cn!(
-                        "cn-popover-content cn-popover-content-logical absolute top-full left-1/2 z-50 mt-1 w-72 -translate-x-1/2 origin-(--transform-origin) outline-hidden",
+                        "cn-popover-content cn-popover-content-logical z-50 w-72 origin-(--transform-origin) outline-hidden",
                         class.get(),
                     )
                 }

@@ -1,3 +1,4 @@
+use crate::hooks::use_anchored_position::use_anchor_rect;
 use crate::hooks::use_dismiss::use_dismiss;
 use crate::{cn, slot};
 use leptos::prelude::*;
@@ -13,6 +14,7 @@ struct MenubarCtx {
 struct MenubarMenuCtx {
     id: String,
     open: RwSignal<bool>,
+    anchor: NodeRef<leptos::html::Div>,
 }
 
 #[derive(Clone, Copy)]
@@ -76,6 +78,7 @@ pub fn MenubarMenu(#[prop(into)] value: String, children: Children) -> impl Into
     provide_context(MenubarMenuCtx {
         id: value.clone(),
         open,
+        anchor: root,
     });
     use_dismiss(open, root);
 
@@ -140,7 +143,9 @@ pub fn MenubarContent(
     #[prop(into, optional)] class: Signal<String>,
     children: ChildrenFn,
 ) -> impl IntoView {
-    let open = expect_context::<MenubarMenuCtx>().open;
+    let ctx = expect_context::<MenubarMenuCtx>();
+    let open = ctx.open;
+    let position = use_anchor_rect(open, ctx.anchor).below();
     view! {
         <Show when=move || open.get() fallback=|| ()>
             <div
@@ -148,9 +153,10 @@ pub fn MenubarContent(
                 data-slot="menubar-content"
                 data-open="true"
                 data-side="bottom"
+                style=move || position.get()
                 class=move || {
                     cn!(
-                        "cn-menubar-content cn-menubar-content-logical cn-menu-target cn-menu-translucent absolute top-full left-0 z-50 mt-1 origin-(--transform-origin) outline-hidden",
+                        "cn-menubar-content cn-menubar-content-logical cn-menu-target cn-menu-translucent z-50 origin-(--transform-origin) outline-hidden",
                         class.get(),
                     )
                 }
