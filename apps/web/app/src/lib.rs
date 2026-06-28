@@ -7,6 +7,7 @@ use leptos_router::{
     components::{ParentRoute, Route, Router, Routes},
 };
 
+pub mod auth;
 mod csrf_client;
 pub mod dashboard;
 pub mod showcase;
@@ -62,23 +63,27 @@ pub fn App() -> impl IntoView {
 
         // content for this welcome page
         <I18nProvider>
-            <Router>
-                <div>
-                    <Routes fallback=|| "Page not found.".into_view()>
-                        <Route path=StaticSegment("") view=HomePage />
-                        <ParentRoute path=StaticSegment("ui") view=showcase::ShowcaseLayout>
-                            <Route path=StaticSegment("") view=showcase::ShowcaseIndex />
-                            <Route path=StaticSegment("buttons") view=showcase::ButtonsPage />
-                            <Route path=StaticSegment("inputs") view=showcase::InputsPage />
-                            <Route path=StaticSegment("data") view=showcase::DataPage />
-                            <Route path=StaticSegment("feedback") view=showcase::FeedbackPage />
-                            <Route path=StaticSegment("overlays") view=showcase::OverlaysPage />
-                            <Route path=StaticSegment("layout") view=showcase::LayoutPage />
-                        </ParentRoute>
-                        <Route path=StaticSegment("dashboard") view=dashboard::Dashboard />
-                    </Routes>
-                </div>
-            </Router>
+            <ui::TooltipProvider>
+                <Router>
+                    <div>
+                        <Routes fallback=|| "Page not found.".into_view()>
+                            <Route path=StaticSegment("") view=HomePage />
+                            <ParentRoute path=StaticSegment("ui") view=showcase::ShowcaseLayout>
+                                <Route path=StaticSegment("") view=showcase::ShowcaseIndex />
+                                <Route path=StaticSegment("buttons") view=showcase::ButtonsPage />
+                                <Route path=StaticSegment("inputs") view=showcase::InputsPage />
+                                <Route path=StaticSegment("data") view=showcase::DataPage />
+                                <Route path=StaticSegment("feedback") view=showcase::FeedbackPage />
+                                <Route path=StaticSegment("overlays") view=showcase::OverlaysPage />
+                                <Route path=StaticSegment("layout") view=showcase::LayoutPage />
+                            </ParentRoute>
+                            <Route path=StaticSegment("dashboard") view=dashboard::Dashboard />
+                            <Route path=StaticSegment("login") view=auth::LoginPage />
+                            <Route path=StaticSegment("signup") view=auth::SignupPage />
+                        </Routes>
+                    </div>
+                </Router>
+            </ui::TooltipProvider>
         </I18nProvider>
     }
 }

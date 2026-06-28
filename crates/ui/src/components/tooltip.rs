@@ -9,6 +9,15 @@ struct TooltipCtx {
     anchor: NodeRef<leptos::html::Div>,
 }
 
+/// Provided by [`TooltipProvider`] so only one tooltip is open at a time (matching
+/// shadcn's provider). Each [`Tooltip`] claims an `id`; opening one sets it as the
+/// `active` id and every other tooltip closes itself.
+#[derive(Clone, Copy)]
+struct TooltipCoordinator {
+    active: RwSignal<u64>,
+    next_id: StoredValue<u64>,
+}
+
 /// Tooltip placement relative to the trigger, surfaced as `data-side` so the nova
 /// layer drives the matching slide-in/arrow utilities.
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
@@ -40,7 +49,11 @@ impl TooltipSide {
 #[component]
 pub fn TooltipProvider(#[prop(default = 0)] delay: i32, children: Children) -> impl IntoView {
     let _ = delay;
-    view! { <div data-slot="tooltip-provider">{children()}</div> }
+    provide_context(TooltipCoordinator {
+        active: RwSignal::new(0),
+        next_id: StoredValue::new(1),
+    });
+    children()
 }
 
 /// Tooltip — shadcn Base UI `tooltip` root. Anchors trigger + content and opens on
@@ -56,6 +69,37 @@ pub fn Tooltip(
     let open = open.unwrap_or_else(|| RwSignal::new(default_open));
     let root = NodeRef::<leptos::html::Div>::new();
     provide_context(TooltipCtx { open, anchor: root });
+
+    // Single-open coordination via the enclosing TooltipProvider (if present): claim
+    // an id, become `active` when opened, and close whenever another tooltip opens.
+    let coord = use_context::<TooltipCoordinator>();
+    let my_id = coord.map(|c| {
+        let id = c.next_id.get_value();
+        c.next_id.set_value(id + 1);
+        id
+    });
+    if let (Some(c), Some(id)) = (coord, my_id) {
+        Effect::new(move |_| {
+            if c.active.get() != id && open.get_untracked() {
+                open.set(false);
+            }
+        });
+    }
+    let activate = Callback::new(move |()| {
+        open.set(true);
+        if let (Some(c), Some(id)) = (coord, my_id) {
+            c.active.set(id);
+        }
+    });
+    let deactivate = Callback::new(move |()| {
+        open.set(false);
+        if let (Some(c), Some(id)) = (coord, my_id)
+            && c.active.get_untracked() == id
+        {
+            c.active.set(0);
+        }
+    });
+
     let on_key = window_event_listener(ev::keydown, move |event| {
         if open.get_untracked() && event.key() == "Escape" {
             open.set(false);
@@ -67,10 +111,10 @@ pub fn Tooltip(
             node_ref=root
             data-slot="tooltip"
             class=move || cn!("relative inline-block", class.get())
-            on:pointerenter=move |_| open.set(true)
-            on:pointerleave=move |_| open.set(false)
-            on:focusin=move |_| open.set(true)
-            on:focusout=move |_| open.set(false)
+            on:pointerenter=move |_| activate.run(())
+            on:pointerleave=move |_| deactivate.run(())
+            on:focusin=move |_| activate.run(())
+            on:focusout=move |_| deactivate.run(())
         >
             {children()}
         </div>
