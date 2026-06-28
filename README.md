@@ -96,6 +96,7 @@ are documented in [`docs/development.md`](docs/development.md).
 
 - [`OpenWorkspace-architecture-plan.md`](OpenWorkspace-architecture-plan.md) — the master specification (source of truth).
 - [`docs/`](docs/) — development setup, Rust style guide, and per-phase specs.
+- [`CHANGELOG.md`](CHANGELOG.md) — notable changes per release.
 
 ## Contributing
 
