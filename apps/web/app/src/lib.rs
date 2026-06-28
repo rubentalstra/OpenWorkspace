@@ -67,7 +67,11 @@ pub fn App() -> impl IntoView {
                         <Route path=StaticSegment("") view=HomePage />
                         <ParentRoute path=StaticSegment("ui") view=showcase::ShowcaseLayout>
                             <Route path=StaticSegment("") view=showcase::ShowcaseIndex />
-                            <Route path=StaticSegment("components") view=showcase::ComponentsPage />
+                            <Route path=StaticSegment("buttons") view=showcase::ButtonsPage />
+                            <Route path=StaticSegment("inputs") view=showcase::InputsPage />
+                            <Route path=StaticSegment("data") view=showcase::DataPage />
+                            <Route path=StaticSegment("feedback") view=showcase::FeedbackPage />
+                            <Route path=StaticSegment("layout") view=showcase::LayoutPage />
                         </ParentRoute>
                     </Routes>
                 </div>
