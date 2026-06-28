@@ -1,12 +1,13 @@
-import * as React from "react"
-import { GalleryVerticalEnd, Minus, Plus } from "lucide-react"
+"use client"
 
-import { SearchForm } from "@/registry/new-york-v4/blocks/sidebar-05/components/search-form"
+import * as React from "react"
+
+import { SearchForm } from "@/registry/bases/base/blocks/sidebar-05/components/search-form"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/registry/new-york-v4/ui/collapsible"
+} from "@/registry/bases/base/ui/collapsible"
 import {
   Sidebar,
   SidebarContent,
@@ -19,7 +20,8 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 // This is sample data.
 const data = {
@@ -161,23 +163,27 @@ const data = {
     },
   ],
 }
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="#">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <GalleryVerticalEnd className="size-4" />
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-medium">Documentation</span>
-                  <span className="">v1.0.0</span>
-                </div>
-              </a>
+            <SidebarMenuButton size="lg" render={<a href="#" />}>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <IconPlaceholder
+                  lucide="GalleryVerticalEndIcon"
+                  tabler="IconLayoutRows"
+                  hugeicons="LayoutBottomIcon"
+                  phosphor="RowsIcon"
+                  remixicon="RiGalleryLine"
+                  className="size-4"
+                />
+              </div>
+              <div className="flex flex-col gap-0.5 leading-none">
+                <span className="font-medium">Documentation</span>
+                <span className="">v1.0.0</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -193,23 +199,35 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 className="group/collapsible"
               >
                 <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton>
-                      {item.title}{" "}
-                      <Plus className="ml-auto group-data-[state=open]/collapsible:hidden" />
-                      <Minus className="ml-auto group-data-[state=closed]/collapsible:hidden" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
+                  <SidebarMenuButton render={<CollapsibleTrigger />}>
+                    {item.title}{" "}
+                    <IconPlaceholder
+                      lucide="PlusIcon"
+                      tabler="IconPlus"
+                      hugeicons="PlusSignIcon"
+                      phosphor="PlusIcon"
+                      remixicon="RiAddLine"
+                      className="ml-auto group-aria-expanded/menu-button:hidden"
+                    />
+                    <IconPlaceholder
+                      lucide="MinusIcon"
+                      tabler="IconMinus"
+                      hugeicons="MinusSignIcon"
+                      phosphor="MinusIcon"
+                      remixicon="RiSubtractLine"
+                      className="ml-auto hidden group-aria-expanded/menu-button:block"
+                    />
+                  </SidebarMenuButton>
                   {item.items?.length ? (
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {item.items.map((item) => (
                           <SidebarMenuSubItem key={item.title}>
                             <SidebarMenuSubButton
-                              asChild
                               isActive={item.isActive}
+                              render={<a href={item.url} />}
                             >
-                              <a href={item.url}>{item.title}</a>
+                              {item.title}
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         ))}
@@ -226,4 +244,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-

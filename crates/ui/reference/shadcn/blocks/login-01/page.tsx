@@ -1,4 +1,4 @@
-import { LoginForm } from "@/registry/new-york-v4/blocks/login-01/components/login-form"
+import { LoginForm } from "@/registry/bases/base/blocks/login-01/components/login-form"
 
 export default function Page() {
   return (
@@ -9,4 +9,3 @@ export default function Page() {
     </div>
   )
 }
-

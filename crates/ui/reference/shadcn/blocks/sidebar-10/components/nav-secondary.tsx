@@ -1,5 +1,6 @@
+"use client"
+
 import React from "react"
-import { type LucideIcon } from "lucide-react"
 
 import {
   SidebarGroup,
@@ -8,7 +9,7 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
 
 export function NavSecondary({
   items,
@@ -17,7 +18,7 @@ export function NavSecondary({
   items: {
     title: string
     url: string
-    icon: LucideIcon
+    icon: React.ReactNode
     badge?: React.ReactNode
   }[]
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
@@ -27,11 +28,9 @@ export function NavSecondary({
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild>
-                <a href={item.url}>
-                  <item.icon />
-                  <span>{item.title}</span>
-                </a>
+              <SidebarMenuButton render={<a href={item.url} />}>
+                {item.icon}
+                <span>{item.title}</span>
               </SidebarMenuButton>
               {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
             </SidebarMenuItem>
@@ -41,4 +40,3 @@ export function NavSecondary({
     </SidebarGroup>
   )
 }
-

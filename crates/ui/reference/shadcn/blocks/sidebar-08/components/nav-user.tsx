@@ -1,19 +1,10 @@
 "use client"
 
 import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
-} from "lucide-react"
-
-import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@/registry/new-york-v4/ui/avatar"
+} from "@/registry/bases/base/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,13 +13,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/registry/new-york-v4/ui/dropdown-menu"
+} from "@/registry/bases/base/ui/dropdown-menu"
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 export function NavUser({
   user,
@@ -40,70 +32,107 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
+          <DropdownMenuTrigger
+            render={
+              <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
+            }
+          >
+            <Avatar>
+              <AvatarImage src={user.avatar} alt={user.name} />
+              <AvatarFallback>CN</AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-medium">{user.name}</span>
+              <span className="truncate text-xs">{user.email}</span>
+            </div>
+            <IconPlaceholder
+              lucide="ChevronsUpDownIcon"
+              tabler="IconSelector"
+              hugeicons="UnfoldMoreIcon"
+              phosphor="CaretUpDownIcon"
+              remixicon="RiArrowUpDownLine"
+              className="ml-auto size-4"
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="min-w-56 rounded-lg"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="p-0 font-normal">
+                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                  <Avatar>
+                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarFallback>CN</AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{user.name}</span>
+                    <span className="truncate text-xs">{user.email}</span>
+                  </div>
                 </div>
-              </div>
-            </DropdownMenuLabel>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <Sparkles />
+                <IconPlaceholder
+                  lucide="SparklesIcon"
+                  tabler="IconSparkles"
+                  hugeicons="SparklesIcon"
+                  phosphor="SparkleIcon"
+                  remixicon="RiSparklingLine"
+                />
                 Upgrade to Pro
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <BadgeCheck />
+                <IconPlaceholder
+                  lucide="BadgeCheckIcon"
+                  tabler="IconRosetteDiscountCheck"
+                  hugeicons="CheckmarkBadgeIcon"
+                  phosphor="CheckCircleIcon"
+                  remixicon="RiCheckboxCircleLine"
+                />
                 Account
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <CreditCard />
+                <IconPlaceholder
+                  lucide="CreditCardIcon"
+                  tabler="IconCreditCard"
+                  hugeicons="CreditCardIcon"
+                  phosphor="CreditCardIcon"
+                  remixicon="RiBankCardLine"
+                />
                 Billing
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Bell />
+                <IconPlaceholder
+                  lucide="BellIcon"
+                  tabler="IconBell"
+                  hugeicons="NotificationIcon"
+                  phosphor="BellIcon"
+                  remixicon="RiNotificationLine"
+                />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <LogOut />
+              <IconPlaceholder
+                lucide="LogOutIcon"
+                tabler="IconLogout"
+                hugeicons="LogoutIcon"
+                phosphor="SignOutIcon"
+                remixicon="RiLogoutBoxLine"
+              />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -112,4 +141,3 @@ export function NavUser({
     </SidebarMenu>
   )
 }
-

@@ -1,17 +1,17 @@
-import { SidebarLeft } from "@/registry/new-york-v4/blocks/sidebar-15/components/sidebar-left"
-import { SidebarRight } from "@/registry/new-york-v4/blocks/sidebar-15/components/sidebar-right"
+import { SidebarLeft } from "@/registry/bases/base/blocks/sidebar-15/components/sidebar-left"
+import { SidebarRight } from "@/registry/bases/base/blocks/sidebar-15/components/sidebar-right"
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
-} from "@/registry/new-york-v4/ui/breadcrumb"
-import { Separator } from "@/registry/new-york-v4/ui/separator"
+} from "@/registry/bases/base/ui/breadcrumb"
+import { Separator } from "@/registry/bases/base/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
 
 export default function Page() {
   return (
@@ -45,4 +45,3 @@ export default function Page() {
     </SidebarProvider>
   )
 }
-

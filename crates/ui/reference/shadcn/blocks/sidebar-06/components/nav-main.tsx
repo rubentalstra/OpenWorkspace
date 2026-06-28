@@ -1,20 +1,19 @@
 "use client"
 
-import { MoreHorizontal, type LucideIcon } from "lucide-react"
-
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/registry/new-york-v4/ui/dropdown-menu"
+} from "@/registry/bases/base/ui/dropdown-menu"
 import {
   SidebarGroup,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 export function NavMain({
   items,
@@ -22,7 +21,7 @@ export function NavMain({
   items: {
     title: string
     url: string
-    icon?: LucideIcon
+    icon?: React.ReactNode
     isActive?: boolean
     items?: {
       title: string
@@ -31,17 +30,26 @@ export function NavMain({
   }[]
 }) {
   const { isMobile } = useSidebar()
-
   return (
     <SidebarGroup>
       <SidebarMenu>
         {items.map((item) => (
           <DropdownMenu key={item.title}>
             <SidebarMenuItem>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                  {item.title} <MoreHorizontal className="ml-auto" />
-                </SidebarMenuButton>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton className="aria-expanded:bg-muted" />
+                }
+              >
+                {item.title}{" "}
+                <IconPlaceholder
+                  lucide="MoreHorizontalIcon"
+                  tabler="IconDots"
+                  hugeicons="MoreHorizontalCircle01Icon"
+                  phosphor="DotsThreeOutlineIcon"
+                  remixicon="RiMoreLine"
+                  className="ml-auto"
+                />
               </DropdownMenuTrigger>
               {item.items?.length ? (
                 <DropdownMenuContent
@@ -50,8 +58,11 @@ export function NavMain({
                   className="min-w-56 rounded-lg"
                 >
                   {item.items.map((item) => (
-                    <DropdownMenuItem asChild key={item.title}>
-                      <a href={item.url}>{item.title}</a>
+                    <DropdownMenuItem
+                      key={item.title}
+                      render={<a href={item.url} />}
+                    >
+                      {item.title}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -63,4 +74,3 @@ export function NavMain({
     </SidebarGroup>
   )
 }
-

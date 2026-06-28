@@ -1,20 +1,6 @@
 "use client"
 
 import * as React from "react"
-import {
-  Bell,
-  Check,
-  Globe,
-  Home,
-  Keyboard,
-  Link,
-  Lock,
-  Menu,
-  MessageCircle,
-  Paintbrush,
-  Settings,
-  Video,
-} from "lucide-react"
 
 import {
   Breadcrumb,
@@ -23,15 +9,15 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/registry/new-york-v4/ui/breadcrumb"
-import { Button } from "@/registry/new-york-v4/ui/button"
+} from "@/registry/bases/base/ui/breadcrumb"
+import { Button } from "@/registry/bases/base/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
   DialogTrigger,
-} from "@/registry/new-york-v4/ui/dialog"
+} from "@/registry/bases/base/ui/dialog"
 import {
   Sidebar,
   SidebarContent,
@@ -41,33 +27,163 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 const data = {
   nav: [
-    { name: "Notifications", icon: Bell },
-    { name: "Navigation", icon: Menu },
-    { name: "Home", icon: Home },
-    { name: "Appearance", icon: Paintbrush },
-    { name: "Messages & media", icon: MessageCircle },
-    { name: "Language & region", icon: Globe },
-    { name: "Accessibility", icon: Keyboard },
-    { name: "Mark as read", icon: Check },
-    { name: "Audio & video", icon: Video },
-    { name: "Connected accounts", icon: Link },
-    { name: "Privacy & visibility", icon: Lock },
-    { name: "Advanced", icon: Settings },
+    {
+      name: "Notifications",
+      icon: (
+        <IconPlaceholder
+          lucide="BellIcon"
+          tabler="IconBell"
+          hugeicons="NotificationIcon"
+          phosphor="BellIcon"
+          remixicon="RiNotificationLine"
+        />
+      ),
+    },
+    {
+      name: "Navigation",
+      icon: (
+        <IconPlaceholder
+          lucide="MenuIcon"
+          tabler="IconMenu"
+          hugeicons="Menu09Icon"
+          phosphor="ListIcon"
+          remixicon="RiMenuLine"
+        />
+      ),
+    },
+    {
+      name: "Home",
+      icon: (
+        <IconPlaceholder
+          lucide="HomeIcon"
+          tabler="IconHome"
+          hugeicons="HomeIcon"
+          phosphor="HouseIcon"
+          remixicon="RiHomeLine"
+        />
+      ),
+    },
+    {
+      name: "Appearance",
+      icon: (
+        <IconPlaceholder
+          lucide="PaintbrushIcon"
+          tabler="IconPalette"
+          hugeicons="PaintBoardIcon"
+          phosphor="PaletteIcon"
+          remixicon="RiPaletteLine"
+        />
+      ),
+    },
+    {
+      name: "Messages & media",
+      icon: (
+        <IconPlaceholder
+          lucide="MessageCircleIcon"
+          tabler="IconMessageQuestion"
+          hugeicons="MessageIcon"
+          phosphor="ChatCircleIcon"
+          remixicon="RiChat1Line"
+        />
+      ),
+    },
+    {
+      name: "Language & region",
+      icon: (
+        <IconPlaceholder
+          lucide="GlobeIcon"
+          tabler="IconWorld"
+          hugeicons="Globe02Icon"
+          phosphor="GlobeIcon"
+          remixicon="RiGlobalLine"
+        />
+      ),
+    },
+    {
+      name: "Accessibility",
+      icon: (
+        <IconPlaceholder
+          lucide="KeyboardIcon"
+          tabler="IconKeyboard"
+          hugeicons="KeyboardIcon"
+          phosphor="KeyboardIcon"
+          remixicon="RiKeyboardLine"
+        />
+      ),
+    },
+    {
+      name: "Mark as read",
+      icon: (
+        <IconPlaceholder
+          lucide="CheckIcon"
+          tabler="IconCheck"
+          hugeicons="Tick02Icon"
+          phosphor="CheckIcon"
+          remixicon="RiCheckLine"
+        />
+      ),
+    },
+    {
+      name: "Audio & video",
+      icon: (
+        <IconPlaceholder
+          lucide="VideoIcon"
+          tabler="IconVideoPlus"
+          hugeicons="RecordIcon"
+          phosphor="VideoIcon"
+          remixicon="RiVideoLine"
+        />
+      ),
+    },
+    {
+      name: "Connected accounts",
+      icon: (
+        <IconPlaceholder
+          lucide="LinkIcon"
+          tabler="IconLink"
+          hugeicons="LinkIcon"
+          phosphor="LinkIcon"
+          remixicon="RiLinksLine"
+        />
+      ),
+    },
+    {
+      name: "Privacy & visibility",
+      icon: (
+        <IconPlaceholder
+          lucide="LockIcon"
+          tabler="IconLock"
+          hugeicons="ShieldIcon"
+          phosphor="LockIcon"
+          remixicon="RiLockLine"
+        />
+      ),
+    },
+    {
+      name: "Advanced",
+      icon: (
+        <IconPlaceholder
+          lucide="SettingsIcon"
+          tabler="IconSettings"
+          hugeicons="SettingsIcon"
+          phosphor="GearIcon"
+          remixicon="RiSettingsLine"
+        />
+      ),
+    },
   ],
 }
 
 export function SettingsDialog() {
   const [open, setOpen] = React.useState(true)
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">Open Dialog</Button>
-      </DialogTrigger>
+      <DialogTrigger render={<Button size="sm" />}>Open Dialog</DialogTrigger>
       <DialogContent className="overflow-hidden p-0 md:max-h-[500px] md:max-w-[700px] lg:max-w-[800px]">
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <DialogDescription className="sr-only">
@@ -82,13 +198,11 @@ export function SettingsDialog() {
                     {data.nav.map((item) => (
                       <SidebarMenuItem key={item.name}>
                         <SidebarMenuButton
-                          asChild
                           isActive={item.name === "Messages & media"}
+                          render={<a href="#" />}
                         >
-                          <a href="#">
-                            <item.icon />
-                            <span>{item.name}</span>
-                          </a>
+                          {item.icon}
+                          <span>{item.name}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
@@ -114,7 +228,9 @@ export function SettingsDialog() {
               </div>
             </header>
             <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pt-0">
-              {Array.from({ length: 10 }).map((_, i) => (
+              {Array.from({
+                length: 10,
+              }).map((_, i) => (
                 <div
                   key={i}
                   className="aspect-video max-w-3xl rounded-xl bg-muted/50"
@@ -127,4 +243,3 @@ export function SettingsDialog() {
     </Dialog>
   )
 }
-

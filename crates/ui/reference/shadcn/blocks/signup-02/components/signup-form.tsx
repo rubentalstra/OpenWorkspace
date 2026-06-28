@@ -1,13 +1,13 @@
-import { cn } from "@/registry/new-york-v4/lib/utils"
-import { Button } from "@/registry/new-york-v4/ui/button"
+import { cn } from "@/registry/bases/base/lib/utils"
+import { Button } from "@/registry/bases/base/ui/button"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
-} from "@/registry/new-york-v4/ui/field"
-import { Input } from "@/registry/new-york-v4/ui/input"
+} from "@/registry/bases/base/ui/field"
+import { Input } from "@/registry/bases/base/ui/input"
 
 export function SignupForm({
   className,
@@ -24,11 +24,23 @@ export function SignupForm({
         </div>
         <Field>
           <FieldLabel htmlFor="name">Full Name</FieldLabel>
-          <Input id="name" type="text" placeholder="John Doe" required />
+          <Input
+            id="name"
+            type="text"
+            placeholder="John Doe"
+            required
+            className="bg-background"
+          />
         </Field>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input id="email" type="email" placeholder="m@example.com" required />
+          <Input
+            id="email"
+            type="email"
+            placeholder="m@example.com"
+            required
+            className="bg-background"
+          />
           <FieldDescription>
             We&apos;ll use this to contact you. We will not share your email
             with anyone else.
@@ -36,14 +48,24 @@ export function SignupForm({
         </Field>
         <Field>
           <FieldLabel htmlFor="password">Password</FieldLabel>
-          <Input id="password" type="password" required />
+          <Input
+            id="password"
+            type="password"
+            required
+            className="bg-background"
+          />
           <FieldDescription>
             Must be at least 8 characters long.
           </FieldDescription>
         </Field>
         <Field>
           <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
-          <Input id="confirm-password" type="password" required />
+          <Input
+            id="confirm-password"
+            type="password"
+            required
+            className="bg-background"
+          />
           <FieldDescription>Please confirm your password.</FieldDescription>
         </Field>
         <Field>
@@ -68,4 +90,3 @@ export function SignupForm({
     </form>
   )
 }
-

@@ -1,30 +1,13 @@
 "use client"
 
 import * as React from "react"
-import {
-  ArrowDown,
-  ArrowUp,
-  Bell,
-  Copy,
-  CornerUpLeft,
-  CornerUpRight,
-  FileText,
-  GalleryVerticalEnd,
-  LineChart,
-  Link,
-  MoreHorizontal,
-  Settings2,
-  Star,
-  Trash,
-  Trash2,
-} from "lucide-react"
 
-import { Button } from "@/registry/new-york-v4/ui/button"
+import { Button } from "@/registry/bases/base/ui/button"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/registry/new-york-v4/ui/popover"
+} from "@/registry/bases/base/ui/popover"
 import {
   Sidebar,
   SidebarContent,
@@ -33,95 +16,211 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 const data = [
   [
     {
       label: "Customize Page",
-      icon: Settings2,
+      icon: (
+        <IconPlaceholder
+          lucide="Settings2Icon"
+          tabler="IconSettings"
+          hugeicons="Settings05Icon"
+          phosphor="GearIcon"
+          remixicon="RiSettingsLine"
+        />
+      ),
     },
     {
       label: "Turn into wiki",
-      icon: FileText,
+      icon: (
+        <IconPlaceholder
+          lucide="FileTextIcon"
+          tabler="IconFileText"
+          hugeicons="File01Icon"
+          phosphor="FileTextIcon"
+          remixicon="RiFileTextLine"
+        />
+      ),
     },
   ],
   [
     {
       label: "Copy Link",
-      icon: Link,
+      icon: (
+        <IconPlaceholder
+          lucide="LinkIcon"
+          tabler="IconLink"
+          hugeicons="LinkIcon"
+          phosphor="LinkIcon"
+          remixicon="RiLinksLine"
+        />
+      ),
     },
     {
       label: "Duplicate",
-      icon: Copy,
+      icon: (
+        <IconPlaceholder
+          lucide="CopyIcon"
+          tabler="IconCopy"
+          hugeicons="Copy01Icon"
+          phosphor="CopyIcon"
+          remixicon="RiFileCopyLine"
+        />
+      ),
     },
     {
       label: "Move to",
-      icon: CornerUpRight,
+      icon: (
+        <IconPlaceholder
+          lucide="CornerUpRightIcon"
+          tabler="IconCornerUpRight"
+          hugeicons="RedoIcon"
+          phosphor="ArrowBendUpRightIcon"
+          remixicon="RiCornerUpRightLine"
+        />
+      ),
     },
     {
       label: "Move to Trash",
-      icon: Trash2,
+      icon: (
+        <IconPlaceholder
+          lucide="Trash2Icon"
+          tabler="IconTrash"
+          hugeicons="Delete02Icon"
+          phosphor="TrashIcon"
+          remixicon="RiDeleteBinLine"
+        />
+      ),
     },
   ],
   [
     {
       label: "Undo",
-      icon: CornerUpLeft,
+      icon: (
+        <IconPlaceholder
+          lucide="CornerUpLeftIcon"
+          tabler="IconCornerUpLeft"
+          hugeicons="UndoIcon"
+          phosphor="ArrowBendUpLeftIcon"
+          remixicon="RiCornerUpLeftLine"
+        />
+      ),
     },
     {
       label: "View analytics",
-      icon: LineChart,
+      icon: (
+        <IconPlaceholder
+          lucide="ChartLineIcon"
+          tabler="IconChartLine"
+          hugeicons="ChartIcon"
+          phosphor="ChartLineIcon"
+          remixicon="RiLineChartLine"
+        />
+      ),
     },
     {
       label: "Version History",
-      icon: GalleryVerticalEnd,
+      icon: (
+        <IconPlaceholder
+          lucide="GalleryVerticalEndIcon"
+          tabler="IconLayoutRows"
+          hugeicons="LayoutBottomIcon"
+          phosphor="RowsIcon"
+          remixicon="RiGalleryLine"
+        />
+      ),
     },
     {
       label: "Show delete pages",
-      icon: Trash,
+      icon: (
+        <IconPlaceholder
+          lucide="TrashIcon"
+          tabler="IconTrash"
+          hugeicons="DeleteIcon"
+          phosphor="TrashIcon"
+          remixicon="RiDeleteBinLine"
+        />
+      ),
     },
     {
       label: "Notifications",
-      icon: Bell,
+      icon: (
+        <IconPlaceholder
+          lucide="BellIcon"
+          tabler="IconBell"
+          hugeicons="NotificationIcon"
+          phosphor="BellIcon"
+          remixicon="RiNotificationLine"
+        />
+      ),
     },
   ],
   [
     {
       label: "Import",
-      icon: ArrowUp,
+      icon: (
+        <IconPlaceholder
+          lucide="ArrowUpIcon"
+          tabler="IconArrowUp"
+          hugeicons="ArrowUpIcon"
+          phosphor="ArrowUpIcon"
+          remixicon="RiArrowUpLine"
+        />
+      ),
     },
     {
       label: "Export",
-      icon: ArrowDown,
+      icon: (
+        <IconPlaceholder
+          lucide="ArrowDownIcon"
+          tabler="IconArrowDown"
+          hugeicons="ArrowDownIcon"
+          phosphor="ArrowDownIcon"
+          remixicon="RiArrowDownLine"
+        />
+      ),
     },
   ],
 ]
-
 export function NavActions() {
   const [isOpen, setIsOpen] = React.useState(false)
-
   React.useEffect(() => {
     setIsOpen(true)
   }, [])
-
   return (
     <div className="flex items-center gap-2 text-sm">
       <div className="hidden font-medium text-muted-foreground md:inline-block">
         Edit Oct 08
       </div>
       <Button variant="ghost" size="icon" className="h-7 w-7">
-        <Star />
+        <IconPlaceholder
+          lucide="StarIcon"
+          tabler="IconStar"
+          hugeicons="StarIcon"
+          phosphor="StarIcon"
+          remixicon="RiStarLine"
+        />
       </Button>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 data-[state=open]:bg-accent"
-          >
-            <MoreHorizontal />
-          </Button>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 data-open:bg-accent"
+            />
+          }
+        >
+          <IconPlaceholder
+            lucide="MoreHorizontalIcon"
+            tabler="IconDots"
+            hugeicons="MoreHorizontalCircle01Icon"
+            phosphor="DotsThreeOutlineIcon"
+            remixicon="RiMoreLine"
+          />
         </PopoverTrigger>
         <PopoverContent
           className="w-56 overflow-hidden rounded-lg p-0"
@@ -136,7 +235,7 @@ export function NavActions() {
                       {group.map((item, index) => (
                         <SidebarMenuItem key={index}>
                           <SidebarMenuButton>
-                            <item.icon /> <span>{item.label}</span>
+                            {item.icon} <span>{item.label}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -151,4 +250,3 @@ export function NavActions() {
     </div>
   )
 }
-

@@ -1,8 +1,9 @@
-import * as React from "react"
-import { GalleryVerticalEnd } from "lucide-react"
+"use client"
 
-import { NavMain } from "@/registry/new-york-v4/blocks/sidebar-06/components/nav-main"
-import { SidebarOptInForm } from "@/registry/new-york-v4/blocks/sidebar-06/components/sidebar-opt-in-form"
+import * as React from "react"
+
+import { NavMain } from "@/registry/bases/base/blocks/sidebar-06/components/nav-main"
+import { SidebarOptInForm } from "@/registry/bases/base/blocks/sidebar-06/components/sidebar-opt-in-form"
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +13,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 // This is sample data.
 const data = {
@@ -144,23 +146,27 @@ const data = {
     },
   ],
 }
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="#">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <GalleryVerticalEnd className="size-4" />
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-medium">Documentation</span>
-                  <span className="">v1.0.0</span>
-                </div>
-              </a>
+            <SidebarMenuButton size="lg" render={<a href="#" />}>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <IconPlaceholder
+                  lucide="GalleryVerticalEndIcon"
+                  tabler="IconLayoutRows"
+                  hugeicons="LayoutBottomIcon"
+                  phosphor="RowsIcon"
+                  remixicon="RiGalleryLine"
+                  className="size-4"
+                />
+              </div>
+              <div className="flex flex-col gap-0.5 leading-none">
+                <span className="font-medium">Documentation</span>
+                <span className="">v1.0.0</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -177,4 +183,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-

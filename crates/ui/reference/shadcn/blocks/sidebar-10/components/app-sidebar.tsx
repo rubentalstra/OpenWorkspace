@@ -1,48 +1,60 @@
 "use client"
 
 import * as React from "react"
-import {
-  AudioWaveform,
-  Blocks,
-  Calendar,
-  Command,
-  Home,
-  Inbox,
-  MessageCircleQuestion,
-  Search,
-  Settings2,
-  Sparkles,
-  Trash2,
-} from "lucide-react"
 
-import { NavFavorites } from "@/registry/new-york-v4/blocks/sidebar-10/components/nav-favorites"
-import { NavMain } from "@/registry/new-york-v4/blocks/sidebar-10/components/nav-main"
-import { NavSecondary } from "@/registry/new-york-v4/blocks/sidebar-10/components/nav-secondary"
-import { NavWorkspaces } from "@/registry/new-york-v4/blocks/sidebar-10/components/nav-workspaces"
-import { TeamSwitcher } from "@/registry/new-york-v4/blocks/sidebar-10/components/team-switcher"
+import { NavFavorites } from "@/registry/bases/base/blocks/sidebar-10/components/nav-favorites"
+import { NavMain } from "@/registry/bases/base/blocks/sidebar-10/components/nav-main"
+import { NavSecondary } from "@/registry/bases/base/blocks/sidebar-10/components/nav-secondary"
+import { NavWorkspaces } from "@/registry/bases/base/blocks/sidebar-10/components/nav-workspaces"
+import { TeamSwitcher } from "@/registry/bases/base/blocks/sidebar-10/components/team-switcher"
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
   SidebarRail,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 // This is sample data.
 const data = {
   teams: [
     {
       name: "Acme Inc",
-      logo: Command,
+      logo: (
+        <IconPlaceholder
+          lucide="TerminalIcon"
+          tabler="IconCommand"
+          hugeicons="CommandIcon"
+          phosphor="CommandIcon"
+          remixicon="RiCommandLine"
+        />
+      ),
       plan: "Enterprise",
     },
     {
       name: "Acme Corp.",
-      logo: AudioWaveform,
+      logo: (
+        <IconPlaceholder
+          lucide="AudioLinesIcon"
+          tabler="IconWaveSine"
+          hugeicons="AudioWave01Icon"
+          phosphor="WaveformIcon"
+          remixicon="RiPulseLine"
+        />
+      ),
       plan: "Startup",
     },
     {
       name: "Evil Corp.",
-      logo: Command,
+      logo: (
+        <IconPlaceholder
+          lucide="TerminalIcon"
+          tabler="IconCommand"
+          hugeicons="CommandIcon"
+          phosphor="CommandIcon"
+          remixicon="RiCommandLine"
+        />
+      ),
       plan: "Free",
     },
   ],
@@ -50,23 +62,55 @@ const data = {
     {
       title: "Search",
       url: "#",
-      icon: Search,
+      icon: (
+        <IconPlaceholder
+          lucide="SearchIcon"
+          tabler="IconSearch"
+          hugeicons="SearchIcon"
+          phosphor="MagnifyingGlassIcon"
+          remixicon="RiSearchLine"
+        />
+      ),
     },
     {
       title: "Ask AI",
       url: "#",
-      icon: Sparkles,
+      icon: (
+        <IconPlaceholder
+          lucide="SparklesIcon"
+          tabler="IconSparkles"
+          hugeicons="SparklesIcon"
+          phosphor="SparkleIcon"
+          remixicon="RiSparklingLine"
+        />
+      ),
     },
     {
       title: "Home",
       url: "#",
-      icon: Home,
+      icon: (
+        <IconPlaceholder
+          lucide="HomeIcon"
+          tabler="IconHome"
+          hugeicons="HomeIcon"
+          phosphor="HouseIcon"
+          remixicon="RiHomeLine"
+        />
+      ),
       isActive: true,
     },
     {
       title: "Inbox",
       url: "#",
-      icon: Inbox,
+      icon: (
+        <IconPlaceholder
+          lucide="InboxIcon"
+          tabler="IconInbox"
+          hugeicons="InboxIcon"
+          phosphor="TrayIcon"
+          remixicon="RiInboxLine"
+        />
+      ),
       badge: "10",
     },
   ],
@@ -74,27 +118,67 @@ const data = {
     {
       title: "Calendar",
       url: "#",
-      icon: Calendar,
+      icon: (
+        <IconPlaceholder
+          lucide="CalendarIcon"
+          tabler="IconCalendar"
+          hugeicons="CalendarIcon"
+          phosphor="CalendarIcon"
+          remixicon="RiCalendarLine"
+        />
+      ),
     },
     {
       title: "Settings",
       url: "#",
-      icon: Settings2,
+      icon: (
+        <IconPlaceholder
+          lucide="Settings2Icon"
+          tabler="IconSettings"
+          hugeicons="Settings05Icon"
+          phosphor="GearIcon"
+          remixicon="RiSettingsLine"
+        />
+      ),
     },
     {
       title: "Templates",
       url: "#",
-      icon: Blocks,
+      icon: (
+        <IconPlaceholder
+          lucide="BlocksIcon"
+          tabler="IconCube"
+          hugeicons="CubeIcon"
+          phosphor="CubeIcon"
+          remixicon="RiBox3Line"
+        />
+      ),
     },
     {
       title: "Trash",
       url: "#",
-      icon: Trash2,
+      icon: (
+        <IconPlaceholder
+          lucide="Trash2Icon"
+          tabler="IconTrash"
+          hugeicons="Delete02Icon"
+          phosphor="TrashIcon"
+          remixicon="RiDeleteBinLine"
+        />
+      ),
     },
     {
       title: "Help",
       url: "#",
-      icon: MessageCircleQuestion,
+      icon: (
+        <IconPlaceholder
+          lucide="MessageCircleQuestionIcon"
+          tabler="IconMessageQuestion"
+          hugeicons="MessageQuestionIcon"
+          phosphor="ChatCircleIcon"
+          remixicon="RiQuestionLine"
+        />
+      ),
     },
   ],
   favorites: [
@@ -274,4 +358,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-

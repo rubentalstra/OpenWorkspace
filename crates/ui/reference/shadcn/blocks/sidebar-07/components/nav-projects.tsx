@@ -1,20 +1,12 @@
 "use client"
 
 import {
-  Folder,
-  Forward,
-  MoreHorizontal,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react"
-
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/registry/new-york-v4/ui/dropdown-menu"
+} from "@/registry/bases/base/ui/dropdown-menu"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -23,7 +15,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 export function NavProjects({
   projects,
@@ -31,46 +24,72 @@ export function NavProjects({
   projects: {
     name: string
     url: string
-    icon: LucideIcon
+    icon: React.ReactNode
   }[]
 }) {
   const { isMobile } = useSidebar()
-
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Projects</SidebarGroupLabel>
       <SidebarMenu>
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild>
-              <a href={item.url}>
-                <item.icon />
-                <span>{item.name}</span>
-              </a>
+            <SidebarMenuButton render={<a href={item.url} />}>
+              {item.icon}
+              <span>{item.name}</span>
             </SidebarMenuButton>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuAction showOnHover>
-                  <MoreHorizontal />
-                  <span className="sr-only">More</span>
-                </SidebarMenuAction>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuAction
+                    showOnHover
+                    className="aria-expanded:bg-muted"
+                  />
+                }
+              >
+                <IconPlaceholder
+                  lucide="MoreHorizontalIcon"
+                  tabler="IconDots"
+                  hugeicons="MoreHorizontalCircle01Icon"
+                  phosphor="DotsThreeOutlineIcon"
+                  remixicon="RiMoreLine"
+                />
+                <span className="sr-only">More</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-48 rounded-lg"
+                className="w-fit"
                 side={isMobile ? "bottom" : "right"}
                 align={isMobile ? "end" : "start"}
               >
                 <DropdownMenuItem>
-                  <Folder className="text-muted-foreground" />
+                  <IconPlaceholder
+                    lucide="FolderIcon"
+                    tabler="IconFolder"
+                    hugeicons="FolderIcon"
+                    phosphor="FolderIcon"
+                    remixicon="RiFolderLine"
+                  />
                   <span>View Project</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Forward className="text-muted-foreground" />
+                  <IconPlaceholder
+                    lucide="ArrowRightIcon"
+                    tabler="IconArrowForward"
+                    hugeicons="ArrowRightIcon"
+                    phosphor="ShareFatIcon"
+                    remixicon="RiShareForwardLine"
+                  />
                   <span>Share Project</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Trash2 className="text-muted-foreground" />
+                <DropdownMenuItem variant="destructive">
+                  <IconPlaceholder
+                    lucide="Trash2Icon"
+                    tabler="IconTrash"
+                    hugeicons="Delete02Icon"
+                    phosphor="TrashIcon"
+                    remixicon="RiDeleteBinLine"
+                  />
                   <span>Delete Project</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -79,7 +98,14 @@ export function NavProjects({
         ))}
         <SidebarMenuItem>
           <SidebarMenuButton className="text-sidebar-foreground/70">
-            <MoreHorizontal className="text-sidebar-foreground/70" />
+            <IconPlaceholder
+              lucide="MoreHorizontalIcon"
+              tabler="IconDots"
+              hugeicons="MoreHorizontalCircle01Icon"
+              phosphor="DotsThreeOutlineIcon"
+              remixicon="RiMoreLine"
+              className="text-sidebar-foreground/70"
+            />
             <span>More</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -87,4 +113,3 @@ export function NavProjects({
     </SidebarGroup>
   )
 }
-

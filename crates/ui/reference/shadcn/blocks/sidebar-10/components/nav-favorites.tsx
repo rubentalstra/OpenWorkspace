@@ -1,20 +1,13 @@
 "use client"
 
 import {
-  ArrowUpRight,
-  Link,
-  MoreHorizontal,
-  StarOff,
-  Trash2,
-} from "lucide-react"
-
-import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/registry/new-york-v4/ui/dropdown-menu"
+} from "@/registry/bases/base/ui/dropdown-menu"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -23,7 +16,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 export function NavFavorites({
   favorites,
@@ -35,56 +29,102 @@ export function NavFavorites({
   }[]
 }) {
   const { isMobile } = useSidebar()
-
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Favorites</SidebarGroupLabel>
       <SidebarMenu>
         {favorites.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild>
-              <a href={item.url} title={item.name}>
-                <span>{item.emoji}</span>
-                <span>{item.name}</span>
-              </a>
+            <SidebarMenuButton render={<a href={item.url} title={item.name} />}>
+              <span>{item.emoji}</span>
+              <span>{item.name}</span>
             </SidebarMenuButton>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuAction showOnHover>
-                  <MoreHorizontal />
-                  <span className="sr-only">More</span>
-                </SidebarMenuAction>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuAction
+                    showOnHover
+                    className="aria-expanded:bg-muted"
+                  />
+                }
+              >
+                <IconPlaceholder
+                  lucide="MoreHorizontalIcon"
+                  tabler="IconDots"
+                  hugeicons="MoreHorizontalCircle01Icon"
+                  phosphor="DotsThreeOutlineIcon"
+                  remixicon="RiMoreLine"
+                />
+                <span className="sr-only">More</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-56 rounded-lg"
                 side={isMobile ? "bottom" : "right"}
                 align={isMobile ? "end" : "start"}
               >
-                <DropdownMenuItem>
-                  <StarOff className="text-muted-foreground" />
-                  <span>Remove from Favorites</span>
-                </DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem>
+                    <IconPlaceholder
+                      lucide="StarOffIcon"
+                      tabler="IconStarOff"
+                      hugeicons="StarOffIcon"
+                      phosphor="StarIcon"
+                      remixicon="RiStarOffLine"
+                      className="text-muted-foreground"
+                    />
+                    <span>Remove from Favorites</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Link className="text-muted-foreground" />
-                  <span>Copy Link</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <ArrowUpRight className="text-muted-foreground" />
-                  <span>Open in New Tab</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Trash2 className="text-muted-foreground" />
-                  <span>Delete</span>
-                </DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem>
+                    <IconPlaceholder
+                      lucide="LinkIcon"
+                      tabler="IconLink"
+                      hugeicons="LinkIcon"
+                      phosphor="LinkIcon"
+                      remixicon="RiLinksLine"
+                      className="text-muted-foreground"
+                    />
+                    <span>Copy Link</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <IconPlaceholder
+                      lucide="ArrowUpRightIcon"
+                      tabler="IconArrowUpRight"
+                      hugeicons="ArrowUpRightIcon"
+                      phosphor="ArrowUpRightIcon"
+                      remixicon="RiArrowRightUpLine"
+                      className="text-muted-foreground"
+                    />
+                    <span>Open in New Tab</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <IconPlaceholder
+                      lucide="Trash2Icon"
+                      tabler="IconTrash"
+                      hugeicons="Delete02Icon"
+                      phosphor="TrashIcon"
+                      remixicon="RiDeleteBinLine"
+                      className="text-muted-foreground"
+                    />
+                    <span>Delete</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
         ))}
         <SidebarMenuItem>
           <SidebarMenuButton className="text-sidebar-foreground/70">
-            <MoreHorizontal />
+            <IconPlaceholder
+              lucide="MoreHorizontalIcon"
+              tabler="IconDots"
+              hugeicons="MoreHorizontalCircle01Icon"
+              phosphor="DotsThreeOutlineIcon"
+              remixicon="RiMoreLine"
+            />
             <span>More</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -92,4 +132,3 @@ export function NavFavorites({
     </SidebarGroup>
   )
 }
-

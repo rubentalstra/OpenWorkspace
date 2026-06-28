@@ -1,11 +1,12 @@
+"use client"
+
 import * as React from "react"
-import { ChevronRight, File, Folder } from "lucide-react"
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/registry/new-york-v4/ui/collapsible"
+} from "@/registry/bases/base/ui/collapsible"
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +19,8 @@ import {
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarRail,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 // This is sample data.
 const data = {
@@ -63,7 +65,6 @@ const data = {
     "README.md",
   ],
 }
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
@@ -75,7 +76,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {data.changes.map((item, index) => (
                 <SidebarMenuItem key={index}>
                   <SidebarMenuButton>
-                    <File />
+                    <IconPlaceholder
+                      lucide="FileIcon"
+                      tabler="IconFile"
+                      hugeicons="FileIcon"
+                      phosphor="FileIcon"
+                      remixicon="RiFileLine"
+                    />
                     {item.file}
                   </SidebarMenuButton>
                   <SidebarMenuBadge>{item.state}</SidebarMenuBadge>
@@ -99,37 +106,50 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-
 type TreeItem = string | TreeItem[]
-
 function Tree({ item }: { item: TreeItem }) {
   const [name, ...items] = Array.isArray(item) ? item : [item]
-
   if (!items.length) {
     return (
       <SidebarMenuButton
         isActive={name === "button.tsx"}
         className="data-[active=true]:bg-transparent"
       >
-        <File />
+        <IconPlaceholder
+          lucide="FileIcon"
+          tabler="IconFile"
+          hugeicons="FileIcon"
+          phosphor="FileIcon"
+          remixicon="RiFileLine"
+        />
         {name}
       </SidebarMenuButton>
     )
   }
-
   return (
     <SidebarMenuItem>
       <Collapsible
         className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
         defaultOpen={name === "components" || name === "ui"}
       >
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton>
-            <ChevronRight className="transition-transform" />
-            <Folder />
-            {name}
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
+        <SidebarMenuButton render={<CollapsibleTrigger />}>
+          <IconPlaceholder
+            lucide="ChevronRightIcon"
+            tabler="IconChevronRight"
+            hugeicons="ArrowRight01Icon"
+            phosphor="CaretRightIcon"
+            remixicon="RiArrowRightSLine"
+            className="transition-transform"
+          />
+          <IconPlaceholder
+            lucide="FolderIcon"
+            tabler="IconFolder"
+            hugeicons="FolderIcon"
+            phosphor="FolderIcon"
+            remixicon="RiFolderLine"
+          />
+          {name}
+        </SidebarMenuButton>
         <CollapsibleContent>
           <SidebarMenuSub>
             {items.map((subItem, index) => (
@@ -141,4 +161,3 @@ function Tree({ item }: { item: TreeItem }) {
     </SidebarMenuItem>
   )
 }
-

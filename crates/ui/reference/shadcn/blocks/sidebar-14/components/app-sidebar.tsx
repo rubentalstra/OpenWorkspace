@@ -13,7 +13,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
 
 // This is sample data.
 const data = {
@@ -155,7 +155,6 @@ const data = {
     },
   ],
 }
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
@@ -166,20 +165,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {data.navMain.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url} className="font-medium">
-                      {item.title}
-                    </a>
+                  <SidebarMenuButton
+                    render={<a href={item.url} className="font-medium" />}
+                  >
+                    {item.title}
                   </SidebarMenuButton>
                   {item.items?.length ? (
                     <SidebarMenuSub>
                       {item.items.map((item) => (
                         <SidebarMenuSubItem key={item.title}>
                           <SidebarMenuSubButton
-                            asChild
                             isActive={item.isActive}
+                            render={<a href={item.url} />}
                           >
-                            <a href={item.url}>{item.title}</a>
+                            {item.title}
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
@@ -195,4 +194,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-

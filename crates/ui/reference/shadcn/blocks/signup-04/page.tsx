@@ -1,4 +1,4 @@
-import { SignupForm } from "@/registry/new-york-v4/blocks/signup-04/components/signup-form"
+import { SignupForm } from "@/registry/bases/base/blocks/signup-04/components/signup-form"
 
 export default function SignupPage() {
   return (
@@ -9,4 +9,3 @@ export default function SignupPage() {
     </div>
   )
 }
-

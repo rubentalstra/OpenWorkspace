@@ -1,14 +1,14 @@
-import { cn } from "@/registry/new-york-v4/lib/utils"
-import { Button } from "@/registry/new-york-v4/ui/button"
-import { Card, CardContent } from "@/registry/new-york-v4/ui/card"
+import { cn } from "@/registry/bases/base/lib/utils"
+import { Button } from "@/registry/bases/base/ui/button"
+import { Card, CardContent } from "@/registry/bases/base/ui/card"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
-} from "@/registry/new-york-v4/ui/field"
-import { Input } from "@/registry/new-york-v4/ui/input"
+} from "@/registry/bases/base/ui/field"
+import { Input } from "@/registry/bases/base/ui/input"
 
 export function SignupForm({
   className,
@@ -112,4 +112,3 @@ export function SignupForm({
     </div>
   )
 }
-

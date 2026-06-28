@@ -1,19 +1,19 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown, GalleryVerticalEnd } from "lucide-react"
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/registry/new-york-v4/ui/dropdown-menu"
+} from "@/registry/bases/base/ui/dropdown-menu"
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 export function VersionSwitcher({
   versions,
@@ -23,37 +23,58 @@ export function VersionSwitcher({
   defaultVersion: string
 }) {
   const [selectedVersion, setSelectedVersion] = React.useState(defaultVersion)
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <GalleryVerticalEnd className="size-4" />
-              </div>
-              <div className="flex flex-col gap-0.5 leading-none">
-                <span className="font-medium">Documentation</span>
-                <span className="">v{selectedVersion}</span>
-              </div>
-              <ChevronsUpDown className="ml-auto" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width)"
-            align="start"
+          <DropdownMenuTrigger
+            render={
+              <SidebarMenuButton
+                size="lg"
+                className="data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground"
+              />
+            }
           >
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <IconPlaceholder
+                lucide="GalleryVerticalEndIcon"
+                tabler="IconLayoutRows"
+                hugeicons="LayoutBottomIcon"
+                phosphor="RowsIcon"
+                remixicon="RiGalleryLine"
+                className="size-4"
+              />
+            </div>
+            <div className="flex flex-col gap-0.5 leading-none">
+              <span className="font-medium">Documentation</span>
+              <span className="">v{selectedVersion}</span>
+            </div>
+            <IconPlaceholder
+              lucide="ChevronsUpDownIcon"
+              tabler="IconSelector"
+              hugeicons="UnfoldMoreIcon"
+              phosphor="CaretUpDownIcon"
+              remixicon="RiArrowUpDownLine"
+              className="ml-auto"
+            />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
             {versions.map((version) => (
               <DropdownMenuItem
                 key={version}
                 onSelect={() => setSelectedVersion(version)}
               >
                 v{version}{" "}
-                {version === selectedVersion && <Check className="ml-auto" />}
+                {version === selectedVersion && (
+                  <IconPlaceholder
+                    lucide="CheckIcon"
+                    tabler="IconCheck"
+                    hugeicons="Tick02Icon"
+                    phosphor="CheckIcon"
+                    remixicon="RiCheckLine"
+                    className="ml-auto"
+                  />
+                )}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -62,4 +83,3 @@ export function VersionSwitcher({
     </SidebarMenu>
   )
 }
-

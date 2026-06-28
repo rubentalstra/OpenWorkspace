@@ -1,23 +1,11 @@
 "use client"
 
 import * as React from "react"
-import {
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  LifeBuoy,
-  Map,
-  PieChart,
-  Send,
-  Settings2,
-  SquareTerminal,
-} from "lucide-react"
 
-import { NavMain } from "@/registry/new-york-v4/blocks/sidebar-16/components/nav-main"
-import { NavProjects } from "@/registry/new-york-v4/blocks/sidebar-16/components/nav-projects"
-import { NavSecondary } from "@/registry/new-york-v4/blocks/sidebar-16/components/nav-secondary"
-import { NavUser } from "@/registry/new-york-v4/blocks/sidebar-16/components/nav-user"
+import { NavMain } from "@/registry/bases/base/blocks/sidebar-16/components/nav-main"
+import { NavProjects } from "@/registry/bases/base/blocks/sidebar-16/components/nav-projects"
+import { NavSecondary } from "@/registry/bases/base/blocks/sidebar-16/components/nav-secondary"
+import { NavUser } from "@/registry/bases/base/blocks/sidebar-16/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +14,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 const data = {
   user: {
@@ -38,7 +27,15 @@ const data = {
     {
       title: "Playground",
       url: "#",
-      icon: SquareTerminal,
+      icon: (
+        <IconPlaceholder
+          lucide="TerminalSquareIcon"
+          tabler="IconTerminal2"
+          hugeicons="ComputerTerminalIcon"
+          phosphor="TerminalIcon"
+          remixicon="RiTerminalBoxLine"
+        />
+      ),
       isActive: true,
       items: [
         {
@@ -58,7 +55,15 @@ const data = {
     {
       title: "Models",
       url: "#",
-      icon: Bot,
+      icon: (
+        <IconPlaceholder
+          lucide="BotIcon"
+          tabler="IconRobot"
+          hugeicons="RoboticIcon"
+          phosphor="RobotIcon"
+          remixicon="RiRobotLine"
+        />
+      ),
       items: [
         {
           title: "Genesis",
@@ -77,7 +82,15 @@ const data = {
     {
       title: "Documentation",
       url: "#",
-      icon: BookOpen,
+      icon: (
+        <IconPlaceholder
+          lucide="BookOpenIcon"
+          tabler="IconBook"
+          hugeicons="BookOpen02Icon"
+          phosphor="BookOpenIcon"
+          remixicon="RiBookOpenLine"
+        />
+      ),
       items: [
         {
           title: "Introduction",
@@ -100,7 +113,15 @@ const data = {
     {
       title: "Settings",
       url: "#",
-      icon: Settings2,
+      icon: (
+        <IconPlaceholder
+          lucide="Settings2Icon"
+          tabler="IconSettings"
+          hugeicons="Settings05Icon"
+          phosphor="GearIcon"
+          remixicon="RiSettingsLine"
+        />
+      ),
       items: [
         {
           title: "General",
@@ -125,33 +146,72 @@ const data = {
     {
       title: "Support",
       url: "#",
-      icon: LifeBuoy,
+      icon: (
+        <IconPlaceholder
+          lucide="LifeBuoyIcon"
+          tabler="IconLifebuoy"
+          hugeicons="ChartRingIcon"
+          phosphor="LifebuoyIcon"
+          remixicon="RiLifebuoyLine"
+        />
+      ),
     },
     {
       title: "Feedback",
       url: "#",
-      icon: Send,
+      icon: (
+        <IconPlaceholder
+          lucide="SendIcon"
+          tabler="IconSend"
+          hugeicons="SentIcon"
+          phosphor="PaperPlaneTiltIcon"
+          remixicon="RiSendPlaneLine"
+        />
+      ),
     },
   ],
   projects: [
     {
       name: "Design Engineering",
       url: "#",
-      icon: Frame,
+      icon: (
+        <IconPlaceholder
+          lucide="FrameIcon"
+          tabler="IconFrame"
+          hugeicons="CropIcon"
+          phosphor="CropIcon"
+          remixicon="RiCropLine"
+        />
+      ),
     },
     {
       name: "Sales & Marketing",
       url: "#",
-      icon: PieChart,
+      icon: (
+        <IconPlaceholder
+          lucide="PieChartIcon"
+          tabler="IconChartPie"
+          hugeicons="PieChartIcon"
+          phosphor="ChartPieIcon"
+          remixicon="RiPieChartLine"
+        />
+      ),
     },
     {
       name: "Travel",
       url: "#",
-      icon: Map,
+      icon: (
+        <IconPlaceholder
+          lucide="MapIcon"
+          tabler="IconMap"
+          hugeicons="MapsIcon"
+          phosphor="MapTrifoldIcon"
+          remixicon="RiMapLine"
+        />
+      ),
     },
   ],
 }
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar
@@ -161,16 +221,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <a href="#">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Command className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Acme Inc</span>
-                  <span className="truncate text-xs">Enterprise</span>
-                </div>
-              </a>
+            <SidebarMenuButton size="lg" render={<a href="#" />}>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                <IconPlaceholder
+                  lucide="TerminalIcon"
+                  tabler="IconCommand"
+                  hugeicons="CommandIcon"
+                  phosphor="CommandIcon"
+                  remixicon="RiCommandLine"
+                  className="size-4"
+                />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">Acme Inc</span>
+                <span className="truncate text-xs">Enterprise</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -186,4 +251,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-

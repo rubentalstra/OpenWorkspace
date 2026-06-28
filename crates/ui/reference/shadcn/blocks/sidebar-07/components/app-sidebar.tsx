@@ -1,30 +1,19 @@
 "use client"
 
 import * as React from "react"
-import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
-} from "lucide-react"
 
-import { NavMain } from "@/registry/new-york-v4/blocks/sidebar-07/components/nav-main"
-import { NavProjects } from "@/registry/new-york-v4/blocks/sidebar-07/components/nav-projects"
-import { NavUser } from "@/registry/new-york-v4/blocks/sidebar-07/components/nav-user"
-import { TeamSwitcher } from "@/registry/new-york-v4/blocks/sidebar-07/components/team-switcher"
+import { NavMain } from "@/registry/bases/base/blocks/sidebar-07/components/nav-main"
+import { NavProjects } from "@/registry/bases/base/blocks/sidebar-07/components/nav-projects"
+import { NavUser } from "@/registry/bases/base/blocks/sidebar-07/components/nav-user"
+import { TeamSwitcher } from "@/registry/bases/base/blocks/sidebar-07/components/team-switcher"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 // This is sample data.
 const data = {
@@ -36,17 +25,41 @@ const data = {
   teams: [
     {
       name: "Acme Inc",
-      logo: GalleryVerticalEnd,
+      logo: (
+        <IconPlaceholder
+          lucide="GalleryVerticalEndIcon"
+          tabler="IconLayoutRows"
+          hugeicons="LayoutBottomIcon"
+          phosphor="RowsIcon"
+          remixicon="RiGalleryLine"
+        />
+      ),
       plan: "Enterprise",
     },
     {
       name: "Acme Corp.",
-      logo: AudioWaveform,
+      logo: (
+        <IconPlaceholder
+          lucide="AudioLinesIcon"
+          tabler="IconWaveSine"
+          hugeicons="AudioWave01Icon"
+          phosphor="WaveformIcon"
+          remixicon="RiPulseLine"
+        />
+      ),
       plan: "Startup",
     },
     {
       name: "Evil Corp.",
-      logo: Command,
+      logo: (
+        <IconPlaceholder
+          lucide="TerminalIcon"
+          tabler="IconCommand"
+          hugeicons="CommandIcon"
+          phosphor="CommandIcon"
+          remixicon="RiCommandLine"
+        />
+      ),
       plan: "Free",
     },
   ],
@@ -54,7 +67,15 @@ const data = {
     {
       title: "Playground",
       url: "#",
-      icon: SquareTerminal,
+      icon: (
+        <IconPlaceholder
+          lucide="TerminalSquareIcon"
+          tabler="IconTerminal2"
+          hugeicons="ComputerTerminalIcon"
+          phosphor="TerminalIcon"
+          remixicon="RiTerminalBoxLine"
+        />
+      ),
       isActive: true,
       items: [
         {
@@ -74,7 +95,15 @@ const data = {
     {
       title: "Models",
       url: "#",
-      icon: Bot,
+      icon: (
+        <IconPlaceholder
+          lucide="BotIcon"
+          tabler="IconRobot"
+          hugeicons="RoboticIcon"
+          phosphor="RobotIcon"
+          remixicon="RiRobotLine"
+        />
+      ),
       items: [
         {
           title: "Genesis",
@@ -93,7 +122,15 @@ const data = {
     {
       title: "Documentation",
       url: "#",
-      icon: BookOpen,
+      icon: (
+        <IconPlaceholder
+          lucide="BookOpenIcon"
+          tabler="IconBook"
+          hugeicons="BookOpen02Icon"
+          phosphor="BookOpenIcon"
+          remixicon="RiBookOpenLine"
+        />
+      ),
       items: [
         {
           title: "Introduction",
@@ -116,7 +153,15 @@ const data = {
     {
       title: "Settings",
       url: "#",
-      icon: Settings2,
+      icon: (
+        <IconPlaceholder
+          lucide="Settings2Icon"
+          tabler="IconSettings"
+          hugeicons="Settings05Icon"
+          phosphor="GearIcon"
+          remixicon="RiSettingsLine"
+        />
+      ),
       items: [
         {
           title: "General",
@@ -141,17 +186,41 @@ const data = {
     {
       name: "Design Engineering",
       url: "#",
-      icon: Frame,
+      icon: (
+        <IconPlaceholder
+          lucide="FrameIcon"
+          tabler="IconFrame"
+          hugeicons="CropIcon"
+          phosphor="CropIcon"
+          remixicon="RiCropLine"
+        />
+      ),
     },
     {
       name: "Sales & Marketing",
       url: "#",
-      icon: PieChart,
+      icon: (
+        <IconPlaceholder
+          lucide="PieChartIcon"
+          tabler="IconChartPie"
+          hugeicons="PieChartIcon"
+          phosphor="ChartPieIcon"
+          remixicon="RiPieChartLine"
+        />
+      ),
     },
     {
       name: "Travel",
       url: "#",
-      icon: Map,
+      icon: (
+        <IconPlaceholder
+          lucide="MapIcon"
+          tabler="IconMap"
+          hugeicons="MapsIcon"
+          phosphor="MapTrifoldIcon"
+          remixicon="RiMapLine"
+        />
+      ),
     },
   ],
 }
@@ -173,4 +242,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-

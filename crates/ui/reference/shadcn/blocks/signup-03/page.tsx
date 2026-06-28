@@ -1,6 +1,7 @@
-import { GalleryVerticalEnd } from "lucide-react"
+"use client"
 
-import { SignupForm } from "@/registry/new-york-v4/blocks/signup-03/components/signup-form"
+import { SignupForm } from "@/registry/bases/base/blocks/signup-03/components/signup-form"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 export default function SignupPage() {
   return (
@@ -8,7 +9,14 @@ export default function SignupPage() {
       <div className="flex w-full max-w-sm flex-col gap-6">
         <a href="#" className="flex items-center gap-2 self-center font-medium">
           <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <GalleryVerticalEnd className="size-4" />
+            <IconPlaceholder
+              lucide="GalleryVerticalEndIcon"
+              tabler="IconLayoutRows"
+              hugeicons="LayoutBottomIcon"
+              phosphor="RowsIcon"
+              remixicon="RiGalleryLine"
+              className="size-4"
+            />
           </div>
           Acme Inc.
         </a>
@@ -17,4 +25,3 @@ export default function SignupPage() {
     </div>
   )
 }
-

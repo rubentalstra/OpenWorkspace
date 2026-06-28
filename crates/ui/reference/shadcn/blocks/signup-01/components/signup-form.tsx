@@ -1,18 +1,18 @@
-import { Button } from "@/registry/new-york-v4/ui/button"
+import { Button } from "@/registry/bases/base/ui/button"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/registry/new-york-v4/ui/card"
+} from "@/registry/bases/base/ui/card"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@/registry/new-york-v4/ui/field"
-import { Input } from "@/registry/new-york-v4/ui/input"
+} from "@/registry/bases/base/ui/field"
+import { Input } from "@/registry/bases/base/ui/input"
 
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   return (
@@ -74,4 +74,3 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
     </Card>
   )
 }
-

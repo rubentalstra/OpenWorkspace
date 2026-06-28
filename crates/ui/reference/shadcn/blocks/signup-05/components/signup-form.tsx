@@ -1,15 +1,16 @@
-import { GalleryVerticalEnd } from "lucide-react"
+"use client"
 
-import { cn } from "@/registry/new-york-v4/lib/utils"
-import { Button } from "@/registry/new-york-v4/ui/button"
+import { cn } from "@/registry/bases/base/lib/utils"
+import { Button } from "@/registry/bases/base/ui/button"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
-} from "@/registry/new-york-v4/ui/field"
-import { Input } from "@/registry/new-york-v4/ui/input"
+} from "@/registry/bases/base/ui/field"
+import { Input } from "@/registry/bases/base/ui/input"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 export function SignupForm({
   className,
@@ -25,7 +26,14 @@ export function SignupForm({
               className="flex flex-col items-center gap-2 font-medium"
             >
               <div className="flex size-8 items-center justify-center rounded-md">
-                <GalleryVerticalEnd className="size-6" />
+                <IconPlaceholder
+                  lucide="GalleryVerticalEndIcon"
+                  tabler="IconLayoutRows"
+                  hugeicons="LayoutBottomIcon"
+                  phosphor="RowsIcon"
+                  remixicon="RiGalleryLine"
+                  className="size-6"
+                />
               </div>
               <span className="sr-only">Acme Inc.</span>
             </a>
@@ -76,4 +84,3 @@ export function SignupForm({
     </div>
   )
 }
-

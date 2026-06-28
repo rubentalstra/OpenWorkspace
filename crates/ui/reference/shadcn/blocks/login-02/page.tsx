@@ -1,6 +1,7 @@
-import { GalleryVerticalEnd } from "lucide-react"
+"use client"
 
-import { LoginForm } from "@/registry/new-york-v4/blocks/login-02/components/login-form"
+import { LoginForm } from "@/registry/bases/base/blocks/login-02/components/login-form"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 export default function LoginPage() {
   return (
@@ -9,7 +10,14 @@ export default function LoginPage() {
         <div className="flex justify-center gap-2 md:justify-start">
           <a href="#" className="flex items-center gap-2 font-medium">
             <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <GalleryVerticalEnd className="size-4" />
+              <IconPlaceholder
+                lucide="GalleryVerticalEndIcon"
+                tabler="IconLayoutRows"
+                hugeicons="LayoutBottomIcon"
+                phosphor="RowsIcon"
+                remixicon="RiGalleryLine"
+                className="size-4"
+              />
             </div>
             Acme Inc.
           </a>
@@ -30,4 +38,3 @@ export default function LoginPage() {
     </div>
   )
 }
-

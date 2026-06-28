@@ -1,9 +1,10 @@
-import * as React from "react"
-import { Plus } from "lucide-react"
+"use client"
 
-import { Calendars } from "@/registry/new-york-v4/blocks/sidebar-12/components/calendars"
-import { DatePicker } from "@/registry/new-york-v4/blocks/sidebar-12/components/date-picker"
-import { NavUser } from "@/registry/new-york-v4/blocks/sidebar-12/components/nav-user"
+import * as React from "react"
+
+import { Calendars } from "@/registry/bases/base/blocks/sidebar-12/components/calendars"
+import { DatePicker } from "@/registry/bases/base/blocks/sidebar-12/components/date-picker"
+import { NavUser } from "@/registry/bases/base/blocks/sidebar-12/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -14,7 +15,8 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 // This is sample data.
 const data = {
@@ -54,7 +56,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton>
-              <Plus />
+              <IconPlaceholder
+                lucide="PlusIcon"
+                tabler="IconPlus"
+                hugeicons="PlusSignIcon"
+                phosphor="PlusIcon"
+                remixicon="RiAddLine"
+              />
               <span>New Calendar</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -64,4 +72,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-

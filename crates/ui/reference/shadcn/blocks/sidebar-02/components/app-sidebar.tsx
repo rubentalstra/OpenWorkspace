@@ -1,13 +1,14 @@
-import * as React from "react"
-import { ChevronRight } from "lucide-react"
+"use client"
 
-import { SearchForm } from "@/registry/new-york-v4/blocks/sidebar-02/components/search-form"
-import { VersionSwitcher } from "@/registry/new-york-v4/blocks/sidebar-02/components/version-switcher"
+import * as React from "react"
+
+import { SearchForm } from "@/registry/bases/base/blocks/sidebar-02/components/search-form"
+import { VersionSwitcher } from "@/registry/bases/base/blocks/sidebar-02/components/version-switcher"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/registry/new-york-v4/ui/collapsible"
+} from "@/registry/bases/base/ui/collapsible"
 import {
   Sidebar,
   SidebarContent,
@@ -19,7 +20,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 // This is sample data.
 const data = {
@@ -162,7 +164,6 @@ const data = {
     },
   ],
 }
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
@@ -184,21 +185,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           >
             <SidebarGroup>
               <SidebarGroupLabel
-                asChild
                 className="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                render={<CollapsibleTrigger />}
               >
-                <CollapsibleTrigger>
-                  {item.title}{" "}
-                  <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                </CollapsibleTrigger>
+                {item.title}{" "}
+                <IconPlaceholder
+                  lucide="ChevronRightIcon"
+                  tabler="IconChevronRight"
+                  hugeicons="ArrowRight01Icon"
+                  phosphor="CaretRightIcon"
+                  remixicon="RiArrowRightSLine"
+                  className="ml-auto transition-transform group-data-open/collapsible:rotate-90"
+                />
               </SidebarGroupLabel>
               <CollapsibleContent>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {item.items.map((item) => (
                       <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton asChild isActive={item.isActive}>
-                          <a href={item.url}>{item.title}</a>
+                        <SidebarMenuButton
+                          isActive={item.isActive}
+                          render={<a href={item.url} />}
+                        >
+                          {item.title}
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
@@ -213,4 +222,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-

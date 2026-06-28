@@ -1,9 +1,6 @@
-import { AppSidebar } from "@/registry/new-york-v4/blocks/sidebar-16/components/app-sidebar"
-import { SiteHeader } from "@/registry/new-york-v4/blocks/sidebar-16/components/site-header"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/registry/new-york-v4/ui/sidebar"
+import { AppSidebar } from "@/registry/bases/base/blocks/sidebar-16/components/app-sidebar"
+import { SiteHeader } from "@/registry/bases/base/blocks/sidebar-16/components/site-header"
+import { SidebarInset, SidebarProvider } from "@/registry/bases/base/ui/sidebar"
 
 export const iframeHeight = "800px"
 
@@ -23,7 +20,7 @@ export default function Page() {
                 <div className="aspect-video rounded-xl bg-muted/50" />
                 <div className="aspect-video rounded-xl bg-muted/50" />
               </div>
-              <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
+              <div className="min-h-screen flex-1 rounded-xl bg-muted/50 md:min-h-min" />
             </div>
           </SidebarInset>
         </div>
@@ -31,4 +28,3 @@ export default function Page() {
     </div>
   )
 }
-

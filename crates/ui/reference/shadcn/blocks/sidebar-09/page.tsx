@@ -1,4 +1,4 @@
-import { AppSidebar } from "@/registry/new-york-v4/blocks/sidebar-09/components/app-sidebar"
+import { AppSidebar } from "@/registry/bases/base/blocks/sidebar-09/components/app-sidebar"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -6,13 +6,13 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/registry/new-york-v4/ui/breadcrumb"
-import { Separator } from "@/registry/new-york-v4/ui/separator"
+} from "@/registry/bases/base/ui/breadcrumb"
+import { Separator } from "@/registry/bases/base/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
 
 export default function Page() {
   return (
@@ -29,7 +29,7 @@ export default function Page() {
           <SidebarTrigger className="-ml-1" />
           <Separator
             orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
+            className="mr-2 data-vertical:h-4 data-vertical:self-auto"
           />
           <Breadcrumb>
             <BreadcrumbList>
@@ -55,4 +55,3 @@ export default function Page() {
     </SidebarProvider>
   )
 }
-

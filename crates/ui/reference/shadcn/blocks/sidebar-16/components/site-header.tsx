@@ -1,8 +1,6 @@
 "use client"
 
-import { SidebarIcon } from "lucide-react"
-
-import { SearchForm } from "@/registry/new-york-v4/blocks/sidebar-16/components/search-form"
+import { SearchForm } from "@/registry/bases/base/blocks/sidebar-16/components/search-form"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,10 +8,11 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/registry/new-york-v4/ui/breadcrumb"
-import { Button } from "@/registry/new-york-v4/ui/button"
-import { Separator } from "@/registry/new-york-v4/ui/separator"
-import { useSidebar } from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/breadcrumb"
+import { Button } from "@/registry/bases/base/ui/button"
+import { Separator } from "@/registry/bases/base/ui/separator"
+import { useSidebar } from "@/registry/bases/base/ui/sidebar"
+import { IconPlaceholder } from "@/app/(create)/components/icon-placeholder"
 
 export function SiteHeader() {
   const { toggleSidebar } = useSidebar()
@@ -27,9 +26,18 @@ export function SiteHeader() {
           size="icon"
           onClick={toggleSidebar}
         >
-          <SidebarIcon />
+          <IconPlaceholder
+            lucide="PanelLeftIcon"
+            tabler="IconLayoutSidebar"
+            hugeicons="SidebarLeftIcon"
+            phosphor="SidebarIcon"
+            remixicon="RiLayoutLeftLine"
+          />
         </Button>
-        <Separator orientation="vertical" className="mr-2 h-4" />
+        <Separator
+          orientation="vertical"
+          className="mr-2 data-vertical:h-4 data-vertical:self-auto"
+        />
         <Breadcrumb className="hidden sm:block">
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -46,4 +54,3 @@ export function SiteHeader() {
     </header>
   )
 }
-

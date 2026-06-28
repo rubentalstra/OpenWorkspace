@@ -1,12 +1,10 @@
 "use client"
 
-import { type LucideIcon } from "lucide-react"
-
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/registry/new-york-v4/ui/sidebar"
+} from "@/registry/bases/base/ui/sidebar"
 
 export function NavMain({
   items,
@@ -14,7 +12,7 @@ export function NavMain({
   items: {
     title: string
     url: string
-    icon: LucideIcon
+    icon: React.ReactNode
     isActive?: boolean
   }[]
 }) {
@@ -22,15 +20,15 @@ export function NavMain({
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
-          <SidebarMenuButton asChild isActive={item.isActive}>
-            <a href={item.url}>
-              <item.icon />
-              <span>{item.title}</span>
-            </a>
+          <SidebarMenuButton
+            isActive={item.isActive}
+            render={<a href={item.url} />}
+          >
+            {item.icon}
+            <span>{item.title}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}
     </SidebarMenu>
   )
 }
-
