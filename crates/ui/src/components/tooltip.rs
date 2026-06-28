@@ -131,25 +131,26 @@ pub fn TooltipContent(
     });
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
-            <div
-                role="tooltip"
-                data-slot="tooltip-content"
-                data-open="true"
-                data-side=move || side.get().as_str()
-                style=move || position.get()
-                class=move || {
-                    cn!(
-                        "cn-tooltip-content cn-tooltip-content-logical z-50 w-fit max-w-xs origin-(--transform-origin) bg-foreground text-background",
-                        class.get(),
-                    )
-                }
-            >
-                {children()}
+            <div class="isolate z-50" style=move || position.get()>
                 <div
-                    data-slot="tooltip-arrow"
+                    role="tooltip"
+                    data-slot="tooltip-content"
+                    data-open="true"
                     data-side=move || side.get().as_str()
-                    class="cn-tooltip-arrow cn-tooltip-arrow-logical z-50 bg-foreground fill-foreground data-[side=bottom]:top-1 data-[side=left]:top-1/2! data-[side=left]:-right-1 data-[side=left]:-translate-y-1/2 data-[side=right]:top-1/2! data-[side=right]:-left-1 data-[side=right]:-translate-y-1/2 data-[side=top]:-bottom-2.5"
-                ></div>
+                    class=move || {
+                        cn!(
+                            "cn-tooltip-content cn-tooltip-content-logical z-50 w-fit max-w-xs origin-(--transform-origin) bg-foreground text-background",
+                            class.get(),
+                        )
+                    }
+                >
+                    {children()}
+                    <div
+                        data-slot="tooltip-arrow"
+                        data-side=move || side.get().as_str()
+                        class="cn-tooltip-arrow cn-tooltip-arrow-logical z-50 bg-foreground fill-foreground data-[side=bottom]:top-1 data-[side=left]:top-1/2! data-[side=left]:-right-1 data-[side=left]:-translate-y-1/2 data-[side=right]:top-1/2! data-[side=right]:-left-1 data-[side=right]:-translate-y-1/2 data-[side=top]:-bottom-2.5"
+                    ></div>
+                </div>
             </div>
         </Show>
     }

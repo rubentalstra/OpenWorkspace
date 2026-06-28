@@ -65,19 +65,20 @@ pub fn PopoverContent(
     let position = use_anchor_rect(ctx.open, ctx.anchor).below_center();
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
-            <div
-                data-slot="popover-content"
-                data-open="true"
-                data-side="bottom"
-                style=move || position.get()
-                class=move || {
-                    cn!(
-                        "cn-popover-content cn-popover-content-logical z-50 w-72 origin-(--transform-origin) outline-hidden",
-                        class.get(),
-                    )
-                }
-            >
-                {children()}
+            <div class="isolate z-50" style=move || position.get()>
+                <div
+                    data-slot="popover-content"
+                    data-open="true"
+                    data-side="bottom"
+                    class=move || {
+                        cn!(
+                            "cn-popover-content cn-popover-content-logical z-50 w-72 origin-(--transform-origin) outline-hidden",
+                            class.get(),
+                        )
+                    }
+                >
+                    {children()}
+                </div>
             </div>
         </Show>
     }

@@ -67,19 +67,20 @@ pub fn HoverCardContent(
     let position = use_anchor_rect(ctx.open, ctx.anchor).below_center();
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
-            <div
-                data-slot="hover-card-content"
-                data-open="true"
-                data-side="bottom"
-                style=move || position.get()
-                class=move || {
-                    cn!(
-                        "cn-hover-card-content cn-hover-card-content-logical z-50 origin-(--transform-origin) outline-hidden",
-                        class.get(),
-                    )
-                }
-            >
-                {children()}
+            <div class="isolate z-50" style=move || position.get()>
+                <div
+                    data-slot="hover-card-content"
+                    data-open="true"
+                    data-side="bottom"
+                    class=move || {
+                        cn!(
+                            "cn-hover-card-content cn-hover-card-content-logical z-50 origin-(--transform-origin) outline-hidden",
+                            class.get(),
+                        )
+                    }
+                >
+                    {children()}
+                </div>
             </div>
         </Show>
     }
