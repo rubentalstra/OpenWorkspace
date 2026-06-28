@@ -2,7 +2,7 @@
 
 # OpenWorkspace
 
-**Self-hosted, open-source workspace booking — desks across multiple sites and entities.**
+**Self-hosted, open-source workspace booking — desks today, with meeting rooms and parking on the roadmap, across multiple sites and entities.**
 
 [![CI](https://github.com/rubentalstra/OpenWorkspace/actions/workflows/ci.yml/badge.svg)](https://github.com/rubentalstra/OpenWorkspace/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
@@ -18,12 +18,19 @@
 OpenWorkspace is deployed once per customer as a production-grade, privacy-respecting
 alternative to commercial workspace-booking suites. It is built in Rust on Leptos
 (server-side rendered) with an Axum server and a PostgreSQL data tier. The first
-release is **desk-only and complete for desks**.
+release is **desk-only and complete for desks**; **meeting rooms** and **parking**
+follow as additive modules on the roadmap.
 
 ## Status
 
 Pre-1.0 and under active development toward the first release. Until V1 ships, only
 the latest `main` is supported. Expect breaking changes between `0.y` versions.
+
+## Roadmap
+
+- **Now** — desks (complete).
+- **Next** — meeting rooms.
+- **Planned** — parking.
 
 ## Highlights
 
