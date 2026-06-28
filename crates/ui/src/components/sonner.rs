@@ -1,4 +1,5 @@
 use crate::cn;
+use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 
@@ -178,15 +179,17 @@ fn ToastItem(toast: Toast) -> impl IntoView {
                         }
                     })}
             </div>
-            <button
-                type="button"
-                data-slot="toast-close"
-                aria-label="Close"
-                class="cn-button cn-button-variant-ghost cn-button-size-icon-sm shrink-0"
+            <Button
+                variant=ButtonVariant::Ghost
+                size=ButtonSize::IconSm
+                class="shrink-0"
+                attr:r#type="button"
+                attr:data-slot="toast-close"
+                attr:aria-label="Close"
                 on:click=move |_| ctx.dismiss(id)
             >
                 <Icon icon=icondata::LuX attr:class="size-4" />
-            </button>
+            </Button>
         </li>
     }
 }

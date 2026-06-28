@@ -1,10 +1,7 @@
+use crate::components::button::{ButtonSize, ButtonVariant, button_variants};
 use crate::{cn, slot};
 use leptos::prelude::*;
 use leptos_icons::Icon;
-
-// shadcn renders pagination links as Buttons-as-anchors; we inline the button's
-// semantic base so a `PaginationLink` is a standalone themed `<a>`.
-const BTN_BASE: &str = "cn-button group/button inline-flex shrink-0 items-center justify-center whitespace-nowrap transition-all outline-none select-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0";
 
 /// Pagination — shadcn Base UI `pagination` navigation landmark.
 #[component]
@@ -37,15 +34,15 @@ pub fn PaginationLink(
     children: Children,
 ) -> impl IntoView {
     let size = if wide {
-        "cn-button-size-default"
+        ButtonSize::Default
     } else {
-        "cn-button-size-icon"
+        ButtonSize::Icon
     };
     let variant = move || {
         if is_active.get() {
-            "cn-button-variant-outline"
+            ButtonVariant::Outline
         } else {
-            "cn-button-variant-ghost"
+            ButtonVariant::Ghost
         }
     };
     view! {
@@ -53,7 +50,9 @@ pub fn PaginationLink(
             data-slot="pagination-link"
             data-active=move || is_active.get().to_string()
             aria-current=move || is_active.get().then_some("page")
-            class=move || cn!(BTN_BASE, variant(), size, "cn-pagination-link", class.get())
+            class=move || {
+                cn!(button_variants(variant(), size), "cn-pagination-link", class.get())
+            }
         >
             {children()}
         </a>

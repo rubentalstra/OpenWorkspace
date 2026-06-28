@@ -32,3 +32,11 @@ variants! {
         component: { element: button }
     }
 }
+
+/// shadcn's `buttonVariants`: the full class string for a button of `variant`/`size`.
+/// For first-party components that render a button-styled non-`<button>` element
+/// (e.g. `PaginationLink`'s `<a>`) so they reuse the exact button look.
+#[must_use]
+pub fn button_variants(variant: ButtonVariant, size: ButtonSize) -> String {
+    crate::cn!(BUTTON_BASE, variant.class(), size.class())
+}

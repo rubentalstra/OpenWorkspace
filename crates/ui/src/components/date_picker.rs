@@ -1,6 +1,7 @@
 use crate::cn;
+use crate::components::button::{Button, ButtonVariant};
 use crate::components::calendar::Calendar;
-use crate::components::popover::{Popover, PopoverContent, PopoverTrigger};
+use crate::components::popover::{Popover, PopoverContent};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use time::Date;
@@ -50,15 +51,20 @@ pub fn DatePicker(
 
     view! {
         <Popover open=open>
-            <PopoverTrigger class=Signal::derive(move || {
-                cn!(
-                    "cn-button cn-button-variant-outline cn-button-size-default group/button inline-flex w-full shrink-0 items-center justify-start gap-2 px-2.5 font-normal whitespace-nowrap transition-all outline-none select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
-                    class.get(),
-                )
-            })>
+            <Button
+                variant=ButtonVariant::Outline
+                class=Signal::derive(move || {
+                    cn!("w-full justify-start gap-2 px-2.5 font-normal", class.get())
+                })
+                attr:r#type="button"
+                attr:data-slot="date-picker-trigger"
+                attr:aria-haspopup="dialog"
+                attr:aria-expanded=move || open.get().to_string()
+                on:click=move |_| open.update(|value| *value = !*value)
+            >
                 <Icon icon=icondata::LuCalendar attr:data-icon="inline-start" attr:class="size-4" />
                 <span data-slot="date-picker-value">{label}</span>
-            </PopoverTrigger>
+            </Button>
             <PopoverContent class="w-auto p-0">
                 <Calendar selected=selected on_change=on_pick />
             </PopoverContent>

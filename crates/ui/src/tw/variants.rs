@@ -58,6 +58,10 @@ macro_rules! variants {
         $crate::__variants_enum!($name Variant, $v0: $v0c $(, $vk: $vc)*);
         $crate::__variants_enum!($name Size, $s0: $s0c $(, $sk: $sc)*);
         $crate::paste::paste! {
+            /// The shared base class string for this component (shadcn's `cva` base),
+            /// for first-party components that style a non-component element to match.
+            pub const [<$name:snake:upper _BASE>]: &str = $base;
+
             $(#[$meta])*
             #[component]
             pub fn $name(
