@@ -22,6 +22,7 @@ pub use paste;
 #[doc(hidden)]
 pub use tw_merge;
 
+pub use components::accordion::{Accordion, AccordionContent, AccordionItem, AccordionTrigger};
 pub use components::alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
 pub use components::aspect_ratio::AspectRatio;
 pub use components::avatar::{
@@ -37,6 +38,7 @@ pub use components::card::{
     Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
 };
 pub use components::checkbox::Checkbox;
+pub use components::collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger};
 pub use components::empty::{
     Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
 };
@@ -55,6 +57,7 @@ pub use components::pagination::{
     PaginationNext, PaginationPrevious,
 };
 pub use components::progress::Progress;
+pub use components::radio_group::{RadioGroup, RadioGroupItem};
 pub use components::separator::{Separator, SeparatorOrientation};
 pub use components::skeleton::Skeleton;
 pub use components::slider::Slider;
@@ -62,6 +65,9 @@ pub use components::spinner::Spinner;
 pub use components::switch::{Switch, SwitchSize};
 pub use components::table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
+};
+pub use components::tabs::{
+    Tabs, TabsContent, TabsList, TabsListVariant, TabsOrientation, TabsTrigger,
 };
 pub use components::textarea::Textarea;
 pub use components::toggle::{Toggle, ToggleSize, ToggleVariant};

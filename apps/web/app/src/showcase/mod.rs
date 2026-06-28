@@ -6,15 +6,18 @@
 use leptos::prelude::*;
 use leptos_router::components::Outlet;
 use ui::{
-    Alert, AlertDescription, AlertTitle, AlertVariant, AspectRatio, Avatar, AvatarFallback,
-    AvatarGroup, Badge, BadgeVariant, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
-    BreadcrumbPage, BreadcrumbSeparator, Button, ButtonSize, ButtonVariant, Card, CardContent,
-    CardDescription, CardFooter, CardHeader, CardTitle, Checkbox, Empty, EmptyDescription,
-    EmptyHeader, EmptyMedia, EmptyTitle, Input, Item, ItemContent, ItemDescription, ItemGroup,
-    ItemMedia, ItemTitle, Kbd, KbdGroup, Label, NativeSelect, NativeSelectOption, Pagination,
-    PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
-    Progress, Separator, SeparatorOrientation, Skeleton, Slider, Spinner, Switch, Table, TableBody,
-    TableCell, TableHead, TableHeader, TableRow, Textarea, Toggle, use_theme_mode,
+    Accordion, AccordionContent, AccordionItem, AccordionTrigger, Alert, AlertDescription,
+    AlertTitle, AlertVariant, AspectRatio, Avatar, AvatarFallback, AvatarGroup, Badge,
+    BadgeVariant, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
+    BreadcrumbSeparator, Button, ButtonSize, ButtonVariant, Card, CardContent, CardDescription,
+    CardFooter, CardHeader, CardTitle, Checkbox, Collapsible, CollapsibleContent,
+    CollapsibleTrigger, Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle, Input, Item,
+    ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle, Kbd, KbdGroup, Label,
+    NativeSelect, NativeSelectOption, Pagination, PaginationContent, PaginationItem,
+    PaginationLink, PaginationNext, PaginationPrevious, Progress, RadioGroup, RadioGroupItem,
+    Separator, SeparatorOrientation, Skeleton, Slider, Spinner, Switch, Table, TableBody,
+    TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger,
+    Textarea, Toggle, use_theme_mode,
 };
 
 /// Ordered nav: `(href, label)`. Drives the header tabs and the overview grid.
@@ -186,6 +189,7 @@ pub fn InputsPage() -> impl IntoView {
     let checked = RwSignal::new(true);
     let switch_on = RwSignal::new(true);
     let vol = RwSignal::new(40.0);
+    let plan = RwSignal::new("map".to_string());
     view! {
         <PageShell title="Inputs" subtitle="Text, choice, and range controls.">
             <Demo title="Text field">
@@ -211,6 +215,22 @@ pub fn InputsPage() -> impl IntoView {
                     <NativeSelectOption>"List"</NativeSelectOption>
                     <NativeSelectOption>"Calendar"</NativeSelectOption>
                 </NativeSelect>
+            </Demo>
+            <Demo title="Radio group">
+                <RadioGroup
+                    value=plan
+                    on_change=Callback::new(move |v| plan.set(v))
+                    class="flex flex-col gap-2"
+                >
+                    <label class="flex items-center gap-2 text-sm">
+                        <RadioGroupItem value="map" />
+                        "Map"
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <RadioGroupItem value="list" />
+                        "List"
+                    </label>
+                </RadioGroup>
             </Demo>
         </PageShell>
     }
@@ -345,7 +365,7 @@ pub fn FeedbackPage() -> impl IntoView {
 #[component]
 pub fn LayoutPage() -> impl IntoView {
     view! {
-        <PageShell title="Layout" subtitle="Separators and ratios.">
+        <PageShell title="Layout" subtitle="Separators, ratios, and disclosure.">
             <Demo title="Separator">
                 <div class="flex h-5 items-center gap-3 text-sm">
                     "Map" <Separator orientation=SeparatorOrientation::Vertical /> "List"
@@ -359,6 +379,54 @@ pub fn LayoutPage() -> impl IntoView {
                 >
                     "16 / 9"
                 </AspectRatio>
+            </Demo>
+            <Demo title="Tabs">
+                <Tabs default_value="map" class="w-full gap-3">
+                    <TabsList>
+                        <TabsTrigger value="map">"Map"</TabsTrigger>
+                        <TabsTrigger value="list">"List"</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="map">
+                        <p class="text-muted-foreground text-sm">"The map view."</p>
+                    </TabsContent>
+                    <TabsContent value="list">
+                        <p class="text-muted-foreground text-sm">"The list view."</p>
+                    </TabsContent>
+                </Tabs>
+            </Demo>
+            <Demo title="Accordion">
+                <Accordion class="w-full">
+                    <AccordionItem class="border-b">
+                        <AccordionTrigger class="py-3 text-sm font-medium">
+                            "How do I book a desk?"
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <p class="text-muted-foreground pb-3 text-sm">
+                                "Pick a floor, choose a free desk, and confirm."
+                            </p>
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem>
+                        <AccordionTrigger class="py-3 text-sm font-medium">
+                            "Can I cancel?"
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <p class="text-muted-foreground pb-3 text-sm">
+                                "Yes — cancel any time before the day starts."
+                            </p>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </Demo>
+            <Demo title="Collapsible">
+                <Collapsible class="w-full">
+                    <CollapsibleTrigger class="cn-button cn-button-variant-outline cn-button-size-sm inline-flex items-center rounded-md">
+                        "Toggle details"
+                    </CollapsibleTrigger>
+                    <CollapsibleContent class="pt-2">
+                        <p class="text-muted-foreground text-sm">"Hidden details revealed."</p>
+                    </CollapsibleContent>
+                </Collapsible>
             </Demo>
         </PageShell>
     }
