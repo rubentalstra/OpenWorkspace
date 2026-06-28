@@ -22,6 +22,10 @@ use ui::{
     use_theme_mode,
 };
 use ui::{
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+    AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, ScrollArea,
+};
+use ui::{
     DatePicker, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
     DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuItemVariant, DropdownMenuLabel, DropdownMenuTrigger, Popover, PopoverContent,
@@ -476,6 +480,15 @@ pub fn LayoutPage() -> impl IntoView {
                     </CollapsibleContent>
                 </Collapsible>
             </Demo>
+            <Demo title="Scroll area">
+                <ScrollArea class="h-32 w-full rounded-md border">
+                    <div class="flex flex-col gap-2 p-3 text-sm">
+                        {(1..=20)
+                            .map(|n| view! { <div>{format!("Desk A-{n:02}")}</div> })
+                            .collect_view()}
+                    </div>
+                </ScrollArea>
+            </Demo>
         </PageShell>
     }
 }
@@ -559,6 +572,23 @@ pub fn OverlaysPage() -> impl IntoView {
             </Demo>
             <Demo title="Date picker">
                 <DatePicker class="w-56" />
+            </Demo>
+            <Demo title="Alert dialog">
+                <AlertDialog>
+                    <AlertDialogTrigger class=trigger>"Cancel booking"</AlertDialogTrigger>
+                    <AlertDialogContent class="max-w-md p-6">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>"Cancel this booking?"</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                "This releases your desk for today. You can book again later."
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>"Keep booking"</AlertDialogCancel>
+                            <AlertDialogAction>"Cancel booking"</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </Demo>
         </PageShell>
     }

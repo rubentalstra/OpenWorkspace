@@ -5,6 +5,7 @@
 
 pub mod accordion;
 pub mod alert;
+pub mod alert_dialog;
 pub mod aspect_ratio;
 pub mod avatar;
 pub mod badge;
@@ -40,6 +41,7 @@ pub mod popover;
 pub mod progress;
 pub mod radio_group;
 pub mod resizable;
+pub mod scroll_area;
 pub mod select;
 pub mod separator;
 pub mod sheet;

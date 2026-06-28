@@ -71,7 +71,7 @@ pub fn ComboboxContent(
     view! {
         <PopoverContent class=Signal::derive(move || {
             cn!(
-                "cn-combobox-content cn-combobox-content-logical group/combobox-content relative w-full origin-(--transform-origin) p-0",
+                "cn-combobox-content cn-combobox-content-logical cn-menu-target cn-menu-translucent group/combobox-content relative w-full origin-(--transform-origin) p-0",
                 class.get(),
             )
         })>

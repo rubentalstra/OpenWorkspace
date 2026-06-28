@@ -24,6 +24,11 @@ pub use tw_merge;
 
 pub use components::accordion::{Accordion, AccordionContent, AccordionItem, AccordionTrigger};
 pub use components::alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
+pub use components::alert_dialog::{
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+    AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogSize, AlertDialogTitle,
+    AlertDialogTrigger,
+};
 pub use components::aspect_ratio::AspectRatio;
 pub use components::avatar::{
     Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
@@ -114,6 +119,7 @@ pub use components::popover::{
 pub use components::progress::Progress;
 pub use components::radio_group::{RadioGroup, RadioGroupItem};
 pub use components::resizable::{ResizableHandle, ResizablePanel, ResizablePanelGroup};
+pub use components::scroll_area::ScrollArea;
 pub use components::select::{
     Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger,
     SelectValue,
