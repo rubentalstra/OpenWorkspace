@@ -34,8 +34,10 @@ export default defineConfig({
   use: {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:3000",
+    /* Base URL to use in actions like `await page.goto('/')`. Override with
+     * E2E_BASE_URL to point at an already-running server (e.g. a manual
+     * `cargo leptos serve` on another port). */
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -96,12 +98,17 @@ export default defineConfig({
   /* Folder for test artifacts such as screenshots, videos, traces, etc. */
   // outputDir: 'test-results/',
 
-  /* Build and serve the app (workspace root) before running the tests. */
-  webServer: {
-    command: "cargo leptos serve",
-    cwd: "..",
-    url: "http://localhost:3000",
-    timeout: 180 * 1000,
-    reuseExistingServer: !process.env.CI,
-  },
+  /* Build and serve the app (workspace root) before running the tests. Set
+   * E2E_NO_WEBSERVER=1 to skip this and run against an already-running server
+   * (pair with E2E_BASE_URL) — avoids a second build fighting the first over
+   * the shared target/ output. */
+  webServer: process.env.E2E_NO_WEBSERVER
+    ? undefined
+    : {
+        command: "cargo leptos serve",
+        cwd: "..",
+        url: "http://localhost:3000",
+        timeout: 180 * 1000,
+        reuseExistingServer: !process.env.CI,
+      },
 });

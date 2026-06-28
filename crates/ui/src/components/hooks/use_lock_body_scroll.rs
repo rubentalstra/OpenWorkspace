@@ -32,10 +32,15 @@ pub fn use_lock_body_scroll(initial_locked: bool) -> RwSignal<bool> {
     });
 
     on_cleanup(move || {
-        let Some(body) = document().body() else {
-            return;
-        };
-        restore_overflow(&body.style(), original.get_untracked().as_deref());
+        // The reactive owner is torn down during server rendering too, where the
+        // DOM globals panic on the non-wasm target. Restoring `<body>` only makes
+        // sense on the client, so the access is gated to the wasm target.
+        #[cfg(target_arch = "wasm32")]
+        if let Some(body) = document().body() {
+            restore_overflow(&body.style(), original.get_untracked().as_deref());
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = original;
     });
 
     locked

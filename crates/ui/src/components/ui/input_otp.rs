@@ -36,14 +36,20 @@ pub fn InputOTP(
             }
         >
             {children()}
+            // A `display:none` input cannot be focused or typed into, which
+            // would make the whole field inert. Instead overlay a transparent,
+            // focusable input across the slots: clicks focus it, keystrokes land
+            // in it, and the client controller mirrors its value into the slots
+            // and drives the active-slot caret from its selection.
             <input
                 data-otp-input=""
                 type="text"
                 inputmode="numeric"
+                autocomplete="one-time-code"
                 maxlength=max_length.to_string()
                 disabled=disabled
                 prop:value=value
-                class="hidden"
+                class="absolute inset-0 h-full w-full cursor-default opacity-0 outline-none disabled:cursor-not-allowed"
                 on:input=on_input
             />
         </div>
