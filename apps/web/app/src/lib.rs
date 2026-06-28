@@ -8,6 +8,7 @@ use leptos_router::{
 };
 
 mod csrf_client;
+pub mod dashboard;
 pub mod showcase;
 pub use csrf_client::CsrfClient;
 
@@ -74,6 +75,7 @@ pub fn App() -> impl IntoView {
                             <Route path=StaticSegment("overlays") view=showcase::OverlaysPage />
                             <Route path=StaticSegment("layout") view=showcase::LayoutPage />
                         </ParentRoute>
+                        <Route path=StaticSegment("dashboard") view=dashboard::Dashboard />
                     </Routes>
                 </div>
             </Router>

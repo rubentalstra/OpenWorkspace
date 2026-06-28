@@ -1,5 +1,44 @@
 use leptos::prelude::*;
 
+/// Which edge of the trigger a popup is placed against (Base UI `side`).
+#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub enum Side {
+    /// Above the trigger.
+    Top,
+    /// To the right of the trigger.
+    Right,
+    /// Below the trigger (the default).
+    #[default]
+    Bottom,
+    /// To the left of the trigger.
+    Left,
+}
+
+impl Side {
+    /// The `data-side` value, for the nova slide-in animation.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Top => "top",
+            Self::Right => "right",
+            Self::Bottom => "bottom",
+            Self::Left => "left",
+        }
+    }
+}
+
+/// How a popup aligns along the trigger's cross axis (Base UI `align`).
+#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub enum Align {
+    /// Aligned to the trigger's start edge (the default).
+    #[default]
+    Start,
+    /// Centred on the trigger.
+    Center,
+    /// Aligned to the trigger's end edge.
+    End,
+}
+
 /// Inline style that parks an as-yet-unmeasured popup off-screen. The measuring
 /// effect runs after the content mounts, so the first frame has no real rect; we
 /// place the popup off-screen (and its `fade-in` keeps it invisible) instead of at
@@ -71,6 +110,40 @@ impl AnchorRect {
                 self.right.get() + 4.0,
             )
         })
+    }
+
+    /// Inline `style` placing the popup against `side` of the trigger, aligned per
+    /// `align` along the cross axis — the general Base-UI positioner. Alignment uses a
+    /// CSS `transform` (so it needs the positioner/popup two-element split to avoid
+    /// fighting the enter animation). Parked off-screen until measured.
+    #[must_use]
+    pub fn place_style(self, side: Side, align: Align) -> String {
+        const GAP: f64 = 4.0;
+        if !self.measured.get() {
+            return OFFSCREEN.to_owned();
+        }
+        let (anchor_x, tx) = match side {
+            Side::Right => (self.right.get() + GAP, 0.0),
+            Side::Left => (self.left.get() - GAP, -100.0),
+            Side::Top | Side::Bottom => match align {
+                Align::Start => (self.left.get(), 0.0),
+                Align::Center => (self.center_x(), -50.0),
+                Align::End => (self.right.get(), -100.0),
+            },
+        };
+        let (anchor_y, ty) = match side {
+            Side::Bottom => (self.bottom.get() + GAP, 0.0),
+            Side::Top => (self.top.get() - GAP, -100.0),
+            Side::Left | Side::Right => match align {
+                Align::Start => (self.top.get(), 0.0),
+                Align::Center => (self.center_y(), -50.0),
+                Align::End => (self.bottom.get(), -100.0),
+            },
+        };
+        format!(
+            "position:fixed;top:{anchor_y}px;left:{anchor_x}px;transform:translate({tx}%,{ty}%);--anchor-width:{}px;",
+            self.width.get(),
+        )
     }
 
     /// Whether the trigger has been measured yet; popups using a bespoke style (the

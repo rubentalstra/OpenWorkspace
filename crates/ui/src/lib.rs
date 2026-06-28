@@ -72,9 +72,10 @@ pub use components::drawer::{
     DrawerTrigger,
 };
 pub use components::dropdown_menu::{
-    DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem,
-    DropdownMenuItemVariant, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
-    DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
+    DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup,
+    DropdownMenuItem, DropdownMenuItemVariant, DropdownMenuLabel, DropdownMenuRadioGroup,
+    DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub,
+    DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 };
 pub use components::empty::{
     Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
@@ -129,6 +130,15 @@ pub use components::sheet::{
     Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide,
     SheetTitle, SheetTrigger,
 };
+pub use components::sidebar::{
+    Sidebar, SidebarCollapsible, SidebarContent, SidebarContext, SidebarFooter, SidebarGroup,
+    SidebarGroupAction, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInput,
+    SidebarInset, SidebarMenu, SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton,
+    SidebarMenuButtonSize, SidebarMenuButtonVariant, SidebarMenuItem, SidebarMenuSkeleton,
+    SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubButtonSize, SidebarMenuSubItem,
+    SidebarProvider, SidebarRail, SidebarSeparator, SidebarSide, SidebarTrigger, SidebarVariant,
+    use_sidebar,
+};
 pub use components::skeleton::Skeleton;
 pub use components::slider::Slider;
 pub use components::sonner::{Toast, ToastVariant, Toaster, ToasterContext, provide_toaster};
@@ -146,6 +156,7 @@ pub use components::toggle_group::{ToggleGroup, ToggleGroupItem};
 pub use components::tooltip::{
     Tooltip, TooltipContent, TooltipProvider, TooltipSide, TooltipTrigger,
 };
+pub use hooks::use_anchored_position::{Align, Side};
 pub use hooks::use_dismiss::use_dismiss;
 pub use hooks::use_is_mobile::{MOBILE_BREAKPOINT, use_is_mobile};
 pub use hooks::use_media_query::use_media_query;

@@ -1,5 +1,5 @@
 use crate::hooks::focus_on_hover::focus_on_hover;
-use crate::hooks::use_anchored_position::use_anchor_rect;
+use crate::hooks::use_anchored_position::{Align, Side, use_anchor_rect};
 use crate::hooks::use_dismiss::use_dismiss;
 use crate::{cn, slot};
 use leptos::prelude::*;
@@ -81,30 +81,39 @@ pub fn DropdownMenuTrigger(
     }
 }
 
-/// The menu panel; mounted (and enter-animated) while open.
+/// The menu panel; mounted (and enter-animated) while open. Positioned against
+/// `side` of the trigger and aligned per `align` (Base UI defaults: bottom/start),
+/// via a positioner element wrapping the popup so alignment transforms don't fight
+/// the enter animation.
 #[component]
 pub fn DropdownMenuContent(
+    #[prop(into, optional)] side: Signal<Side>,
+    #[prop(into, optional)] align: Signal<Align>,
     #[prop(into, optional)] class: Signal<String>,
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<DropdownMenuCtx>();
-    let position = use_anchor_rect(ctx.open, ctx.anchor).below();
+    let rect = use_anchor_rect(ctx.open, ctx.anchor);
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
             <div
-                data-slot="dropdown-menu-content"
-                role="menu"
-                data-open="true"
-                data-side="bottom"
-                style=move || position.get()
-                class=move || {
-                    cn!(
-                        "cn-dropdown-menu-content cn-dropdown-menu-content-logical cn-menu-target cn-menu-translucent z-50 max-h-96 min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto outline-none data-closed:overflow-hidden",
-                        class.get(),
-                    )
-                }
+                class="isolate z-50 outline-none"
+                style=move || rect.place_style(side.get(), align.get())
             >
-                {children()}
+                <div
+                    data-slot="dropdown-menu-content"
+                    role="menu"
+                    data-open="true"
+                    data-side=move || side.get().as_str()
+                    class=move || {
+                        cn!(
+                            "cn-dropdown-menu-content cn-dropdown-menu-content-logical cn-menu-target cn-menu-translucent z-50 max-h-(--available-height) w-(--anchor-width) origin-(--transform-origin) overflow-x-hidden overflow-y-auto outline-none data-closed:overflow-hidden",
+                            class.get(),
+                        )
+                    }
+                >
+                    {children()}
+                </div>
             </div>
         </Show>
     }
