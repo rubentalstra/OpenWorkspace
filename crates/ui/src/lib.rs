@@ -34,6 +34,9 @@ pub use components::breadcrumb::{
     BreadcrumbSeparator,
 };
 pub use components::button::{Button, ButtonSize, ButtonVariant};
+pub use components::button_group::{
+    ButtonGroup, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
+};
 pub use components::card::{
     Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
 };
@@ -42,7 +45,15 @@ pub use components::collapsible::{Collapsible, CollapsibleContent, CollapsibleTr
 pub use components::empty::{
     Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
 };
+pub use components::field::{
+    Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
+    FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
+};
 pub use components::input::Input;
+pub use components::input_group::{
+    InputGroup, InputGroupAddon, InputGroupAddonAlign, InputGroupButton, InputGroupButtonSize,
+    InputGroupInput, InputGroupText, InputGroupTextarea,
+};
 pub use components::item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant,
@@ -71,6 +82,7 @@ pub use components::tabs::{
 };
 pub use components::textarea::Textarea;
 pub use components::toggle::{Toggle, ToggleSize, ToggleVariant};
+pub use components::toggle_group::{ToggleGroup, ToggleGroupItem};
 pub use hooks::use_is_mobile::{MOBILE_BREAKPOINT, use_is_mobile};
 pub use hooks::use_media_query::use_media_query;
 pub use hooks::use_theme_mode::{ThemeMode, use_theme_mode};

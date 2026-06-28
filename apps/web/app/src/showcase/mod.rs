@@ -9,15 +9,17 @@ use ui::{
     Accordion, AccordionContent, AccordionItem, AccordionTrigger, Alert, AlertDescription,
     AlertTitle, AlertVariant, AspectRatio, Avatar, AvatarFallback, AvatarGroup, Badge,
     BadgeVariant, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
-    BreadcrumbSeparator, Button, ButtonSize, ButtonVariant, Card, CardContent, CardDescription,
-    CardFooter, CardHeader, CardTitle, Checkbox, Collapsible, CollapsibleContent,
-    CollapsibleTrigger, Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle, Input, Item,
-    ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle, Kbd, KbdGroup, Label,
-    NativeSelect, NativeSelectOption, Pagination, PaginationContent, PaginationItem,
-    PaginationLink, PaginationNext, PaginationPrevious, Progress, RadioGroup, RadioGroupItem,
-    Separator, SeparatorOrientation, Skeleton, Slider, Spinner, Switch, Table, TableBody,
-    TableCell, TableHead, TableHeader, TableRow, Tabs, TabsContent, TabsList, TabsTrigger,
-    Textarea, Toggle, use_theme_mode,
+    BreadcrumbSeparator, Button, ButtonGroup, ButtonGroupText, ButtonSize, ButtonVariant, Card,
+    CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Checkbox, Collapsible,
+    CollapsibleContent, CollapsibleTrigger, Empty, EmptyDescription, EmptyHeader, EmptyMedia,
+    EmptyTitle, Field, FieldDescription, FieldLabel, Input, InputGroup, InputGroupAddon,
+    InputGroupInput, InputGroupText, Item, ItemContent, ItemDescription, ItemGroup, ItemMedia,
+    ItemTitle, Kbd, KbdGroup, Label, NativeSelect, NativeSelectOption, Pagination,
+    PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
+    Progress, RadioGroup, RadioGroupItem, Separator, SeparatorOrientation, Skeleton, Slider,
+    Spinner, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs,
+    TabsContent, TabsList, TabsTrigger, Textarea, Toggle, ToggleGroup, ToggleGroupItem,
+    use_theme_mode,
 };
 
 /// Ordered nav: `(href, label)`. Drives the header tabs and the overview grid.
@@ -148,6 +150,7 @@ pub fn ShowcaseIndex() -> impl IntoView {
 #[component]
 pub fn ButtonsPage() -> impl IntoView {
     let bold = RwSignal::new(false);
+    let marks = RwSignal::new(vec!["bold".to_string()]);
     view! {
         <PageShell title="Buttons" subtitle="Actions, badges, toggles.">
             <Demo title="Variants">
@@ -178,6 +181,27 @@ pub fn ButtonsPage() -> impl IntoView {
                     <Kbd>"⌘"</Kbd>
                     <Kbd>"K"</Kbd>
                 </KbdGroup>
+            </Demo>
+            <Demo title="Button group">
+                <ButtonGroup>
+                    <ButtonGroupText>"View"</ButtonGroupText>
+                    <Button variant=ButtonVariant::Outline size=ButtonSize::Sm>
+                        "Day"
+                    </Button>
+                    <Button variant=ButtonVariant::Outline size=ButtonSize::Sm>
+                        "Week"
+                    </Button>
+                    <Button variant=ButtonVariant::Outline size=ButtonSize::Sm>
+                        "Month"
+                    </Button>
+                </ButtonGroup>
+            </Demo>
+            <Demo title="Toggle group">
+                <ToggleGroup value=marks on_change=Callback::new(move |v| marks.set(v))>
+                    <ToggleGroupItem value="bold">"B"</ToggleGroupItem>
+                    <ToggleGroupItem value="italic">"I"</ToggleGroupItem>
+                    <ToggleGroupItem value="underline">"U"</ToggleGroupItem>
+                </ToggleGroup>
             </Demo>
         </PageShell>
     }
@@ -231,6 +255,21 @@ pub fn InputsPage() -> impl IntoView {
                         "List"
                     </label>
                 </RadioGroup>
+            </Demo>
+            <Demo title="Field">
+                <Field>
+                    <FieldLabel>"Display name"</FieldLabel>
+                    <Input attr:placeholder="Ada Lovelace" />
+                    <FieldDescription>"Shown to your teammates."</FieldDescription>
+                </Field>
+            </Demo>
+            <Demo title="Input group">
+                <InputGroup>
+                    <InputGroupAddon>
+                        <InputGroupText>"@"</InputGroupText>
+                    </InputGroupAddon>
+                    <InputGroupInput attr:placeholder="username" />
+                </InputGroup>
             </Demo>
         </PageShell>
     }

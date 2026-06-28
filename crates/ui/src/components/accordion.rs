@@ -85,18 +85,34 @@ pub fn AccordionContent(
     children: Children,
 ) -> impl IntoView {
     let ctx = expect_context::<AccordionItemCtx>();
+    let inner = NodeRef::<leptos::html::Div>::new();
+    let height = RwSignal::new(0_i32);
+    // Mirror Base UI's height animation: measure the (always-rendered) inner panel
+    // and transition the wrapper's height between 0 and that measured value. The
+    // nova keyframe path (`data-open:animate-accordion-down`) needs the Base UI
+    // runtime's height var, so we don't emit `data-open` here — height drives it.
+    Effect::new(move |_| {
+        let open = ctx.open.get();
+        let measured = inner.get_untracked().map_or(0, |el| el.scroll_height());
+        height.set(if open { measured } else { 0 });
+    });
     view! {
         <div
             data-slot="accordion-content"
-            class="cn-accordion-content overflow-hidden"
-            class:hidden=move || !ctx.open.get()
+            class="cn-accordion-content overflow-hidden transition-[height] duration-200 ease-out"
+            style:height=move || format!("{}px", height.get())
         >
-            <div class=move || {
-                cn!(
-                    "cn-accordion-content-inner [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
-                    class.get(),
-                )
-            }>{children()}</div>
+            <div
+                node_ref=inner
+                class=move || {
+                    cn!(
+                        "cn-accordion-content-inner [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
+                        class.get(),
+                    )
+                }
+            >
+                {children()}
+            </div>
         </div>
     }
 }

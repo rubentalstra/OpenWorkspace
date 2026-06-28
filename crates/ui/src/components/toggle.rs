@@ -10,7 +10,7 @@ pub enum ToggleVariant {
 }
 
 impl ToggleVariant {
-    fn class(self) -> &'static str {
+    pub(crate) fn class(self) -> &'static str {
         match self {
             Self::Default => "cn-toggle-variant-default",
             Self::Outline => "cn-toggle-variant-outline",
@@ -28,7 +28,7 @@ pub enum ToggleSize {
 }
 
 impl ToggleSize {
-    fn class(self) -> &'static str {
+    pub(crate) fn class(self) -> &'static str {
         match self {
             Self::Default => "cn-toggle-size-default",
             Self::Sm => "cn-toggle-size-sm",

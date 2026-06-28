@@ -55,14 +55,24 @@ pub fn CollapsibleContent(
     children: Children,
 ) -> impl IntoView {
     let ctx = expect_context::<CollapsibleCtx>();
+    let inner = NodeRef::<leptos::html::Div>::new();
+    let height = RwSignal::new(0_i32);
+    // Measure the always-rendered inner content and transition height 0 ↔ measured.
+    Effect::new(move |_| {
+        let open = ctx.open.get();
+        let measured = inner.get_untracked().map_or(0, |el| el.scroll_height());
+        height.set(if open { measured } else { 0 });
+    });
     view! {
         <div
             data-slot="collapsible-content"
             data-open=move || ctx.open.get().then_some("true")
-            class:hidden=move || !ctx.open.get()
-            class=move || cn!("", class.get())
+            class="overflow-hidden transition-[height] duration-200 ease-out"
+            style:height=move || format!("{}px", height.get())
         >
-            {children()}
+            <div node_ref=inner class=move || cn!("", class.get())>
+                {children()}
+            </div>
         </div>
     }
 }
