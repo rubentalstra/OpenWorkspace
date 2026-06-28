@@ -3,18 +3,18 @@ use leptos_icons::Icon;
 use leptos_router::components::Outlet;
 use leptos_router::hooks::use_location;
 use ui::{
-    AccordionContent, AccordionHeader, AccordionItem, AccordionTitle, AccordionTrigger, Avatar,
-    AvatarFallback, AvatarSize, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
-    DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
-    DropdownMenuSeparator, DropdownMenuSide, DropdownMenuSub, DropdownMenuSubContent,
-    DropdownMenuSubTrigger, DropdownMenuTrigger, Sheet, SheetContent,
-    SheetDirection, SheetTrigger, Sidenav, SidenavCollapsible, SidenavContent, SidenavFooter,
-    SidenavGroup, SidenavGroupContent, SidenavGroupLabel, SidenavHeader, SidenavLink, SidenavMenu,
-    SidenavMenuItem, SidenavMenuSub, SidenavTrigger, SidenavWrapper, ThemeToggle, Toaster,
+    Avatar, AvatarFallback, AvatarSize, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent,
+    DropdownMenu, DropdownMenuAlign, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
+    DropdownMenuItemVariant, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSide,
+    DropdownMenuTrigger, Separator, SeparatorOrientation, Sheet, SheetContent, SheetDirection,
+    SheetTrigger, Sidenav, SidenavCollapsible, SidenavContent, SidenavFooter, SidenavGroup,
+    SidenavGroupContent, SidenavGroupLabel, SidenavHeader, SidenavInset, SidenavMenu,
+    SidenavMenuAction, SidenavMenuButton, SidenavMenuButtonSize, SidenavMenuItem, SidenavMenuSub,
+    SidenavMenuSubButton, SidenavMenuSubItem, SidenavTrigger, SidenavWrapper, ThemeToggle, Toaster,
     ToasterContext,
 };
 
-/// One nav section: a title, a leading glyph, and its category links.
+/// One collapsible nav section: a title, a leading glyph, and its links.
 struct NavSection {
     title: &'static str,
     icon: icondata::Icon,
@@ -53,24 +53,32 @@ const NAV_SECTIONS: &[NavSection] = &[
     },
 ];
 
-/// Persistent gallery chrome modelled on the rust-ui `sidenav07` block: a brand
-/// selector header, accordion-grouped category menus, and a footer account menu,
-/// beside an [`Outlet`] content area. The desktop [`Sidenav`] collapses via the
-/// header rail; on mobile the same nav is served through a [`Sheet`]. One
-/// [`Toaster`] is mounted so any page below can raise toasts.
+const PROJECTS: &[(&str, icondata::Icon)] = &[
+    ("Design system", icondata::LuFrame),
+    ("Booking app", icondata::LuChartPie),
+    ("Floor plans", icondata::LuMap),
+];
+
+/// Faithful recreation of shadcn's `sidebar-07` (a sidebar that collapses to
+/// icons) on our `ui` components: a team-switcher header, collapsible nav
+/// groups, a projects list with per-item menus, and a footer account menu —
+/// beside an inset content area. Collapses to an icon rail with tooltips; on
+/// mobile the same nav is served through a [`Sheet`]. Mounts one [`Toaster`].
 #[component]
 pub fn ShowcaseLayout() -> impl IntoView {
-    // Provided above the outlet *and* the toaster so any page can raise toasts.
     provide_context(ToasterContext::new());
     let path = use_location().pathname;
 
     view! {
-        <SidenavWrapper attr:style="--sidenav-width: 16rem;" class="min-h-screen bg-sidenav">
-            <Sidenav collapsible=SidenavCollapsible::Offcanvas>
+        <SidenavWrapper
+            attr:style="--sidenav-width: 16rem; --sidenav-width-icon: 3rem;"
+            class="min-h-screen bg-sidenav"
+        >
+            <Sidenav collapsible=SidenavCollapsible::Icon>
                 <NavBody active_path=path />
             </Sidenav>
 
-            <main class="flex flex-col flex-1 min-w-0 bg-background">
+            <SidenavInset>
                 <header class="flex sticky top-0 z-20 gap-2 items-center px-4 h-14 border-b backdrop-blur border-sidenav-border bg-background/80">
                     <div class="hidden md:block">
                         <SidenavTrigger>
@@ -95,9 +103,9 @@ pub fn ShowcaseLayout() -> impl IntoView {
                             </SheetContent>
                         </Sheet>
                     </div>
-                    <div class="flex-1 text-sm font-medium text-muted-foreground">
-                        "Component gallery"
-                    </div>
+                    <Separator orientation=SeparatorOrientation::Vertical class="mr-1 h-4" />
+                    <span class="text-sm font-medium text-foreground">"Component gallery"</span>
+                    <div class="flex-1" />
                     <ThemeToggle />
                 </header>
 
@@ -106,206 +114,261 @@ pub fn ShowcaseLayout() -> impl IntoView {
                         <Outlet />
                     </div>
                 </div>
-            </main>
+            </SidenavInset>
 
             <Toaster />
         </SidenavWrapper>
     }
 }
 
-/// Shared sidenav body — header selector, accordion-grouped menus, footer account
-/// menu — rendered by both the desktop [`Sidenav`] and the mobile [`Sheet`].
+/// Shared sidebar body used by the desktop [`Sidenav`] and the mobile [`Sheet`].
 #[component]
 fn NavBody(#[prop(into)] active_path: Signal<String>) -> impl IntoView {
-    let sections = NAV_SECTIONS
-        .iter()
-        .map(|section| {
-            view! { <NavGroup section=section active_path=active_path /> }
-        })
-        .collect_view();
-
     view! {
-        <SidenavHeader class="border-b border-sidenav-border">
-            <BrandSelector />
+        <SidenavHeader>
+            <TeamSwitcher />
         </SidenavHeader>
-
         <SidenavContent>
-            <SidenavGroup>
-                <SidenavMenu>
-                    <SidenavMenuItem>
-                        <SidenavLink href="/ui">
-                            <Icon icon=icondata::LuLayoutGrid attr:class="size-4 shrink-0" />
-                            <span>"Overview"</span>
-                        </SidenavLink>
-                    </SidenavMenuItem>
-                </SidenavMenu>
-            </SidenavGroup>
-
-            <SidenavGroup>
-                <SidenavGroupLabel>"Components"</SidenavGroupLabel>
-                <SidenavGroupContent>
-                    <SidenavMenu>{sections}</SidenavMenu>
-                </SidenavGroupContent>
-            </SidenavGroup>
+            <NavMain active_path=active_path />
+            <NavProjects />
         </SidenavContent>
-
-        <SidenavFooter class="border-t border-sidenav-border">
-            <UserMenu />
+        <SidenavFooter>
+            <NavUser />
         </SidenavFooter>
     }
 }
 
-/// One accordion-grouped nav section. The group opens by default when the active
-/// route is one of its links.
+/// Header brand/quick-jump menu (shadcn `TeamSwitcher`).
+#[component]
+fn TeamSwitcher() -> impl IntoView {
+    view! {
+        <SidenavMenu>
+            <SidenavMenuItem>
+                <DropdownMenu
+                    align=DropdownMenuAlign::Start
+                    side=DropdownMenuSide::Bottom
+                    class="block w-full"
+                >
+                    <DropdownMenuTrigger as_child=true>
+                        <SidenavMenuButton
+                            size=SidenavMenuButtonSize::Lg
+                            attr:title="OpenWorkspace UI"
+                            class="data-[state=open]:bg-sidenav-accent"
+                        >
+                            <div class="flex justify-center items-center rounded-lg bg-primary text-primary-foreground aspect-square size-8">
+                                <Icon icon=icondata::LuComponent attr:class="size-4" />
+                            </div>
+                            <div class="grid flex-1 text-sm leading-tight text-left">
+                                <span class="font-semibold truncate">"OpenWorkspace UI"</span>
+                                <span class="text-xs truncate">"Component gallery"</span>
+                            </div>
+                            <Icon icon=icondata::LuChevronsUpDown attr:class="ml-auto size-4" />
+                        </SidenavMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent class="min-w-56">
+                        <DropdownMenuLabel>"OpenWorkspace"</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem href="/ui">
+                            <Icon icon=icondata::LuLayoutGrid />
+                            "Overview"
+                        </DropdownMenuItem>
+                        <DropdownMenuItem href="/">
+                            <Icon icon=icondata::LuHouse />
+                            "Home"
+                        </DropdownMenuItem>
+                        <DropdownMenuItem href="https://github.com/rust-ui/ui">
+                            <Icon icon=icondata::LuBookOpen />
+                            "Reference UI"
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </SidenavMenuItem>
+        </SidenavMenu>
+    }
+}
+
+/// Collapsible nav groups (shadcn `NavMain`). Built on [`Collapsible`] +
+/// [`SidenavMenuButton`], so each group shrinks to an icon (with a `title`
+/// tooltip) when the sidebar collapses.
+#[component]
+fn NavMain(#[prop(into)] active_path: Signal<String>) -> impl IntoView {
+    let groups = NAV_SECTIONS
+        .iter()
+        .map(|section| view! { <NavGroup section=section active_path=active_path /> })
+        .collect_view();
+
+    view! {
+        <SidenavGroup>
+            <SidenavGroupLabel>"Platform"</SidenavGroupLabel>
+            <SidenavMenu>
+                <SidenavMenuItem>
+                    <SidenavMenuButton href="/ui".to_string() tooltip="Overview">
+                        <Icon icon=icondata::LuLayoutGrid />
+                        <span>"Overview"</span>
+                    </SidenavMenuButton>
+                </SidenavMenuItem>
+                {groups}
+            </SidenavMenu>
+        </SidenavGroup>
+    }
+}
+
+/// One collapsible group with a chevron that rotates on open.
 #[component]
 fn NavGroup(section: &'static NavSection, #[prop(into)] active_path: Signal<String>) -> impl IntoView {
-    let open = {
-        let here = active_path.get_untracked();
-        section.links.iter().any(|(href, _)| here == *href)
-    };
+    let open = RwSignal::new(
+        section
+            .links
+            .iter()
+            .any(|(href, _)| active_path.get_untracked() == *href),
+    );
     let links = section
         .links
         .iter()
-        .map(|(href, label)| view! { <SidenavLink href=*href>{*label}</SidenavLink> })
+        .map(|(href, label)| {
+            view! {
+                <SidenavMenuSubItem>
+                    <SidenavMenuSubButton href=*href>{*label}</SidenavMenuSubButton>
+                </SidenavMenuSubItem>
+            }
+        })
         .collect_view();
 
     view! {
         <SidenavMenuItem>
-            <AccordionItem default_open=open>
-                <AccordionTrigger class="p-2 rounded-md hover:bg-sidenav-accent hover:text-sidenav-accent-foreground">
-                    <AccordionHeader>
-                        <Icon icon=section.icon attr:class="size-4" />
-                        <AccordionTitle>{section.title}</AccordionTitle>
-                    </AccordionHeader>
-                </AccordionTrigger>
-                <AccordionContent class="p-0">
+            <Collapsible open=open class="group/collapsible">
+                <SidenavMenuButton
+                    tooltip=section.title
+                    on:click=move |_| open.update(|o| *o = !*o)
+                >
+                    <Icon icon=section.icon />
+                    <span>{section.title}</span>
+                    <Icon
+                        icon=icondata::LuChevronRight
+                        attr:class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                    />
+                </SidenavMenuButton>
+                <CollapsibleContent>
                     <SidenavMenuSub>{links}</SidenavMenuSub>
-                </AccordionContent>
-            </AccordionItem>
+                </CollapsibleContent>
+            </Collapsible>
         </SidenavMenuItem>
     }
 }
 
-/// Brand block in the header that doubles as a quick-jump menu.
+/// Projects list with a per-item action menu (shadcn `NavProjects`). Hidden when
+/// the sidebar is collapsed to icons.
 #[component]
-fn BrandSelector() -> impl IntoView {
+fn NavProjects() -> impl IntoView {
+    let items = PROJECTS
+        .iter()
+        .map(|(name, icon)| {
+            view! {
+                <SidenavMenuItem>
+                    <SidenavMenuButton href="#".to_string()>
+                        <Icon icon=*icon />
+                        <span>{*name}</span>
+                    </SidenavMenuButton>
+                    <DropdownMenu
+                        align=DropdownMenuAlign::Start
+                        side=DropdownMenuSide::Bottom
+                        class="contents"
+                    >
+                        <DropdownMenuTrigger as_child=true>
+                            <SidenavMenuAction show_on_hover=true>
+                                <Icon icon=icondata::LuEllipsis />
+                            </SidenavMenuAction>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent class="w-48">
+                            <DropdownMenuItem>
+                                <Icon icon=icondata::LuFolder />
+                                "View project"
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <Icon icon=icondata::LuForward />
+                                "Share project"
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem variant=DropdownMenuItemVariant::Destructive>
+                                <Icon icon=icondata::LuTrash2 />
+                                "Delete project"
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </SidenavMenuItem>
+            }
+        })
+        .collect_view();
+
     view! {
-        <DropdownMenu align=DropdownMenuAlign::Start class="block w-full">
-            <DropdownMenuTrigger class="flex gap-2 justify-between items-center px-2 w-full h-12 bg-transparent border-0 hover:bg-sidenav-accent">
-                <div class="flex gap-2 items-center min-w-0">
-                    <div class="flex justify-center items-center rounded-lg bg-primary text-primary-foreground size-8 shrink-0">
-                        <Icon icon=icondata::LuComponent attr:class="size-4" />
-                    </div>
-                    <div class="grid flex-1 text-sm leading-tight text-left">
-                        <span class="font-semibold truncate">"OpenWorkspace UI"</span>
-                        <span class="text-xs truncate text-muted-foreground">
-                            "Component gallery"
-                        </span>
-                    </div>
-                </div>
-                <Icon icon=icondata::LuChevronsUpDown attr:class="opacity-60 size-4 shrink-0" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent class="w-56">
-                <DropdownMenuGroup>
-                    <DropdownMenuItem href="/ui">
-                        <Icon icon=icondata::LuLayoutGrid />
-                        "Overview"
-                    </DropdownMenuItem>
-                    <DropdownMenuItem href="/">
-                        <Icon icon=icondata::LuHouse />
-                        "Home"
-                    </DropdownMenuItem>
-                </DropdownMenuGroup>
-            </DropdownMenuContent>
-        </DropdownMenu>
+        <SidenavGroup class="group-data-[collapsible=Icon]:hidden">
+            <SidenavGroupLabel>"Projects"</SidenavGroupLabel>
+            <SidenavGroupContent>
+                <SidenavMenu>{items}</SidenavMenu>
+            </SidenavGroupContent>
+        </SidenavGroup>
     }
 }
 
-/// Account menu pinned to the sidenav footer; opens upward.
+/// Footer account menu (shadcn `NavUser`); opens upward.
 #[component]
-fn UserMenu() -> impl IntoView {
+fn NavUser() -> impl IntoView {
     view! {
-        <DropdownMenu align=DropdownMenuAlign::Start side=DropdownMenuSide::Top class="block w-full">
-            <DropdownMenuTrigger class="flex gap-2 justify-between items-center px-2 w-full h-12 bg-transparent border-0 hover:bg-sidenav-accent">
-                <div class="flex gap-2 items-center min-w-0">
-                    <Avatar size=AvatarSize::Sm>
-                        <AvatarFallback>"OW"</AvatarFallback>
-                    </Avatar>
-                    <div class="grid flex-1 text-sm leading-tight text-left">
-                        <span class="font-medium truncate">"OpenWorkspace"</span>
-                        <span class="text-xs truncate text-muted-foreground">
-                            "dev@openworkspace.dev"
-                        </span>
-                    </div>
-                </div>
-                <Icon icon=icondata::LuChevronsUpDown attr:class="opacity-60 size-4 shrink-0" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent class="min-w-56">
-                <DropdownMenuLabel>"Main menu"</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                    <DropdownMenuItem href="/ui">
-                        <Icon icon=icondata::LuLayoutGrid />
-                        "Overview"
-                    </DropdownMenuItem>
-                    <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                            <Icon icon=icondata::LuSettings />
-                            "Settings"
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
+        <SidenavMenu>
+            <SidenavMenuItem>
+                <DropdownMenu
+                    align=DropdownMenuAlign::Start
+                    side=DropdownMenuSide::Top
+                    class="block w-full"
+                >
+                    <DropdownMenuTrigger as_child=true>
+                        <SidenavMenuButton
+                            size=SidenavMenuButtonSize::Lg
+                            attr:title="OpenWorkspace"
+                            class="data-[state=open]:bg-sidenav-accent"
+                        >
+                            <Avatar size=AvatarSize::Sm>
+                                <AvatarFallback>"OW"</AvatarFallback>
+                            </Avatar>
+                            <div class="grid flex-1 text-sm leading-tight text-left">
+                                <span class="font-semibold truncate">"OpenWorkspace"</span>
+                                <span class="text-xs truncate">"dev@openworkspace.dev"</span>
+                            </div>
+                            <Icon icon=icondata::LuChevronsUpDown attr:class="ml-auto size-4" />
+                        </SidenavMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent class="min-w-56">
+                        <DropdownMenuLabel>"dev@openworkspace.dev"</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
                             <DropdownMenuItem>
-                                <Icon icon=icondata::LuUser />
+                                <Icon icon=icondata::LuSparkles />
+                                "Upgrade to Pro"
+                            </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                            <DropdownMenuItem>
+                                <Icon icon=icondata::LuBadgeCheck />
                                 "Account"
                             </DropdownMenuItem>
                             <DropdownMenuItem>
-                                <Icon icon=icondata::LuShield />
-                                "Privacy"
+                                <Icon icon=icondata::LuCreditCard />
+                                "Billing"
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                                 <Icon icon=icondata::LuBell />
                                 "Notifications"
                             </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                            <Icon icon=icondata::LuWrench />
-                            "Tools"
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                            <DropdownMenuItem>
-                                <Icon icon=icondata::LuDownload />
-                                "Export data"
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <Icon icon=icondata::LuUpload />
-                                "Import data"
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                                <Icon icon=icondata::LuTerminal />
-                                "Developer tools"
-                            </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                    <DropdownMenuItem href="https://github.com/rust-ui/ui">
-                        <Icon icon=icondata::LuBookOpen />
-                        "Reference UI"
-                    </DropdownMenuItem>
-                    <DropdownMenuItem href="/">
-                        <Icon icon=icondata::LuHouse />
-                        "Home"
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        <Icon icon=icondata::LuLogOut />
-                        "Sign out"
-                    </DropdownMenuItem>
-                </DropdownMenuGroup>
-            </DropdownMenuContent>
-        </DropdownMenu>
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>
+                            <Icon icon=icondata::LuLogOut />
+                            "Log out"
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </SidenavMenuItem>
+        </SidenavMenu>
     }
 }

@@ -1,4 +1,4 @@
-use crate::{clx, cn, variants, void};
+use crate::{Tooltip, TooltipContent, TooltipPosition, TooltipTrigger, clx, cn, void};
 use leptos::context::Provider;
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
@@ -68,24 +68,124 @@ void! {
     "w-full h-8 shadow-none bg-background"
 }
 
-variants! {
-    /// Primary clickable row inside a [`SidenavMenuItem`]. Pass `href` to render
-    /// an anchor with active-state `aria-current`; otherwise it is a button.
-    SidenavMenuButton {
-        base: "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden ring-sidenav-ring transition-[width,height,padding] hover:bg-sidenav-accent hover:text-sidenav-accent-foreground focus-visible:ring-2 active:bg-sidenav-accent active:text-sidenav-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidenav=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-[current=page]:bg-sidenav-accent aria-[current=page]:font-medium aria-[current=page]:text-sidenav-accent-foreground data-[state=open]:hover:bg-sidenav-accent data-[state=open]:hover:text-sidenav-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 group-data-[collapsible=Icon]:size-8! group-data-[collapsible=Icon]:p-0! [&>svg]:stroke-2 aria-[current=page]:[&>svg]:stroke-[2.7]",
-        variants: {
-            variant: {
-                Default: "",
-                Outline: "bg-background shadow-[0_0_0_1px_hsl(var(--sidenav-border))] hover:shadow-[0_0_0_1px_hsl(var(--sidenav-accent))]",
-            },
-            size: {
-                Default: "h-8 text-sm",
-                Sm: "h-7 text-xs",
-                Lg: "h-12",
-            }
-        },
-        component: { element: button, support_href: true, support_aria_current: true }
+const SIDENAV_MENU_BUTTON_BASE: &str = "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden ring-sidenav-ring transition-[width,height,padding] hover:bg-sidenav-accent hover:text-sidenav-accent-foreground focus-visible:ring-2 active:bg-sidenav-accent active:text-sidenav-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidenav=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-[current=page]:bg-sidenav-accent aria-[current=page]:font-medium aria-[current=page]:text-sidenav-accent-foreground data-[state=open]:hover:bg-sidenav-accent data-[state=open]:hover:text-sidenav-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 group-data-[collapsible=Icon]:size-8! group-data-[collapsible=Icon]:p-2! [&>svg]:stroke-2 aria-[current=page]:[&>svg]:stroke-[2.7]";
+
+/// Visual style of a [`SidenavMenuButton`].
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+pub enum SidenavMenuButtonVariant {
+    #[default]
+    Default,
+    Outline,
+}
+
+impl SidenavMenuButtonVariant {
+    fn class(self) -> &'static str {
+        match self {
+            Self::Default => "",
+            Self::Outline => "bg-background shadow-[0_0_0_1px_hsl(var(--sidenav-border))] hover:shadow-[0_0_0_1px_hsl(var(--sidenav-accent))]",
+        }
     }
+}
+
+/// Height/density of a [`SidenavMenuButton`]. `Lg` is for header/footer rows
+/// (team switcher, account menu).
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+pub enum SidenavMenuButtonSize {
+    #[default]
+    Default,
+    Sm,
+    Lg,
+}
+
+impl SidenavMenuButtonSize {
+    fn class(self) -> &'static str {
+        match self {
+            Self::Default => "h-8 text-sm",
+            Self::Sm => "h-7 text-xs",
+            Self::Lg => "h-12 text-sm",
+        }
+    }
+}
+
+/// Primary clickable row inside a [`SidenavMenuItem`]. Renders a `<button>`, or
+/// an `<a>` when `href` is set (with active-state `aria-current`). When the
+/// sidenav is collapsed to icons it shrinks to an icon and, if `tooltip` is set,
+/// reveals that label in a right-side tooltip on hover. Native attributes,
+/// events and bindings forward to the root.
+#[component]
+pub fn SidenavMenuButton(
+    #[prop(into, optional)] variant: Signal<SidenavMenuButtonVariant>,
+    #[prop(into, optional)] size: Signal<SidenavMenuButtonSize>,
+    #[prop(into, optional)] href: Option<String>,
+    /// Marks the row as the current page (`aria-current="page"`).
+    #[prop(into, optional)]
+    is_active: Signal<bool>,
+    /// Label shown in a tooltip while the sidenav is collapsed to icons.
+    #[prop(into, optional)]
+    tooltip: Option<String>,
+    #[prop(into, optional)] class: Signal<String>,
+    children: ChildrenFn,
+) -> impl IntoView {
+    let children = StoredValue::new(children);
+    let href = StoredValue::new(href);
+    let merged = move || {
+        cn!(
+            SIDENAV_MENU_BUTTON_BASE,
+            variant.get().class(),
+            size.get().class(),
+            class.get(),
+        )
+    };
+    let aria_current = move || is_active.get().then_some("page");
+
+    // Built lazily so it can be (re)rendered inside the tooltip wrapper without
+    // capturing a non-`Send` view value across the reactive boundary.
+    let render_button = move || match href.get_value() {
+        Some(href) => view! {
+            <a
+                data-name="SidenavMenuButton"
+                data-sidenav="menu-button"
+                href=href
+                aria-current=aria_current
+                class=merged
+            >
+                {children.with_value(|c| c())}
+            </a>
+        }
+        .into_any(),
+        None => view! {
+            <button
+                type="button"
+                data-name="SidenavMenuButton"
+                data-sidenav="menu-button"
+                aria-current=aria_current
+                class=merged
+            >
+                {children.with_value(|c| c())}
+            </button>
+        }
+        .into_any(),
+    };
+
+    let Some(tooltip) = tooltip else {
+        return render_button().into_any();
+    };
+    let tooltip = StoredValue::new(tooltip);
+
+    // Tooltip is suppressed while expanded (the label is already visible) and
+    // only revealed once the sidenav collapses to its icon rail.
+    view! {
+        <Tooltip class="block w-full">
+            <TooltipTrigger class="block w-full">{render_button()}</TooltipTrigger>
+            <TooltipContent
+                position=TooltipPosition::Right
+                class="hidden group-data-[collapsible=Icon]:block"
+            >
+                {move || tooltip.get_value()}
+            </TooltipContent>
+        </Tooltip>
+    }
+    .into_any()
 }
 
 /// Shared open/closed state for the sidenav, provided by [`SidenavWrapper`] and
@@ -313,7 +413,10 @@ pub fn Sidenav(
                 data-name="Sidenav"
                 data-state=move || open_state_data(is_open.get())
                 data-side=move || side.get().as_data()
-                data-collapsible=move || collapsible.get().as_data()
+                // Mirror shadcn: expose the collapsible mode only while collapsed,
+                // so `group-data-[collapsible=Icon]` content rules (shrink to icon,
+                // hide labels) apply only then — never while expanded.
+                data-collapsible=move || if is_open.get() { "" } else { collapsible.get().as_data() }
                 class="hidden md:block group peer text-sidenav-foreground"
             >
                 <div data-name="SidenavGap" class=gap_class />
