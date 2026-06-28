@@ -21,6 +21,18 @@ i18n = { path = "../../../crates/i18n", version = "0.1.0", default-features = fa
 # touchpoint in app code (provider + config stay behind the `i18n` facade).
 leptos-fluent.workspace = true
 
+# The showcase gallery (`showcase/`) exercises the whole `ui` kit: Lucide glyphs
+# in the nav and demos, plus the trait/derive surfaces the kit's forms, data grid
+# and date pickers expect from a consumer. All are existing workspace deps already
+# pulled in by `crates/ui`; they compile for both targets (used in shared view
+# code, never gated to one).
+leptos_icons.workspace = true
+icondata.workspace = true
+serde.workspace = true
+validator = { workspace = true, features = ["derive"] }
+strum.workspace = true
+time = { workspace = true, features = ["macros"] }
+
 http.workspace = true
 cfg-if.workspace = true
 thiserror.workspace = true

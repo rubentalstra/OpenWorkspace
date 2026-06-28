@@ -432,11 +432,14 @@ pub fn GridRow(
             data-index=move || index.get().to_string()
             class=merged_class
             tabindex="-1"
-            // Performance: content-visibility:auto skips rendering for off-screen rows
+            // Performance: content-visibility:auto skips rendering for off-screen rows.
+            // Row height must match `use_virtual_scroll`'s `ROW_HEIGHT` so the
+            // absolutely-positioned rows land in the slots the hook computes.
             style=move || {
-                let translate_y = index.get() * 36;
+                let row_height = crate::constants::Pagination::ROW_HEIGHT;
+                let translate_y = index.get() * row_height;
                 format!(
-                    "height: 36px; transform: translateY({translate_y}px); content-visibility: auto; contain-intrinsic-size: auto 36px;",
+                    "height: {row_height}px; transform: translateY({translate_y}px); content-visibility: auto; contain-intrinsic-size: auto {row_height}px;",
                 )
             }
         >

@@ -31,8 +31,8 @@ pub fn InputPrompt(
 }
 
 /// Auto-growing prompt textarea. Submits via `on_submit` when Enter is pressed
-/// without Shift; every other native attribute, event and `bind:value` forwards
-/// to the underlying `<textarea>`.
+/// without Shift; every other native attribute and event (e.g. `prop:value` +
+/// `on:input` for two-way control) forwards to the underlying `<textarea>`.
 #[component]
 pub fn InputPromptTextarea(
     #[prop(into, optional)] class: Signal<String>,

@@ -4,7 +4,7 @@ use leptos_fluent::move_tr;
 use leptos_meta::{Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
     StaticSegment,
-    components::{Route, Router, Routes},
+    components::{ParentRoute, Route, Router, Routes},
 };
 
 mod csrf_client;
@@ -65,7 +65,20 @@ pub fn App() -> impl IntoView {
                 <main>
                     <Routes fallback=|| "Page not found.".into_view()>
                         <Route path=StaticSegment("") view=HomePage />
-                        <Route path=StaticSegment("ui") view=showcase::UiShowcase />
+                        <ParentRoute path=StaticSegment("ui") view=showcase::ShowcaseLayout>
+                            <Route path=StaticSegment("") view=showcase::ShowcaseIndex />
+                            <Route path=StaticSegment("buttons") view=showcase::ButtonsPage />
+                            <Route path=StaticSegment("inputs") view=showcase::InputsPage />
+                            <Route path=StaticSegment("forms") view=showcase::FormsPage />
+                            <Route path=StaticSegment("overlays") view=showcase::OverlaysPage />
+                            <Route path=StaticSegment("navigation") view=showcase::NavigationPage />
+                            <Route path=StaticSegment("data") view=showcase::DataPage />
+                            <Route path=StaticSegment("dates") view=showcase::DatesPage />
+                            <Route path=StaticSegment("feedback") view=showcase::FeedbackPage />
+                            <Route path=StaticSegment("layout") view=showcase::LayoutPage />
+                            <Route path=StaticSegment("theme") view=showcase::ThemePage />
+                            <Route path=StaticSegment("hooks") view=showcase::HooksPage />
+                        </ParentRoute>
                     </Routes>
                 </main>
             </Router>

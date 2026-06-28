@@ -130,12 +130,21 @@ impl Toast {
 
 /// Handle to the toast queue, provided by [`Toaster`] and retrieved with
 /// [`use_toaster`]. Cloning is cheap — it shares one underlying queue.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct ToasterContext {
     queue: RwSignal<Vec<Toast>>,
 }
 
 impl ToasterContext {
+    /// Creates an empty toast queue. Provide this above where [`Toaster`] is
+    /// mounted when callers that need [`use_toaster`] are siblings of the
+    /// toaster rather than its descendants; [`Toaster`] reuses an ancestor
+    /// context when one is present.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// Pushes `toast` onto the stack, arming its auto-dismiss timer when it
     /// carries a finite duration. Returns the id so callers can dismiss a
     /// persistent toast later.
@@ -210,10 +219,14 @@ pub fn Toaster(
     #[prop(into, optional)] position: Signal<SonnerPosition>,
     #[prop(into, optional)] class: Signal<String>,
 ) -> impl IntoView {
-    let ctx = ToasterContext {
-        queue: RwSignal::new(Vec::new()),
-    };
-    provide_context(ctx);
+    // Reuse a context provided by an ancestor (so callers mounted as siblings
+    // of the toaster still resolve it) and otherwise self-provide for the
+    // common descendant-only case.
+    let ctx = use_context::<ToasterContext>().unwrap_or_else(|| {
+        let ctx = ToasterContext::new();
+        provide_context(ctx);
+        ctx
+    });
 
     let merged = move || {
         cn!(

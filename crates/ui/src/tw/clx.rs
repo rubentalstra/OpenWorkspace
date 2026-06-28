@@ -15,14 +15,14 @@ macro_rules! clx {
         #[component]
         pub fn $name(
             #[prop(into, optional)] class: Signal<String>,
-            children: Children,
+            #[prop(optional)] children: Option<Children>,
         ) -> impl IntoView {
             view! {
                 <$element
                     class=move || $crate::cn!($($base_class),+, class.get())
                     data-name=stringify!($name)
                 >
-                    {children()}
+                    {children.map(|children| children())}
                 </$element>
             }
         }
