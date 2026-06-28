@@ -15,6 +15,7 @@ pub mod label;
 pub mod progress;
 pub mod separator;
 pub mod skeleton;
+pub mod slider;
 pub mod spinner;
 pub mod switch;
 pub mod textarea;

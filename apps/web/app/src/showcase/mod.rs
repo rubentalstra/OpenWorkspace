@@ -8,7 +8,7 @@ use leptos_router::components::Outlet;
 use ui::{
     AspectRatio, Avatar, AvatarFallback, Badge, BadgeVariant, Button, ButtonSize, ButtonVariant,
     Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Checkbox, Input, Kbd,
-    KbdGroup, Label, Progress, Separator, SeparatorOrientation, Skeleton, Spinner, Switch,
+    KbdGroup, Label, Progress, Separator, SeparatorOrientation, Skeleton, Slider, Spinner, Switch,
     Textarea, Toggle, use_theme_mode,
 };
 
@@ -104,10 +104,15 @@ fn Section(#[prop(into)] title: String, children: Children) -> impl IntoView {
 
 /// Gallery of the ported primitives.
 #[component]
+#[expect(
+    clippy::too_many_lines,
+    reason = "flat enumeration of component demos; splitting hurts readability"
+)]
 pub fn ComponentsPage() -> impl IntoView {
     let switch_on = RwSignal::new(true);
     let checked = RwSignal::new(true);
     let bold = RwSignal::new(false);
+    let vol = RwSignal::new(40.0);
 
     view! {
         <div class="flex flex-col gap-10">
@@ -154,6 +159,13 @@ pub fn ComponentsPage() -> impl IntoView {
             <Section title="Progress / Spinner">
                 <Progress value=66.0 class="w-64" />
                 <Spinner />
+            </Section>
+
+            <Section title="Slider">
+                <Slider value=vol on_change=Callback::new(move |v| vol.set(v)) class="w-64" />
+                <span class="text-muted-foreground text-sm tabular-nums">
+                    {move || format!("{:.0}", vol.get())}
+                </span>
             </Section>
 
             <Section title="Kbd">

@@ -38,6 +38,7 @@ pub use components::label::Label;
 pub use components::progress::Progress;
 pub use components::separator::{Separator, SeparatorOrientation};
 pub use components::skeleton::Skeleton;
+pub use components::slider::Slider;
 pub use components::spinner::Spinner;
 pub use components::switch::{Switch, SwitchSize};
 pub use components::textarea::Textarea;

@@ -22,10 +22,13 @@ icondata = { workspace = true }
 # class). JS calls run only on the client, inside Effects/event handlers.
 web-sys = { version = "0.3", features = [
     "Document",
+    "DomRect",
     "DomTokenList",
     "Element",
     "EventTarget",
+    "KeyboardEvent",
     "MediaQueryList",
+    "PointerEvent",
     "Storage",
     "Window",
 ] }
