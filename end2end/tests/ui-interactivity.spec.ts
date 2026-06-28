@@ -104,8 +104,9 @@ test.describe("/ui interactivity (hydration + wired handlers)", () => {
   test("layout: an Accordion expands on click", async ({ page }) => {
     await page.goto("/ui/layout");
     await waitForHydration(page);
-    // The first item is default-open; target the second (closed) trigger.
-    const trigger = page.locator('[data-name="AccordionTrigger"]').nth(1);
+    // The sidenav nav groups are also accordions, so scope to the page content.
+    // The first page item is default-open; target the second (closed) trigger.
+    const trigger = page.locator('main [data-name="AccordionTrigger"]').nth(1);
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
     await trigger.click();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");

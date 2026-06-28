@@ -324,6 +324,99 @@ pub fn DropdownMenuItem(
     .into_any()
 }
 
+/// Open state of a [`DropdownMenuSub`], shared with its trigger and flyout.
+#[derive(Clone, Copy)]
+struct DropdownMenuSubContext {
+    open: RwSignal<bool>,
+}
+
+/// A nested submenu inside a [`DropdownMenuContent`]. Owns its own open state and
+/// reveals its [`DropdownMenuSubContent`] flyout while hovered (or while the
+/// [`DropdownMenuSubTrigger`] is toggled).
+#[component]
+pub fn DropdownMenuSub(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let open = RwSignal::new(false);
+
+    view! {
+        <Provider value=DropdownMenuSubContext { open }>
+            <div
+                data-name="DropdownMenuSub"
+                class=move || cn!("relative", class.get())
+                on:pointerenter=move |_| open.set(true)
+                on:pointerleave=move |_| open.set(false)
+            >
+                {children()}
+            </div>
+        </Provider>
+    }
+}
+
+/// Row that opens its enclosing [`DropdownMenuSub`]. Carries a trailing chevron
+/// and `aria-haspopup`/`aria-expanded`; toggles the flyout on click and opens it
+/// on hover via the parent.
+#[component]
+pub fn DropdownMenuSubTrigger(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let sub = expect_context::<DropdownMenuSubContext>();
+
+    let merged = move || {
+        cn!(
+            "inline-flex gap-2 items-center w-full rounded-sm px-2 py-1.5 text-sm text-left cursor-pointer transition-colors outline-none text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground [&_svg:not([class*='size-'])]:size-4",
+            class.get(),
+        )
+    };
+
+    view! {
+        <button
+            type="button"
+            data-name="DropdownMenuSubTrigger"
+            role="menuitem"
+            tabindex="-1"
+            aria-haspopup="menu"
+            aria-expanded=move || sub.open.get().to_string()
+            data-state=move || if sub.open.get() { "open" } else { "closed" }
+            class=merged
+            on:click=move |_| sub.open.update(|open| *open = !*open)
+        >
+            {children()}
+            <Icon icon=icondata::LuChevronRight attr:class="ml-auto size-4 text-muted-foreground" />
+        </button>
+    }
+}
+
+/// Flyout panel of a [`DropdownMenuSub`], rendered to the trigger's side while
+/// open. Holds [`DropdownMenuItem`]s, which close the whole menu on select.
+#[component]
+pub fn DropdownMenuSubContent(
+    #[prop(into, optional)] class: Signal<String>,
+    children: ChildrenFn,
+) -> impl IntoView {
+    let sub = expect_context::<DropdownMenuSubContext>();
+    let children = StoredValue::new(children);
+
+    view! {
+        <Show when=move || sub.open.get()>
+            <div
+                data-name="DropdownMenuSubContent"
+                role="menu"
+                class=move || {
+                    cn!(
+                        "absolute top-0 left-full z-50 ml-1 min-w-[11rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
+                        class.get(),
+                    )
+                }
+            >
+                {move || children.read_value()()}
+            </div>
+        </Show>
+    }
+}
+
 /// Selected-value state for a [`DropdownMenuRadioGroup`], shared with its items.
 #[derive(Clone)]
 struct DropdownMenuRadioContext<T: Clone + PartialEq + Send + Sync + 'static> {
