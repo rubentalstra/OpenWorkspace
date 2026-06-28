@@ -18,6 +18,9 @@ COPY --from=planner /app/recipe.json recipe.json
 # a skeleton — cook the wasm target too if the wasm build cache becomes a bottleneck.)
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
+# Pin the Tailwind binary so cargo-leptos downloads a fixed release asset instead
+# of resolving "latest" via the GitHub API (which rate-limits during CI builds).
+ENV LEPTOS_TAILWIND_VERSION=v4.2.1
 RUN cargo leptos build --release
 
 FROM docker.io/library/debian:bookworm-slim AS runtime
