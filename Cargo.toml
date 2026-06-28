@@ -44,6 +44,18 @@ leptos-fluent = "0.3.1"
 fluent-templates = "0.14.0"
 unic-langid = "0.9.6"
 
+# UI kit (crates/ui). STABLE-only: rust-ui's `icons`/`leptos_ui` force `leptos/nightly`
+# and are deliberately NOT used. `tw_merge` (the cn() class-merge + cva-style `variants!`
+# macro rust-ui components use) is framework-agnostic and stable; `leptos_icons`+`icondata`
+# provide Lucide on stable Leptos 0.8. rust-ui component source is CLI-fetched then patched
+# onto these. See the UI-foundation plan + docs/development.md.
+tw_merge = { version = "0.1.21", features = ["variant"] }
+leptos_icons = "0.7.1"
+icondata = "0.7"
+# Used by the vendored clx/variants macros (rust-ui's leptos_ui macros, copied into
+# crates/ui/src/tw to avoid leptos_ui's nightly pin).
+paste = "1"
+
 # Server stack.
 axum = "0.8.9"
 tokio = { version = "1.52.3", features = ["full"] }
@@ -65,6 +77,10 @@ wasm-bindgen = "0.2.126"
 # argon2, the otel/metrics stack, …) live in their own crate's Cargo.toml.
 serde = { version = "1.0", features = ["derive"] }
 secrecy = { version = "0.10.3", features = ["serde"] }
+strum = { version = "0.28.0", features = ["derive"] }
+validator = "0.20.0"
+serde_json = "1.0.150"
+time = "0.3.51"
 
 # cargo-leptos configuration (array-of-tables form; one entry per Leptos project).
 [[workspace.metadata.leptos]]
@@ -74,7 +90,10 @@ lib-package = "frontend"
 site-root = "target/site"
 site-pkg-dir = "pkg"
 watch-additional-files = ["locales"]
-style-file = "apps/web/style/main.css"
+# Single self-contained Tailwind v4 entry (Pipeline A): cargo-leptos runs its
+# bundled Tailwind binary on this file into pkg/openworkspace.css. No `style-file`
+# — main.css is the only stylesheet (shadcn Base UI / nova).
+tailwind-input-file = "apps/web/style/main.css"
 assets-dir = "apps/web/public"
 site-addr = "127.0.0.1:3000"
 reload-port = 3001

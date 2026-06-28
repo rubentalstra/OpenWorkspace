@@ -4,10 +4,13 @@ use leptos_fluent::move_tr;
 use leptos_meta::{Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
     StaticSegment,
-    components::{Route, Router, Routes},
+    components::{ParentRoute, Route, Router, Routes},
 };
 
+pub mod auth;
 mod csrf_client;
+pub mod dashboard;
+pub mod showcase;
 pub use csrf_client::CsrfClient;
 
 /// The per-request CSRF token, provided as Leptos context by the server so the
@@ -20,7 +23,7 @@ pub struct CsrfToken(pub String);
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="en" class="style-nova">
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -40,6 +43,11 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
+    // Dark-mode state: light by default, resolved on the client from local
+    // storage (falling back to the OS color-scheme) and mirrored onto the
+    // document root's `dark` class. Pure Leptos — no inline theme script.
+    _ = ui::ThemeMode::init();
+
     // On SSR the server provides the per-request CSRF token; emit it into <head>
     // so both the header (JS) and hidden-field (no-JS) paths can read it. Absent
     // during hydration, where it is unneeded.
@@ -55,13 +63,28 @@ pub fn App() -> impl IntoView {
 
         // content for this welcome page
         <I18nProvider>
-            <Router>
-                <main>
-                    <Routes fallback=|| "Page not found.".into_view()>
-                        <Route path=StaticSegment("") view=HomePage />
-                    </Routes>
-                </main>
-            </Router>
+            <ui::TooltipProvider>
+                <Router>
+                    <div>
+                        <Routes fallback=|| "Page not found.".into_view()>
+                            <Route path=StaticSegment("") view=HomePage />
+                            <ParentRoute path=StaticSegment("ui") view=showcase::ShowcaseLayout>
+                                <Route path=StaticSegment("") view=showcase::ShowcaseIndex />
+                                <Route path=StaticSegment("buttons") view=showcase::ButtonsPage />
+                                <Route path=StaticSegment("inputs") view=showcase::InputsPage />
+                                <Route path=StaticSegment("data") view=showcase::DataPage />
+                                <Route path=StaticSegment("feedback") view=showcase::FeedbackPage />
+                                <Route path=StaticSegment("overlays") view=showcase::OverlaysPage />
+                                <Route path=StaticSegment("layout") view=showcase::LayoutPage />
+                                <Route path=StaticSegment("chat") view=showcase::ChatPage />
+                            </ParentRoute>
+                            <Route path=StaticSegment("dashboard") view=dashboard::Dashboard />
+                            <Route path=StaticSegment("login") view=auth::LoginPage />
+                            <Route path=StaticSegment("signup") view=auth::SignupPage />
+                        </Routes>
+                    </div>
+                </Router>
+            </ui::TooltipProvider>
         </I18nProvider>
     }
 }

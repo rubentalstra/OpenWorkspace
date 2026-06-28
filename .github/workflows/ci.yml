@@ -15,6 +15,15 @@ env:
   # sccache caches per-rustc-invocation objects, not incremental fragments, so
   # incremental builds would bypass it. Disable it everywhere to feed the cache.
   CARGO_INCREMENTAL: 0
+  # Tailwind standalone binary version. cargo-leptos prefers a `tailwindcss` on
+  # PATH (the install step below) and only downloads when absent; pinning the
+  # version keeps the installed binary and any fallback download in lockstep and
+  # skips cargo-leptos's GitHub "latest" API lookup (which rate-limits on shared
+  # CI runner IPs). We must supply the binary ourselves because the musl-static
+  # cargo-leptos that taiki-e/install-action ships makes cargo-leptos fetch the
+  # *musl* Tailwind build, whose loader is absent on glibc ubuntu — execve then
+  # fails with ENOENT in build_tailwind. The glibc binary on PATH avoids that.
+  LEPTOS_TAILWIND_VERSION: v4.2.1
 
 jobs:
   # No compilation: rustfmt/leptosfmt parse, they don't build. Stays parallel.
@@ -64,6 +73,12 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-leptos
+      - name: Install Tailwind CSS (glibc standalone)
+        run: |
+          curl -fsSL -o /usr/local/bin/tailwindcss \
+            "https://github.com/tailwindlabs/tailwindcss/releases/download/${LEPTOS_TAILWIND_VERSION}/tailwindcss-linux-x64"
+          chmod +x /usr/local/bin/tailwindcss
+          tailwindcss --help >/dev/null
       - run: cargo build --workspace --all-targets --locked
       - run: cargo leptos build
       - run: sccache --show-stats
@@ -152,6 +167,12 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-leptos
+      - name: Install Tailwind CSS (glibc standalone)
+        run: |
+          curl -fsSL -o /usr/local/bin/tailwindcss \
+            "https://github.com/tailwindlabs/tailwindcss/releases/download/${LEPTOS_TAILWIND_VERSION}/tailwindcss-linux-x64"
+          chmod +x /usr/local/bin/tailwindcss
+          tailwindcss --help >/dev/null
       # Debug build validates the full ssr+wasm compile fast; the release build is
       # exercised by the container image (deploy/containers/Containerfile.web).
       - run: cargo leptos build

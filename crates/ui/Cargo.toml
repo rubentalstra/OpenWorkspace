@@ -6,6 +6,46 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+# Leptos drives the components; ssr/hydrate are forwarded from apps/web/app so the
+# kit emits identical server/client HTML. (`leptos::wasm_bindgen` re-exports
+# wasm-bindgen, so no direct wasm-bindgen dep is needed.)
+leptos = { workspace = true }
+# Class merging behind the first-party `cn!` facade — shadcn's `cn()` equivalent.
+tw_merge = { workspace = true }
+# The `variants!`/`cn!` macros expand `$crate::paste`.
+paste.workspace = true
+# Lucide glyphs, rendered directly by components that show icons (checkbox check,
+# spinner loader, …) — shadcn's lucide-react equivalent on stable Leptos.
+leptos_icons = { workspace = true }
+icondata = { workspace = true }
+# Date math for the calendar / date-picker. The `wasm-bindgen` feature wires
+# `OffsetDateTime::now_utc()` to the browser clock; without it the calendar panics
+# ("time not implemented on this platform") when it reads today's date on the client.
+time = { workspace = true, features = ["wasm-bindgen"] }
+# Browser APIs for the SSR-safe hooks (media query, local storage, dark-mode
+# class). JS calls run only on the client, inside Effects/event handlers.
+web-sys = { version = "0.3", features = [
+    "Document",
+    "DomRect",
+    "DomTokenList",
+    "Element",
+    "EventTarget",
+    "HtmlDocument",
+    "HtmlElement",
+    "KeyboardEvent",
+    "MediaQueryList",
+    "Node",
+    "PointerEvent",
+    "Storage",
+    "Window",
+] }
+
+# Further deps are added per wave as components need them. Expected returns:
+# leptos_router (nav/sidebar active-link state), time (calendar/date-picker math).
+
+[features]
+ssr = ["leptos/ssr"]
+hydrate = ["leptos/hydrate"]
 
 [lints]
 workspace = true
