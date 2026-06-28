@@ -66,7 +66,10 @@ jobs:
       - name: Generate SBOM (CycloneDX)
         run: cdxgen -t rust -o sbom.cdx.json .
       - name: Generate CBOM (cryptography)
-        run: cdxgen -t rust --include-crypto -o cbom.cdx.json .
+        # --no-validate: cdxgen emits the crypto primitive "aead", which its own
+        # CycloneDX schema check rejects (the spec enum is "ae"); the CBOM file is
+        # still correct, so skip validation rather than fail the release.
+        run: cdxgen -t rust --include-crypto --no-validate -o cbom.cdx.json .
       - uses: actions/upload-artifact@v7
         with:
           name: boms
