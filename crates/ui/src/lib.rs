@@ -30,6 +30,11 @@ pub use components::alert_dialog::{
     AlertDialogTrigger,
 };
 pub use components::aspect_ratio::AspectRatio;
+pub use components::attachment::{
+    Attachment, AttachmentAction, AttachmentActions, AttachmentContent, AttachmentDescription,
+    AttachmentGroup, AttachmentMedia, AttachmentMediaVariant, AttachmentOrientation,
+    AttachmentSize, AttachmentState, AttachmentTitle, AttachmentTrigger,
+};
 pub use components::avatar::{
     Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
 };
@@ -37,6 +42,10 @@ pub use components::badge::{Badge, BadgeVariant};
 pub use components::breadcrumb::{
     Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
     BreadcrumbSeparator,
+};
+pub use components::bubble::{
+    Bubble, BubbleAlign, BubbleContent, BubbleGroup, BubbleReactions, BubbleReactionsSide,
+    BubbleVariant,
 };
 pub use components::button::{Button, ButtonSize, ButtonVariant};
 pub use components::button_group::{
@@ -46,6 +55,11 @@ pub use components::calendar::Calendar;
 pub use components::card::{
     Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
 };
+pub use components::carousel::{
+    Carousel, CarouselContent, CarouselContext, CarouselItem, CarouselNext, CarouselOrientation,
+    CarouselPrevious, use_carousel,
+};
+pub use components::chart::{ChartConfig, ChartContainer, ChartSeries, ChartStyle};
 pub use components::checkbox::Checkbox;
 pub use components::collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger};
 pub use components::combobox::{
@@ -97,10 +111,19 @@ pub use components::item::{
 };
 pub use components::kbd::{Kbd, KbdGroup};
 pub use components::label::Label;
+pub use components::marker::{Marker, MarkerContent, MarkerIcon, MarkerVariant};
 pub use components::menubar::{
     Menubar, MenubarCheckboxItem, MenubarContent, MenubarItem, MenubarItemVariant, MenubarLabel,
     MenubarMenu, MenubarRadioGroup, MenubarRadioItem, MenubarSub, MenubarSubContent,
     MenubarSubTrigger, MenubarTrigger,
+};
+pub use components::message::{
+    Message, MessageAlign, MessageAvatar, MessageContent, MessageFooter, MessageGroup,
+    MessageHeader,
+};
+pub use components::message_scroller::{
+    MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem,
+    MessageScrollerProvider, MessageScrollerViewport,
 };
 pub use components::native_select::{
     NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize,
