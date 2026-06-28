@@ -1,3 +1,4 @@
+use crate::hooks::focus_on_hover::focus_on_hover;
 use crate::hooks::use_dismiss::use_dismiss;
 use crate::{cn, slot};
 use leptos::prelude::*;
@@ -158,6 +159,7 @@ pub fn ContextMenuItem(
     view! {
         <div
             role="menuitem"
+            tabindex="-1"
             data-slot="context-menu-item"
             data-inset=inset.then_some("true")
             data-variant=move || variant.get().as_str()
@@ -169,6 +171,7 @@ pub fn ContextMenuItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=move |_| {
                 if disabled {
                     return;
@@ -197,6 +200,7 @@ pub fn ContextMenuCheckboxItem(
     view! {
         <div
             role="menuitemcheckbox"
+            tabindex="-1"
             data-slot="context-menu-checkbox-item"
             data-inset=inset.then_some("true")
             data-disabled=disabled.then_some("true")
@@ -208,6 +212,7 @@ pub fn ContextMenuCheckboxItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=move |_| {
                 if disabled {
                     return;
@@ -264,6 +269,7 @@ pub fn ContextMenuRadioItem(
     view! {
         <div
             role="menuitemradio"
+            tabindex="-1"
             data-slot="context-menu-radio-item"
             data-inset=inset.then_some("true")
             data-disabled=disabled.then_some("true")
@@ -275,6 +281,7 @@ pub fn ContextMenuRadioItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=move |_| {
                 if disabled {
                     return;

@@ -195,10 +195,13 @@ pub fn CommandItem(
         });
     });
     let select_value = value;
+    let highlighted = RwSignal::new(false);
     view! {
         <div
             data-slot="command-item"
             data-checked=move || selected.get().then_some("true")
+            data-selected=move || highlighted.get().then_some("true")
+            data-highlighted=move || highlighted.get().then_some("true")
             class:hidden=move || !matches.get()
             class=move || {
                 cn!(
@@ -206,6 +209,8 @@ pub fn CommandItem(
                     class.get(),
                 )
             }
+            on:pointermove=move |_| highlighted.set(true)
+            on:pointerleave=move |_| highlighted.set(false)
             on:click=move |_| {
                 if let Some(cb) = on_select {
                     cb.run(select_value.clone());

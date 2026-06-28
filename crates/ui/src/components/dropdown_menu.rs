@@ -1,3 +1,4 @@
+use crate::hooks::focus_on_hover::focus_on_hover;
 use crate::hooks::use_anchored_position::use_anchor_rect;
 use crate::hooks::use_dismiss::use_dismiss;
 use crate::{cn, slot};
@@ -156,6 +157,7 @@ pub fn DropdownMenuItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=move |_| {
                 if let Some(cb) = on_select {
                     cb.run(());
@@ -192,6 +194,7 @@ pub fn DropdownMenuCheckboxItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=move |_| {
                 if let Some(cb) = on_change {
                     cb.run(!checked.get_untracked());
@@ -258,6 +261,7 @@ pub fn DropdownMenuRadioItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=move |_| {
                 ctx.value.set(value.clone());
                 if let Some(cb) = ctx.on_change.get_value() {
@@ -330,6 +334,7 @@ pub fn DropdownMenuSubTrigger(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=move |_| ctx.open.update(|open| *open = !*open)
         >
             {children()}

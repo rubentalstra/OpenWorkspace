@@ -1,3 +1,4 @@
+use crate::hooks::focus_on_hover::focus_on_hover;
 use crate::hooks::use_anchored_position::use_anchor_rect;
 use crate::hooks::use_dismiss::use_dismiss;
 use crate::{cn, slot};
@@ -191,6 +192,7 @@ pub fn MenubarItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=move |_| {
                 if let Some(cb) = on_select {
                     cb.run(());
@@ -231,6 +233,7 @@ pub fn MenubarCheckboxItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=toggle
         >
             <span class="cn-menubar-checkbox-item-indicator pointer-events-none absolute flex items-center justify-center">
@@ -288,6 +291,7 @@ pub fn MenubarRadioItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=move |_| {
                 ctx.value.set(value.clone());
                 if let Some(cb) = ctx.on_change.get_value() {

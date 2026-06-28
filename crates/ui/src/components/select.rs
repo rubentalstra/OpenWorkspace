@@ -1,3 +1,4 @@
+use crate::hooks::focus_on_hover::focus_on_hover;
 use crate::hooks::use_anchored_position::use_anchor_rect;
 use crate::hooks::use_dismiss::use_dismiss;
 use crate::{cn, slot};
@@ -216,6 +217,7 @@ pub fn SelectItem(
     view! {
         <div
             role="option"
+            tabindex="-1"
             data-slot="select-item"
             data-selected=move || selected.get().then_some("true")
             aria-selected=move || selected.get().to_string()
@@ -225,6 +227,7 @@ pub fn SelectItem(
                     class.get(),
                 )
             }
+            on:pointermove=focus_on_hover
             on:click=on_click
         >
             <span class="cn-select-item-text shrink-0 whitespace-nowrap">{children()}</span>
