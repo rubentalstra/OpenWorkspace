@@ -42,6 +42,10 @@ pub use components::card::{
 };
 pub use components::checkbox::Checkbox;
 pub use components::collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger};
+pub use components::dialog::{
+    Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+    DialogTrigger,
+};
 pub use components::empty::{
     Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
 };
@@ -67,6 +71,9 @@ pub use components::pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
     PaginationNext, PaginationPrevious,
 };
+pub use components::popover::{
+    Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger,
+};
 pub use components::progress::Progress;
 pub use components::radio_group::{RadioGroup, RadioGroupItem};
 pub use components::separator::{Separator, SeparatorOrientation};
@@ -83,6 +90,7 @@ pub use components::tabs::{
 pub use components::textarea::Textarea;
 pub use components::toggle::{Toggle, ToggleSize, ToggleVariant};
 pub use components::toggle_group::{ToggleGroup, ToggleGroupItem};
+pub use hooks::use_dismiss::use_dismiss;
 pub use hooks::use_is_mobile::{MOBILE_BREAKPOINT, use_is_mobile};
 pub use hooks::use_media_query::use_media_query;
 pub use hooks::use_theme_mode::{ThemeMode, use_theme_mode};
