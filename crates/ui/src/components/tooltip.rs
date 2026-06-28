@@ -107,27 +107,32 @@ pub fn TooltipContent(
 ) -> impl IntoView {
     let ctx = expect_context::<TooltipCtx>();
     let rect = use_anchor_rect(ctx.open, ctx.anchor);
-    let position = Signal::derive(move || match side.get() {
-        TooltipSide::Top => format!(
-            "position:fixed;top:{}px;left:{}px;transform:translate(-50%,calc(-100% - 6px));",
-            rect.top(),
-            rect.center_x(),
-        ),
-        TooltipSide::Bottom => format!(
-            "position:fixed;top:{}px;left:{}px;transform:translate(-50%,6px);",
-            rect.bottom(),
-            rect.center_x(),
-        ),
-        TooltipSide::Left => format!(
-            "position:fixed;top:{}px;left:{}px;transform:translate(calc(-100% - 6px),-50%);",
-            rect.center_y(),
-            rect.left(),
-        ),
-        TooltipSide::Right => format!(
-            "position:fixed;top:{}px;left:{}px;transform:translate(6px,-50%);",
-            rect.center_y(),
-            rect.right(),
-        ),
+    let position = Signal::derive(move || {
+        if !rect.measured() {
+            return crate::hooks::use_anchored_position::AnchorRect::offscreen().to_owned();
+        }
+        match side.get() {
+            TooltipSide::Top => format!(
+                "position:fixed;top:{}px;left:{}px;transform:translate(-50%,calc(-100% - 6px));",
+                rect.top(),
+                rect.center_x(),
+            ),
+            TooltipSide::Bottom => format!(
+                "position:fixed;top:{}px;left:{}px;transform:translate(-50%,6px);",
+                rect.bottom(),
+                rect.center_x(),
+            ),
+            TooltipSide::Left => format!(
+                "position:fixed;top:{}px;left:{}px;transform:translate(calc(-100% - 6px),-50%);",
+                rect.center_y(),
+                rect.left(),
+            ),
+            TooltipSide::Right => format!(
+                "position:fixed;top:{}px;left:{}px;transform:translate(6px,-50%);",
+                rect.center_y(),
+                rect.right(),
+            ),
+        }
     });
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>

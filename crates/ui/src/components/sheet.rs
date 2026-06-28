@@ -1,3 +1,4 @@
+use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::{cn, slot};
 use leptos::ev;
 use leptos::prelude::*;
@@ -101,16 +102,18 @@ pub fn SheetContent(
                 {show_close
                     .then(|| {
                         view! {
-                            <button
-                                type="button"
-                                data-slot="sheet-close"
-                                aria-label="Close"
-                                class="cn-sheet-close cn-button cn-button-variant-ghost cn-button-size-icon-sm"
+                            <Button
+                                variant=ButtonVariant::Ghost
+                                size=ButtonSize::IconSm
+                                class="cn-sheet-close"
+                                attr:r#type="button"
+                                attr:data-slot="sheet-close"
+                                attr:aria-label="Close"
                                 on:click=move |_| ctx.open.set(false)
                             >
                                 <Icon icon=icondata::LuX />
                                 <span class="sr-only">"Close"</span>
-                            </button>
+                            </Button>
                         }
                     })}
             </div>

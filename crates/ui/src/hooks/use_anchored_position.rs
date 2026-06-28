@@ -1,13 +1,20 @@
 use leptos::prelude::*;
 
+/// Inline style that parks an as-yet-unmeasured popup off-screen. The measuring
+/// effect runs after the content mounts, so the first frame has no real rect; we
+/// place the popup off-screen (and its `fade-in` keeps it invisible) instead of at
+/// the viewport's top-left corner, which otherwise reads as a "fly-in" once the
+/// real position lands.
+const OFFSCREEN: &str = "position:fixed;top:-9999px;left:-9999px;";
+
 /// The trigger's viewport-relative rect, refreshed whenever `open` becomes true.
 ///
 /// Anchored popups (popover, dropdown, select, tooltip, …) render their content as a
 /// normal DOM descendant of the trigger so outside-click dismissal keeps working,
 /// but position it with `position: fixed`. A fixed box escapes any clipping
 /// ancestor (e.g. a card's `overflow-hidden`) and stacks above page content, while
-/// the measured rect keeps it pinned to the trigger. Values are zero on the server
-/// and before the first client open.
+/// the measured rect keeps it pinned to the trigger. Until the first measurement
+/// the popup is parked off-screen (see [`OFFSCREEN`]).
 #[derive(Clone, Copy)]
 pub struct AnchorRect {
     left: RwSignal<f64>,
@@ -16,6 +23,7 @@ pub struct AnchorRect {
     bottom: RwSignal<f64>,
     width: RwSignal<f64>,
     height: RwSignal<f64>,
+    measured: RwSignal<bool>,
 }
 
 impl AnchorRect {
@@ -23,6 +31,9 @@ impl AnchorRect {
     /// at least as wide as it — the default for menus, selects, and popovers.
     pub fn below(self) -> Signal<String> {
         Signal::derive(move || {
+            if !self.measured.get() {
+                return OFFSCREEN.to_owned();
+            }
             format!(
                 "position:fixed;top:{}px;left:{}px;min-width:{}px;",
                 self.bottom.get() + 4.0,
@@ -36,6 +47,9 @@ impl AnchorRect {
     /// centred on it — the popover default (`align: center`).
     pub fn below_center(self) -> Signal<String> {
         Signal::derive(move || {
+            if !self.measured.get() {
+                return OFFSCREEN.to_owned();
+            }
             format!(
                 "position:fixed;top:{}px;left:{}px;transform:translateX(-50%);",
                 self.bottom.get() + 4.0,
@@ -48,12 +62,26 @@ impl AnchorRect {
     /// the submenu default (`side: right`).
     pub fn right_of(self) -> Signal<String> {
         Signal::derive(move || {
+            if !self.measured.get() {
+                return OFFSCREEN.to_owned();
+            }
             format!(
                 "position:fixed;top:{}px;left:{}px;",
                 self.top.get(),
                 self.right.get() + 4.0,
             )
         })
+    }
+
+    /// Whether the trigger has been measured yet; popups using a bespoke style (the
+    /// tooltip's side-aware placement) park themselves off-screen until this is true.
+    pub fn measured(self) -> bool {
+        self.measured.get()
+    }
+
+    /// The off-screen parking style for not-yet-measured bespoke popups.
+    pub fn offscreen() -> &'static str {
+        OFFSCREEN
     }
 
     /// Distance of the trigger's top edge from the viewport top (px).
@@ -97,9 +125,11 @@ pub fn use_anchor_rect(open: RwSignal<bool>, anchor: NodeRef<leptos::html::Div>)
         bottom: RwSignal::new(0.0),
         width: RwSignal::new(0.0),
         height: RwSignal::new(0.0),
+        measured: RwSignal::new(false),
     };
     Effect::new(move |_| {
         if !open.get() {
+            rect.measured.set(false);
             return;
         }
         if let Some(el) = anchor.get_untracked() {
@@ -110,6 +140,7 @@ pub fn use_anchor_rect(open: RwSignal<bool>, anchor: NodeRef<leptos::html::Div>)
             rect.bottom.set(r.bottom());
             rect.width.set(r.width());
             rect.height.set(r.height());
+            rect.measured.set(true);
         }
     });
     rect

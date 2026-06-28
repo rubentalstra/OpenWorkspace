@@ -62,7 +62,7 @@ pub fn PopoverContent(
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<PopoverCtx>();
-    let position = use_anchor_rect(ctx.open, ctx.anchor).below_center();
+    let position = use_anchor_rect(ctx.open, ctx.anchor).below();
     view! {
         <Show when=move || ctx.open.get() fallback=|| ()>
             <div class="isolate z-50" style=move || position.get()>

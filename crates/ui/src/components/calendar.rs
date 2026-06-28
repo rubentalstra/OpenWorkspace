@@ -1,4 +1,5 @@
 use crate::cn;
+use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use time::{Date, Month, OffsetDateTime, util};
@@ -86,7 +87,7 @@ pub fn Calendar(
             data-slot="calendar"
             class=move || {
                 cn!(
-                    "cn-calendar group/calendar w-fit bg-background [--cell-radius:var(--radius-md)] [--cell-size:--spacing(8)]",
+                    "cn-calendar group/calendar w-fit bg-background in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
                     class.get(),
                 )
             }
@@ -107,15 +108,16 @@ fn CalendarNav(display: RwSignal<Date>, #[prop(into)] caption: Signal<String>) -
             data-slot="calendar-nav"
             class="relative flex h-(--cell-size) w-full items-center justify-between gap-1"
         >
-            <button
-                type="button"
-                data-slot="calendar-previous"
-                aria-label="Go to the previous month"
-                class="cn-button cn-button-variant-ghost size-(--cell-size) p-0 select-none"
+            <Button
+                variant=ButtonVariant::Ghost
+                class="size-(--cell-size) p-0 select-none"
+                attr:r#type="button"
+                attr:data-slot="calendar-previous"
+                attr:aria-label="Go to the previous month"
                 on:click=move |_| display.update(|d| *d = shift_month(*d, false))
             >
-                <Icon icon=icondata::LuChevronLeft attr:class="size-4" />
-            </button>
+                <Icon icon=icondata::LuChevronLeft attr:class="cn-rtl-flip size-4" />
+            </Button>
             <div
                 data-slot="calendar-caption"
                 aria-live="polite"
@@ -123,15 +125,16 @@ fn CalendarNav(display: RwSignal<Date>, #[prop(into)] caption: Signal<String>) -
             >
                 {move || caption.get()}
             </div>
-            <button
-                type="button"
-                data-slot="calendar-next"
-                aria-label="Go to the next month"
-                class="cn-button cn-button-variant-ghost size-(--cell-size) p-0 select-none"
+            <Button
+                variant=ButtonVariant::Ghost
+                class="size-(--cell-size) p-0 select-none"
+                attr:r#type="button"
+                attr:data-slot="calendar-next"
+                attr:aria-label="Go to the next month"
                 on:click=move |_| display.update(|d| *d = shift_month(*d, true))
             >
-                <Icon icon=icondata::LuChevronRight attr:class="size-4" />
-            </button>
+                <Icon icon=icondata::LuChevronRight attr:class="cn-rtl-flip size-4" />
+            </Button>
         </div>
     }
 }
@@ -214,23 +217,21 @@ fn CalendarDay(
             role="gridcell"
             class="group/day relative aspect-square h-full w-full rounded-(--cell-radius) p-0 text-center select-none"
         >
-            <button
-                type="button"
-                data-slot="calendar-day-button"
-                data-day=label
-                data-selected=move || is_selected.get().then_some("true")
-                data-today=move || is_today.get().then_some("true")
-                data-outside=move || is_outside.get().then_some("true")
-                aria-selected=move || is_selected.get().to_string()
-                class=move || {
-                    cn!(
-                        "cn-calendar-day-button cn-button cn-button-variant-ghost relative flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal data-[today=true]:bg-muted data-[today=true]:text-foreground data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground data-[outside=true]:text-muted-foreground data-[outside=true]:opacity-50",
-                    )
-                }
+            <Button
+                variant=ButtonVariant::Ghost
+                size=ButtonSize::Icon
+                class="cn-calendar-day-button relative flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal data-[today=true]:bg-muted data-[today=true]:text-foreground data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground data-[outside=true]:text-muted-foreground data-[outside=true]:opacity-50"
+                attr:r#type="button"
+                attr:data-slot="calendar-day-button"
+                attr:data-day=label
+                attr:data-selected=move || is_selected.get().then_some("true")
+                attr:data-today=move || is_today.get().then_some("true")
+                attr:data-outside=move || is_outside.get().then_some("true")
+                attr:aria-selected=move || is_selected.get().to_string()
                 on:click=pick
             >
                 {date.day().to_string()}
-            </button>
+            </Button>
         </div>
     }
 }

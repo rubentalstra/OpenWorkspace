@@ -1,3 +1,4 @@
+use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::{cn, slot};
 use leptos::ev;
 use leptos::prelude::*;
@@ -79,15 +80,18 @@ pub fn DialogContent(
                 {show_close
                     .then(|| {
                         view! {
-                            <button
-                                type="button"
-                                data-slot="dialog-close"
-                                aria-label="Close"
-                                class="cn-dialog-close cn-button cn-button-variant-ghost cn-button-size-icon-sm"
+                            <Button
+                                variant=ButtonVariant::Ghost
+                                size=ButtonSize::IconSm
+                                class="cn-dialog-close"
+                                attr:r#type="button"
+                                attr:data-slot="dialog-close"
+                                attr:aria-label="Close"
                                 on:click=move |_| ctx.open.set(false)
                             >
                                 <Icon icon=icondata::LuX />
-                            </button>
+                                <span class="sr-only">"Close"</span>
+                            </Button>
                         }
                     })}
             </div>

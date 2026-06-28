@@ -5,11 +5,15 @@ use leptos::wasm_bindgen::JsCast;
 /// rules fire on hover — mirroring Base UI's roving focus, where the hovered item
 /// becomes the focused one. Attach to `on:pointermove` of each focusable item
 /// (`<button>`s are focusable already; give `<div>` items `tabindex="-1"`).
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "matches the leptos event-handler signature so it can be passed directly to on:pointermove"
+)]
 pub fn focus_on_hover(ev: PointerEvent) {
     if let Some(el) = ev
         .current_target()
         .and_then(|target| target.dyn_into::<web_sys::HtmlElement>().ok())
     {
-        let _ = el.focus();
+        _ = el.focus();
     }
 }
