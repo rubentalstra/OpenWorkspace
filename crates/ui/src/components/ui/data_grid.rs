@@ -505,7 +505,7 @@ pub fn GridCell(
     children: Children,
     colindex: i32,
     #[prop(into)] column: String,
-    #[prop(optional, into)] class: String,
+    #[prop(into, optional)] class: Signal<String>,
     #[prop(optional)] visible: Option<Signal<bool>>,
     #[prop(optional, into)] active: Signal<bool>,
     #[prop(optional, into)] current: Signal<bool>,
@@ -515,10 +515,12 @@ pub fn GridCell(
     #[prop(optional)] on_mousedown: Option<Callback<()>>,
     #[prop(optional)] on_mouseenter: Option<Callback<()>>,
 ) -> impl IntoView {
-    let merged_class = cn!(
-        "relative border-r opacity-100 bg-background select-none data-[visible=false]:hidden aria-selected:*:ring-2 aria-selected:*:ring-ring aria-selected:*:ring-inset aria-current:*:bg-neutral-400/20",
-        class
-    );
+    let merged_class = move || {
+        cn!(
+            "relative border-r opacity-100 bg-background select-none data-[visible=false]:hidden aria-selected:*:ring-2 aria-selected:*:ring-ring aria-selected:*:ring-inset aria-current:*:bg-neutral-400/20",
+            class.get()
+        )
+    };
 
     let formatted_style = format!("width: calc(var(--col-{column}-size) * 1px);");
 

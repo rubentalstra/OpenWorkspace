@@ -24,9 +24,21 @@ clx! {
     AccordionDescription, p, "text-muted-foreground text-sm"
 }
 
-clx! {
-    /// Anchor row styled to sit inside an expanded panel.
-    AccordionLink, a, "grid gap-2.5 items-center p-2 grid-cols-[auto_1fr] [&_svg:not([class*='size-'])]:size-4 hover:bg-muted"
+const ACCORDION_LINK_BASE: &str = "grid gap-2.5 items-center p-2 grid-cols-[auto_1fr] [&_svg:not([class*='size-'])]:size-4 hover:bg-muted";
+
+/// Anchor row styled to sit inside an expanded panel. Renders an `<a>` to
+/// `href`; native attributes, events and children forward to it.
+#[component]
+pub fn AccordionLink(
+    #[prop(into)] href: String,
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <a data-name="AccordionLink" href=href class=move || cn!(ACCORDION_LINK_BASE, class.get())>
+            {children()}
+        </a>
+    }
 }
 
 /// Per-item disclosure state plus the id wiring that ties the trigger to its

@@ -60,13 +60,19 @@ impl TabsOrientation {
     }
 }
 
-/// Tabbed container. Owns the selected value (seeded from `default_value`) and
-/// shares it with the nested [`TabsList`], [`TabsTrigger`]s and [`TabsContent`]
-/// panels through context. Native attributes, events and bindings forward to
-/// the root element.
+/// Tabbed container. Owns the selected value and shares it with the nested
+/// [`TabsList`], [`TabsTrigger`]s and [`TabsContent`] panels through context.
+///
+/// Pass `value` to drive the selection externally (controlled); otherwise an
+/// internal signal seeded from `default_value` is used. Native attributes,
+/// events and bindings forward to the root element.
 #[component]
 pub fn Tabs(
-    /// Value selected on first render.
+    /// External signal driving the active value; when omitted the tabs manage
+    /// their own state seeded from `default_value`.
+    #[prop(optional)]
+    value: Option<RwSignal<String>>,
+    /// Value selected on first render when uncontrolled.
     #[prop(into, optional)]
     default_value: String,
     #[prop(into, optional)] orientation: Signal<TabsOrientation>,
@@ -75,7 +81,7 @@ pub fn Tabs(
     children: Children,
 ) -> impl IntoView {
     let ctx = TabsContext {
-        selected: RwSignal::new(default_value),
+        selected: value.unwrap_or_else(|| RwSignal::new(default_value)),
         orientation,
         id_base: StoredValue::new(use_random_id()),
     };

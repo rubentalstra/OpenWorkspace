@@ -4,17 +4,27 @@ use leptos_icons::Icon;
 
 /// One-time-code field: renders the visible slots plus a hidden input that holds
 /// the value. Mirroring digits into the slots, the caret and focus handling are
-/// wired on the client.
+/// wired on the client. `value` seeds the initial code; `on_change` fires with
+/// the full code on every edit so the entered value is observable from Rust.
 #[component]
 pub fn InputOTP(
     children: Children,
     max_length: u32,
     #[prop(optional)] disabled: bool,
     #[prop(into, optional)] value: String,
+    /// Fires with the current code whenever the user edits it.
+    #[prop(optional)]
+    on_change: Option<Callback<String>>,
     #[prop(into, optional)] class: Signal<String>,
 ) -> impl IntoView {
     use_input_otp();
     let container_id = format!("otp_{}", use_random_id());
+
+    let on_input = move |ev: leptos::ev::Event| {
+        if let Some(cb) = on_change {
+            cb.run(event_target_value(&ev));
+        }
+    };
 
     view! {
         <div
@@ -34,6 +44,7 @@ pub fn InputOTP(
                 disabled=disabled
                 prop:value=value
                 class="hidden"
+                on:input=on_input
             />
         </div>
     }

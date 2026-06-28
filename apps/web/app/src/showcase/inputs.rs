@@ -214,37 +214,37 @@ fn SwitchSection() -> impl IntoView {
     view! {
         <Section
             title="Switches"
-            description="A button[role=switch] driven by aria-checked; toggle the state at the call site."
+            description="A button[role=switch] controlled by `checked` with an `on_checked_change` callback, mirroring Checkbox."
         >
             <Demo col=true>
                 <Label class="gap-3">
                     <Switch
-                        attr:aria-checked=move || wifi.get().to_string()
-                        attr:aria-label="Wi-Fi"
-                        on:click=move |_| {
-                            wifi.update(|on| *on = !*on);
-                        }
+                        checked=wifi
+                        on_checked_change=Callback::new(move |v| wifi.set(v))
+                        aria_label="Wi-Fi"
                     />
                     <SwitchLabel>"Wi-Fi"</SwitchLabel>
                 </Label>
                 <Label class="gap-3">
                     <Switch
-                        attr:aria-checked=move || bluetooth.get().to_string()
-                        attr:aria-label="Bluetooth"
-                        on:click=move |_| {
-                            bluetooth.update(|on| *on = !*on);
-                        }
+                        checked=bluetooth
+                        on_checked_change=Callback::new(move |v| bluetooth.set(v))
+                        aria_label="Bluetooth"
                     />
                     <SwitchLabel>"Bluetooth"</SwitchLabel>
                 </Label>
             </Demo>
             <Demo label="States">
-                <Switch attr:aria-checked="true" attr:aria-label="On" />
-                <Switch attr:aria-checked="false" attr:aria-label="Off" />
-                <Switch attr:aria-checked="true" attr:aria-label="Disabled on" attr:disabled=true />
+                <Switch checked=Signal::derive(|| true) aria_label="On" />
+                <Switch checked=Signal::derive(|| false) aria_label="Off" />
                 <Switch
-                    attr:aria-checked="false"
-                    attr:aria-label="Disabled off"
+                    checked=Signal::derive(|| true)
+                    aria_label="Disabled on"
+                    attr:disabled=true
+                />
+                <Switch
+                    checked=Signal::derive(|| false)
+                    aria_label="Disabled off"
                     attr:disabled=true
                 />
             </Demo>
@@ -255,6 +255,7 @@ fn SwitchSection() -> impl IntoView {
 #[component]
 fn RadioSection() -> impl IntoView {
     let plan = RwSignal::new("team".to_string());
+    let density = RwSignal::new("comfortable".to_string());
 
     view! {
         <Section
@@ -280,18 +281,21 @@ fn RadioSection() -> impl IntoView {
                     {move || format!("Selected: {}", plan.get())}
                 </span>
             </Demo>
-            <Demo label="Radio button bar">
-                <RadioButtonGroup>
-                    <RadioButton>
+            <Demo label="Radio button bar" col=true>
+                <RadioButtonGroup value=density>
+                    <RadioButton value="compact">
                         <RadioButtonText>"Compact"</RadioButtonText>
                     </RadioButton>
-                    <RadioButton>
+                    <RadioButton value="comfortable">
                         <RadioButtonText>"Comfortable"</RadioButtonText>
                     </RadioButton>
-                    <RadioButton>
+                    <RadioButton value="spacious">
                         <RadioButtonText>"Spacious"</RadioButtonText>
                     </RadioButton>
                 </RadioButtonGroup>
+                <span class="text-sm text-muted-foreground">
+                    {move || format!("Density: {}", density.get())}
+                </span>
             </Demo>
         </Section>
     }

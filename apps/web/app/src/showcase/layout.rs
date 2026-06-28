@@ -74,7 +74,7 @@ fn AccordionSection() -> impl IntoView {
                             <AccordionDescription>
                                 "Pick a site, a date and a desk. The first release is desk-only."
                             </AccordionDescription>
-                            <AccordionLink attr:href="/ui/dates">
+                            <AccordionLink href="/ui/dates">
                                 <Icon icon=icondata::LuChevronRight />
                                 "See the date pickers"
                             </AccordionLink>

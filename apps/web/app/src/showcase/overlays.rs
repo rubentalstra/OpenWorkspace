@@ -1,9 +1,9 @@
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use ui::{
-    AlertDialog, AlertDialogAction, AlertDialogBackdrop, AlertDialogCancel, AlertDialogContent,
-    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Button,
-    ButtonSize, ButtonVariant, Command, CommandDialog, CommandDialogProvider, CommandDialogTrigger,
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+    AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, Button, ButtonSize,
+    ButtonVariant, Command, CommandDialog, CommandDialogProvider, CommandDialogTrigger,
     CommandEmpty, CommandFooter, CommandGroup, CommandGroupLabel, CommandInput, CommandItem,
     CommandList, ContextMenu, ContextMenuContent, ContextMenuGroup, ContextMenuItem,
     ContextMenuLabel, ContextMenuSub, ContextMenuSubContent, ContextMenuSubItem,
@@ -96,49 +96,30 @@ fn DialogSection() -> impl IntoView {
 
 #[component]
 fn AlertDialogSection() -> impl IntoView {
-    let open = RwSignal::new(false);
-
     view! {
         <Section
             title="Alert dialog"
-            description="A confirmation interruption. The family is static markup, so the page wires its open state."
+            description="A confirmation interruption built on the same context-driven open state as Dialog. Escape or either action closes it; the backdrop does not dismiss on click."
         >
             <Demo>
                 <AlertDialog>
-                    <Button
-                        variant=ButtonVariant::Destructive
-                        on:click=move |_| {
-                            open.set(true);
-                        }
-                    >
+                    <AlertDialogTrigger variant=ButtonVariant::Destructive>
                         "Cancel booking"
-                    </Button>
-                    <Show when=move || open.get()>
-                        <AlertDialogBackdrop on:click=move |_| {
-                            open.set(false);
-                        } />
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>"Cancel this booking?"</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    "This frees the desk for the day and cannot be undone."
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel on:click=move |_| {
-                                    open.set(false);
-                                }>"Keep booking"</AlertDialogCancel>
-                                <AlertDialogAction
-                                    variant=ButtonVariant::Destructive
-                                    on:click=move |_| {
-                                        open.set(false);
-                                    }
-                                >
-                                    "Cancel booking"
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </Show>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>"Cancel this booking?"</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                "This frees the desk for the day and cannot be undone."
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>"Keep booking"</AlertDialogCancel>
+                            <AlertDialogAction variant=ButtonVariant::Destructive>
+                                "Cancel booking"
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
                 </AlertDialog>
             </Demo>
         </Section>

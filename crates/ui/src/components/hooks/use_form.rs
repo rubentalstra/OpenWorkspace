@@ -232,8 +232,9 @@ pub struct FieldContext {
     pub name: String,
 }
 
-/// Lets a model render its own form fields. Implemented by the
-/// `#[derive(AutoForm)]` macro.
+/// Lets a model render its own form fields, wired to a [`Form`]. Implement it by
+/// hand on each form model (compose [`FormField`](crate::FormField) with the
+/// `Form*` field controls).
 pub trait AutoFormFields: FormData {
     /// Renders every form field for the model, wired to `form`.
     fn render_fields(form: Form<Self>) -> impl IntoView;

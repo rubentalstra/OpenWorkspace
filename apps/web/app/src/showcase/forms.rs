@@ -157,14 +157,16 @@ fn AutoFormSection() -> impl IntoView {
 
 #[component]
 fn OtpSection() -> impl IntoView {
+    let code = RwSignal::new(String::new());
+
     view! {
         <Section
             title="One-time code"
-            description="InputOTP renders digit slots backed by a hidden numeric input; typing is mirrored into the slots on the client. Grouped, ungrouped and disabled layouts."
+            description="InputOTP renders digit slots backed by a hidden numeric input; typing is mirrored into the slots on the client and reported through on_change. Grouped, ungrouped and disabled layouts."
         >
             <Demo col=true>
                 <Demo label="Six digits, split in two groups">
-                    <InputOTP max_length=6>
+                    <InputOTP max_length=6 on_change=Callback::new(move |v| code.set(v))>
                         <InputOTPGroup>
                             <InputOTPSlot index=0 />
                             <InputOTPSlot index=1 />
@@ -177,6 +179,9 @@ fn OtpSection() -> impl IntoView {
                             <InputOTPSlot index=5 />
                         </InputOTPGroup>
                     </InputOTP>
+                    <span class="text-sm text-muted-foreground">
+                        {move || format!("Entered: {}", code.get())}
+                    </span>
                 </Demo>
                 <Demo label="Four digits, single group">
                     <InputOTP max_length=4>

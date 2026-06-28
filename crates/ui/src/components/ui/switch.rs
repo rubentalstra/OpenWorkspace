@@ -8,21 +8,34 @@ const SWITCH_THUMB: &str = "pointer-events-none block size-4 rounded-full bg-bac
 
 clx! {SwitchLabel, span, "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50"}
 
-/// Toggle switch styled as a `<button role="switch">`. Drive its state via the
-/// forwarded `aria-checked` attribute and handle `on:click` at the call site;
-/// the track and thumb restyle from `aria-checked` selectors.
+/// Toggle switch rendered as a `<button role="switch">`. Controlled via
+/// `checked`; `on_checked_change` fires with the toggled value when clicked, and
+/// the track and thumb restyle from the `aria-checked` selectors automatically.
+/// Native attributes, events and bindings forward to the root.
 #[component]
 pub fn Switch(
+    #[prop(into, optional)] checked: Signal<bool>,
+    #[prop(optional)] on_checked_change: Option<Callback<bool>>,
+    #[prop(into, optional)] aria_label: Option<String>,
     #[prop(into, optional)] class: Signal<String>,
     #[prop(optional)] node_ref: NodeRef<html::Button>,
 ) -> impl IntoView {
+    let on_click = move |_| {
+        if let Some(cb) = on_checked_change {
+            cb.run(!checked.get_untracked());
+        }
+    };
+
     view! {
         <button
             node_ref=node_ref
             data-name="Switch"
             type="button"
             role="switch"
+            aria-checked=move || checked.get().to_string()
+            aria-label=aria_label
             class=move || cn!(SWITCH_BASE, class.get())
+            on:click=on_click
         >
             <span data-name="SwitchThumb" class=SWITCH_THUMB />
         </button>

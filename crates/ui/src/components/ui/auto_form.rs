@@ -1,8 +1,8 @@
 //! Automatic form generation from a struct model.
 //!
 //! `AutoForm` renders the fields of any `T: AutoFormFields` (implement that
-//! trait — typically via a `#[derive(AutoForm)]` macro — to describe the layout)
-//! and submits the validated model.
+//! trait by hand on the model to describe the field layout) and submits the
+//! validated model.
 
 use crate::{
     AutoFormFields, Checkbox, FieldContext, Form, FormContext, FormProvider, FormSet, Label,
