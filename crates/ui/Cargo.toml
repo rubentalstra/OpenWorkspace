@@ -28,18 +28,11 @@ time.workspace = true
 # the client (inside Effect/event handlers).
 wasm-bindgen = { workspace = true }
 js-sys = "0.3"
-web-sys = { version = "0.3", features = ["Clipboard", "CssStyleDeclaration", "CustomEvent", "Document", "Element", "Event", "HtmlElement", "HtmlInputElement", "KeyboardEvent", "MediaQueryList", "MediaQueryListEvent", "MouseEvent", "Navigator", "Node", "NodeList", "Storage", "Window", "DomRect"] }
+web-sys = { version = "0.3", features = ["Clipboard", "CssStyleDeclaration", "CustomEvent", "Document", "DomRect", "Element", "Event", "History", "HtmlElement", "HtmlInputElement", "KeyboardEvent", "Location", "MediaQueryList", "MediaQueryListEvent", "MouseEvent", "MutationObserver", "MutationObserverInit", "MutationRecord", "Navigator", "Node", "NodeList", "Storage", "UrlSearchParams", "Window"] }
 
 [features]
 ssr = ["leptos/ssr"]
 hydrate = ["leptos/hydrate"]
-
-# Read by the rust-ui CLI (`ui init`/`ui add`) so it targets this crate and knows
-# where to write the theme CSS. cargo-leptos itself uses the workspace-level
-# [[workspace.metadata.leptos]] tailwind-input-file (apps/web/style/tailwind.css),
-# not this; the generated theme is relocated there.
-[package.metadata.leptos]
-tailwind-input-file = "style/tailwind.css"
 
 [lints]
 workspace = true

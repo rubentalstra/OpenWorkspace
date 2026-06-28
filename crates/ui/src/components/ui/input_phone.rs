@@ -1,16 +1,14 @@
-use leptos_icons::Icon;
-use leptos::prelude::*;
 use crate::clx;
-use tw_merge::*;
-
-use crate::components::ui::command::{
-    Command, CommandEmpty, CommandGroup, CommandGroupLabel, CommandInput, CommandItem, CommandList,
-};
-use crate::components::ui::input::Input;
-use crate::components::ui::popover::{Popover, PopoverAlign, PopoverContent, PopoverTrigger};
 use crate::utils::country::Country;
 use crate::utils::phone_number::{PhoneFormat, PhoneNumber};
+use leptos::prelude::*;
+use leptos_icons::Icon;
 
+use super::command::{Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList};
+use super::input::Input;
+use super::popover::{Popover, PopoverAlign, PopoverContent, PopoverTrigger};
+
+/// Countries surfaced at the top of the picker before the full list.
 const COMMON_COUNTRIES: &[Country] = &[
     Country::UnitedStatesOfAmerica,
     Country::UnitedKingdom,
@@ -27,59 +25,56 @@ const COMMON_COUNTRIES: &[Country] = &[
     Country::Mexico,
 ];
 
-mod components {
-    use super::*;
-    clx! {InputPhoneWrapper, div, "flex w-full"}
+clx! {
+    /// Row wrapper joining the country selector and the phone field.
+    InputPhoneWrapper, div, "flex w-full"
 }
 
-pub use components::*;
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
+/// A selectable country row in the picker: flag, name, dial code and a check
+/// mark for the current selection.
 #[component]
 fn CountryItem(country: Country, selected_country: RwSignal<Country>) -> impl IntoView {
-    let search_value = format!("{} {} {}", country.name(), country.alpha2(), country.dial_code_formatted(),);
-    let is_selected = Signal::derive(move || selected_country.get() == country);
+    let search_value = format!(
+        "{} {} {}",
+        country.name(),
+        country.alpha2(),
+        country.dial_code_formatted()
+    );
 
     view! {
         <CommandItem
             value=search_value
-            selected=is_selected
-            reserve_check_space=true
-            on_select=Callback::new(move |_| {
-                selected_country.set(country);
-            })
+            on_select=Callback::new(move |()| selected_country.set(country))
         >
             <span class="text-base">{country.flag_emoji()}</span>
             <span class="flex-1 truncate">{country.name()}</span>
             <span class="w-12 text-right text-muted-foreground">
                 {country.dial_code_formatted()}
             </span>
+            <Show when=move || selected_country.get() == country>
+                <Icon icon=icondata::LuCheck attr:class="ml-1 size-4" />
+            </Show>
         </CommandItem>
     }
 }
 
+/// Phone-number field with a searchable country selector. The dial code follows
+/// the chosen country; the number is stored as raw digits and shown formatted.
 #[component]
 pub fn InputPhone(
-    #[prop(optional, into)] class: String,
+    #[prop(into, optional)] class: Signal<String>,
     #[prop(optional)] value_signal: Option<RwSignal<PhoneNumber>>,
     #[prop(optional)] country_signal: Option<RwSignal<Country>>,
     #[prop(optional)] disabled: bool,
-    #[prop(optional, into)] invalid: MaybeProp<bool>,
-    #[prop(optional, into)] on_blur: Option<Callback<()>>,
+    #[prop(into, optional)] invalid: Signal<bool>,
+    #[prop(optional)] on_blur: Option<Callback<()>>,
 ) -> impl IntoView {
-    let internal_value_signal = RwSignal::new(PhoneNumber::default());
-    let internal_country_signal = RwSignal::new(Country::UnitedStatesOfAmerica);
-
-    let value = value_signal.unwrap_or(internal_value_signal);
-    let selected_country = country_signal.unwrap_or(internal_country_signal);
-
-    let wrapper_class = tw_merge!("flex w-full", class);
+    let value = value_signal.unwrap_or_else(|| RwSignal::new(PhoneNumber::default()));
+    let selected_country =
+        country_signal.unwrap_or_else(|| RwSignal::new(Country::UnitedStatesOfAmerica));
 
     view! {
-        <InputPhoneWrapper class=wrapper_class>
+        <InputPhoneWrapper class=class>
             <Popover align=PopoverAlign::Start>
                 <PopoverTrigger
                     class="gap-1 px-3 w-auto rounded-r-none border-r-0"
@@ -104,8 +99,6 @@ pub fn InputPhone(
                         </div>
                         <CommandList class="min-h-0 max-h-[280px]">
                             <CommandEmpty>"No country found."</CommandEmpty>
-
-                            // Common countries
                             <CommandGroup>
                                 {COMMON_COUNTRIES
                                     .iter()
@@ -114,10 +107,10 @@ pub fn InputPhone(
                                     })
                                     .collect_view()}
                             </CommandGroup>
-
-                            // Separator + rest of countries
                             <CommandGroup>
-                                <CommandGroupLabel>"All countries"</CommandGroupLabel>
+                                <div class="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                                    "All countries"
+                                </div>
                                 {Country::all()
                                     .iter()
                                     .filter(|c| !COMMON_COUNTRIES.contains(c))
@@ -131,7 +124,6 @@ pub fn InputPhone(
                 </PopoverContent>
             </Popover>
 
-            // Phone number input - displays formatted, stores raw digits
             <div class="relative flex-1">
                 <Input
                     class="pr-8 w-full rounded-l-none"
@@ -142,12 +134,11 @@ pub fn InputPhone(
                     }
                     attr:disabled=disabled
                     attr:aria-label="Phone number"
-                    attr:aria-invalid=move || invalid.get().unwrap_or(false)
+                    attr:aria-invalid=move || invalid.get().to_string()
                     prop:value=move || value.get().format(selected_country.get())
                     on:input=move |ev| {
                         let format = PhoneFormat::for_country(selected_country.get());
-                        let phone = PhoneNumber::new(&event_target_value(&ev), format.max_digits);
-                        value.set(phone);
+                        value.set(PhoneNumber::new(&event_target_value(&ev), format.max_digits));
                     }
                     on:blur=move |_| {
                         if let Some(cb) = on_blur {

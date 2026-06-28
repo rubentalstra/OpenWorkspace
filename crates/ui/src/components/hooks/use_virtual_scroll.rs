@@ -3,134 +3,96 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use leptos::html;
 use leptos::prelude::*;
-use wasm_bindgen::JsCast;
-use wasm_bindgen::closure::Closure;
+use leptos::wasm_bindgen::JsCast;
+use leptos::wasm_bindgen::closure::Closure;
 
-use crate::constants::PAGINATION;
+use crate::constants::Pagination;
 
-/// Buffer rows to render above/below viewport for smooth scrolling
+/// Extra rows rendered above and below the viewport for smooth scrolling.
 const BUFFER_ROWS: usize = 5;
 
-/// Virtual scroll state containing the visible range
+/// Visible row range and total height for a virtualized list.
 #[derive(Clone, Copy)]
 pub struct VirtualScrollState {
-    /// First visible row index
+    /// First row index to render.
     pub start_index: Memo<usize>,
-    /// Last visible row index (exclusive)
+    /// One past the last row index to render.
     pub end_index: Memo<usize>,
-    /// Total height of the virtual container in pixels
+    /// Total height of the virtual container, in pixels.
     pub total_height: Signal<usize>,
 }
 
-/// Get the virtual scroll context from a parent VirtualizedGrid.
-/// Returns None if used outside of a VirtualizedGrid.
+/// Reads the virtual-scroll state provided by a parent virtualized grid, or
+/// `None` outside one.
 pub fn use_virtual_scroll_context() -> Option<VirtualScrollState> {
     use_context::<VirtualScrollState>()
 }
 
-/// Hook for virtual scrolling in data grids.
-///
-/// Only renders rows that are visible in the viewport plus a small buffer,
-/// dramatically improving performance for large datasets.
-///
-/// # Arguments
-/// * `container_ref` - NodeRef to the scrollable container element
-/// * `total_rows` - Signal containing the total number of rows
-///
-/// # Returns
-/// * `VirtualScrollState` with start/end indices and total height
-///
-/// # Example
-/// ```ignore
-/// let container_ref = NodeRef::<html::Div>::new();
-/// let total_rows = Signal::derive(move || data.get().len());
-/// let virtual_scroll = use_virtual_scroll(container_ref, total_rows);
-///
-/// // Only render visible rows
-/// <For
-///     each=move || (virtual_scroll.start_index.get()..virtual_scroll.end_index.get())
-///     key=|&i| i
-///     children=move |i| { ... }
-/// />
-/// ```
-pub fn use_virtual_scroll(container_ref: NodeRef<html::Div>, total_rows: Signal<usize>) -> VirtualScrollState {
-    let scroll_top_signal = RwSignal::new(0usize);
-    let container_height_signal = RwSignal::new(600usize); // Default height
+/// Virtual scrolling for large lists: renders only the rows in the viewport plus
+/// a small buffer. `container_ref` is the scroll container; `total_rows` is the
+/// reactive row count. All DOM access runs inside an effect, so it is inert on
+/// the server.
+pub fn use_virtual_scroll(
+    container_ref: NodeRef<html::Div>,
+    total_rows: Signal<usize>,
+) -> VirtualScrollState {
+    let scroll_top = RwSignal::new(0usize);
+    let container_height = RwSignal::new(600usize);
 
-    // Track if component is still mounted to prevent accessing disposed signals
-    // Using Arc<AtomicBool> for thread-safe (Send + Sync) mounted flag
-    let is_mounted = Arc::new(AtomicBool::new(true));
-    let is_mounted_for_cleanup = Arc::clone(&is_mounted);
+    // Guards the closures below: they outlive this scope (handed to the browser),
+    // so they must not touch disposed signals after the component unmounts.
+    let mounted = Arc::new(AtomicBool::new(true));
+    let mounted_cleanup = Arc::clone(&mounted);
+    on_cleanup(move || mounted_cleanup.store(false, Ordering::SeqCst));
 
-    // Cleanup: mark as unmounted when component is disposed
-    on_cleanup(move || {
-        is_mounted_for_cleanup.store(false, Ordering::SeqCst);
-    });
-
-    // Update scroll position and container height on scroll
-    let is_mounted_for_effect = Arc::clone(&is_mounted);
-    let is_mounted_for_scroll = Arc::clone(&is_mounted);
+    let mounted_effect = Arc::clone(&mounted);
     Effect::new(move || {
-        if let Some(el) = container_ref.get() {
-            // Measure height after browser layout completes using requestAnimationFrame.
-            // Without this, the Effect runs before CSS layout is finished, causing
-            // client_height() to return 0 or an incorrect value. This resulted in
-            // only ~30 rows being rendered on initial load until the user scrolled.
-            // requestAnimationFrame ensures we measure after the paint cycle.
-            let is_mounted_for_raf = Arc::clone(&is_mounted_for_effect);
-            let measure_height = Closure::wrap(Box::new(move || {
-                // Check if still mounted before accessing signals
-                if !is_mounted_for_raf.load(Ordering::SeqCst) {
-                    return;
-                }
-                if let Some(el) = container_ref.get_untracked() {
-                    container_height_signal.set(el.client_height().max(0) as usize);
-                }
-            }) as Box<dyn Fn()>);
+        let Some(el) = container_ref.get() else {
+            return;
+        };
 
-            let window = leptos::prelude::window();
-            _ = window.request_animation_frame(measure_height.as_ref().unchecked_ref());
-            measure_height.forget();
+        // Measure after layout: a `requestAnimationFrame` callback runs post-paint,
+        // when `client_height` is correct (it reads 0 before first layout).
+        let mounted_raf = Arc::clone(&mounted_effect);
+        let measure = Closure::<dyn Fn()>::new(move || {
+            if !mounted_raf.load(Ordering::SeqCst) {
+                return;
+            }
+            if let Some(el) = container_ref.get_untracked() {
+                container_height.set(usize::try_from(el.client_height()).unwrap_or(0));
+            }
+        });
+        _ = window().request_animation_frame(measure.as_ref().unchecked_ref());
+        measure.forget();
 
-            // Set up scroll listener with mounted check
-            let is_mounted_for_handler = Arc::clone(&is_mounted_for_scroll);
-            let scroll_handler = Closure::wrap(Box::new(move || {
-                // Check if still mounted before accessing signals
-                if !is_mounted_for_handler.load(Ordering::SeqCst) {
-                    return;
-                }
-                if let Some(el) = container_ref.get_untracked() {
-                    scroll_top_signal.set(el.scroll_top().max(0) as usize);
-                    container_height_signal.set(el.client_height().max(0) as usize);
-                }
-            }) as Box<dyn Fn()>);
-
-            _ = el.add_event_listener_with_callback("scroll", scroll_handler.as_ref().unchecked_ref());
-
-            // Keep the closure alive - it will check is_mounted before accessing signals
-            scroll_handler.forget();
-        }
+        let mounted_scroll = Arc::clone(&mounted_effect);
+        let on_scroll = Closure::<dyn Fn()>::new(move || {
+            if !mounted_scroll.load(Ordering::SeqCst) {
+                return;
+            }
+            if let Some(el) = container_ref.get_untracked() {
+                scroll_top.set(usize::try_from(el.scroll_top()).unwrap_or(0));
+                container_height.set(usize::try_from(el.client_height()).unwrap_or(0));
+            }
+        });
+        _ = el.add_event_listener_with_callback("scroll", on_scroll.as_ref().unchecked_ref());
+        on_scroll.forget();
     });
 
-    let start_index = Memo::new(move |_| {
-        let scroll_top = scroll_top_signal.get();
-        let start = scroll_top / PAGINATION::ROW_HEIGHT;
-        start.saturating_sub(BUFFER_ROWS)
-    });
+    let start_index =
+        Memo::new(move |_| (scroll_top.get() / Pagination::ROW_HEIGHT).saturating_sub(BUFFER_ROWS));
 
     let end_index = Memo::new(move |_| {
-        let scroll_top = scroll_top_signal.get();
-        let container_height = container_height_signal.get();
-        let total = total_rows.get();
-
-        let visible_rows = (container_height / PAGINATION::ROW_HEIGHT) + 1;
-        let start = scroll_top / PAGINATION::ROW_HEIGHT;
-        let end = start + visible_rows + BUFFER_ROWS * 2;
-
-        end.min(total)
+        let visible_rows = (container_height.get() / Pagination::ROW_HEIGHT) + 1;
+        let start = scroll_top.get() / Pagination::ROW_HEIGHT;
+        (start + visible_rows + BUFFER_ROWS * 2).min(total_rows.get())
     });
 
-    let total_height = Signal::derive(move || total_rows.get() * PAGINATION::ROW_HEIGHT);
+    let total_height = Signal::derive(move || total_rows.get() * Pagination::ROW_HEIGHT);
 
-    VirtualScrollState { start_index, end_index, total_height }
+    VirtualScrollState {
+        start_index,
+        end_index,
+        total_height,
+    }
 }

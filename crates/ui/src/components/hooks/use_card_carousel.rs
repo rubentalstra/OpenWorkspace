@@ -33,7 +33,7 @@ struct Registration {
 /// calls are no-ops, so every `CardCarouselTrack` may call it freely. The work
 /// runs inside an [`Effect`], which never executes during server rendering, so
 /// no browser API is touched at hook-invocation time.
-pub fn init() {
+pub fn use_card_carousel() {
     Effect::new(move |_| {
         REGISTERED.with(|cell| {
             if cell.borrow().is_some() {
@@ -58,20 +58,37 @@ fn register() -> Option<Registration> {
         .add_event_listener_with_callback_and_bool("scroll", scroll.as_ref().unchecked_ref(), true)
         .ok()?;
 
-    Some(Registration { _click: click, _scroll: scroll })
+    Some(Registration {
+        _click: click,
+        _scroll: scroll,
+    })
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "window event-listener callback takes the event by value"
+)]
 fn handle_click(event: ev::MouseEvent) {
     let Some(target) = event.target() else { return };
-    let Ok(el) = target.dyn_into::<Element>() else { return };
-    let Some(button) = el.closest(CAROUSEL_NAV_BUTTON).ok().flatten() else { return };
+    let Ok(el) = target.dyn_into::<Element>() else {
+        return;
+    };
+    let Some(button) = el.closest(CAROUSEL_NAV_BUTTON).ok().flatten() else {
+        return;
+    };
 
     event.stop_propagation();
     event.prevent_default();
 
-    let Some(root) = button.closest(CAROUSEL_ROOT).ok().flatten() else { return };
-    let Some(track) = root.query_selector(CAROUSEL_TRACK).ok().flatten() else { return };
-    let Ok(buttons) = root.query_selector_all(CAROUSEL_NAV_BUTTON) else { return };
+    let Some(root) = button.closest(CAROUSEL_ROOT).ok().flatten() else {
+        return;
+    };
+    let Some(track) = root.query_selector(CAROUSEL_TRACK).ok().flatten() else {
+        return;
+    };
+    let Ok(buttons) = root.query_selector_all(CAROUSEL_NAV_BUTTON) else {
+        return;
+    };
 
     let is_prev = buttons
         .item(0)
@@ -85,14 +102,28 @@ fn handle_click(event: ev::MouseEvent) {
     track.scroll_by_with_x_and_y(delta, 0.0);
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "scroll event-listener callback takes the event by value"
+)]
 fn handle_scroll(event: Event) {
     let Some(target) = event.target() else { return };
-    let Ok(el) = target.dyn_into::<Element>() else { return };
-    let Some(track) = el.closest(CAROUSEL_TRACK).ok().flatten() else { return };
-    let Some(root) = track.closest(CAROUSEL_ROOT).ok().flatten() else { return };
+    let Ok(el) = target.dyn_into::<Element>() else {
+        return;
+    };
+    let Some(track) = el.closest(CAROUSEL_TRACK).ok().flatten() else {
+        return;
+    };
+    let Some(root) = track.closest(CAROUSEL_ROOT).ok().flatten() else {
+        return;
+    };
 
-    let Ok(indicators) = root.query_selector_all(CAROUSEL_INDICATOR) else { return };
-    let Ok(buttons) = root.query_selector_all(CAROUSEL_NAV_BUTTON) else { return };
+    let Ok(indicators) = root.query_selector_all(CAROUSEL_INDICATOR) else {
+        return;
+    };
+    let Ok(buttons) = root.query_selector_all(CAROUSEL_NAV_BUTTON) else {
+        return;
+    };
 
     let index = active_index(track.scroll_left(), track.client_width());
     let count = indicators.length();
@@ -105,18 +136,31 @@ fn handle_scroll(event: Event) {
 
 /// Page index nearest the current scroll offset, clamped to a non-negative
 /// whole number of pages. Returns `0` when the track has no measurable width.
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "pages is positive and clamped to u32::MAX before the cast"
+)]
 fn active_index(scroll_left: i32, client_width: i32) -> u32 {
     if client_width <= 0 {
         return 0;
     }
     let pages = (f64::from(scroll_left) / f64::from(client_width)).round();
-    if pages.is_sign_positive() { pages.min(f64::from(u32::MAX)) as u32 } else { 0 }
+    if pages.is_sign_positive() {
+        pages.min(f64::from(u32::MAX)) as u32
+    } else {
+        0
+    }
 }
 
 fn sync_indicators(indicators: &NodeList, active: u32) {
     for i in 0..indicators.length() {
-        let Some(node) = indicators.item(i) else { continue };
-        let Ok(dot) = node.dyn_into::<Element>() else { continue };
+        let Some(node) = indicators.item(i) else {
+            continue;
+        };
+        let Ok(dot) = node.dyn_into::<Element>() else {
+            continue;
+        };
         if i == active {
             _ = dot.set_attribute("aria-current", "true");
         } else {
@@ -127,7 +171,9 @@ fn sync_indicators(indicators: &NodeList, active: u32) {
 
 fn set_aria_disabled(node: Option<Node>, disabled: bool) {
     let Some(node) = node else { return };
-    let Ok(el) = node.dyn_into::<Element>() else { return };
+    let Ok(el) = node.dyn_into::<Element>() else {
+        return;
+    };
     if disabled {
         _ = el.set_attribute("aria-disabled", "true");
     } else {

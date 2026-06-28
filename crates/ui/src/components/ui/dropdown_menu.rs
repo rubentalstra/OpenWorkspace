@@ -232,6 +232,22 @@ pub fn DropdownMenuGroup(
     }
 }
 
+/// Icon + label row for use inside a [`DropdownMenuItem`].
+#[component]
+pub fn DropdownMenuAction(
+    #[prop(into, optional)] class: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    view! {
+        <span
+            data-name="DropdownMenuAction"
+            class=move || cn!("inline-flex flex-1 items-center gap-2", class.get())
+        >
+            {children()}
+        </span>
+    }
+}
+
 /// Visual style of a [`DropdownMenuItem`].
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub enum DropdownMenuItemVariant {

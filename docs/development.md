@@ -18,8 +18,19 @@ cargo install cargo-audit                 # RustSec vulnerability scan
 cargo install cargo-chef --locked         # cached container builds (deploy/containers)
 ```
 
-Node (≥ 20) is required for the Playwright end-to-end tests in `end2end/` and,
-later, the Tailwind v4 CSS build via the rust-ui CLI.
+Node (≥ 20) is required for the Playwright end-to-end tests in `end2end/`,
+including the `@axe-core/playwright` accessibility gate over the `/ui` showcase.
+
+## UI design system (`crates/ui`)
+
+A first-party, **stable-Rust** component kit (no `leptos/nightly`) — 83 components + 18 hooks:
+
+- **Styling:** `tw_merge` behind the first-party `cn!` facade, plus our own `clx!`/`void!`/`variants!` macros under `tw/` (not leptos_ui's). Lucide icons via `leptos_icons` + `icondata`, used directly. `variants!` generates plain `Copy` enums + a `match`-based `class()` — no `tw_merge` derive macros.
+- **Zero JavaScript:** every interactive component (dialog, sheet, popover, tooltip, menus, command, select, carousel, drawer, …) is pure Leptos — `RwSignal` + `<Show>` + `window_event_listener`, focus/scroll-lock/ARIA. No `<script>` blocks, no `.js` assets.
+- **Tailwind v4 (Pipeline A):** cargo-leptos's bundled binary builds `[[workspace.metadata.leptos]] tailwind-input-file = apps/web/style/tailwind.css`; the `@source` globs there must cover `apps/web/app/src` and `crates/ui/src`. `crates/ui` must **not** carry its own `[package.metadata.leptos]` (cargo-leptos would treat it as a second lib-package and the build fails).
+- **Dark mode:** `ui::ThemeMode::init()` in the app root — light default, resolves from `localStorage` / `prefers-color-scheme`, toggles the document `dark` class (pure Leptos, no inline theme script). The `/ui` route renders the component showcase.
+- **Lint:** run clippy per-feature (`--features ssr` *or* `--features hydrate`), never `--all-features` (the two conflict).
+- **Note:** `AutoForm`'s `#[derive(AutoForm)]` is consumer-side tooling — a future proc-macro crate generates the `AutoFormFields` impl; the component itself is generic over that trait.
 
 ## Local dev services (podman)
 

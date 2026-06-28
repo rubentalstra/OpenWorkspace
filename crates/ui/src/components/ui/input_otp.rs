@@ -1,32 +1,30 @@
-use leptos_icons::Icon;
+use crate::{cn, use_input_otp, use_random_id};
 use leptos::prelude::*;
-use tw_merge::*;
+use leptos_icons::Icon;
 
-#[cfg(target_arch = "wasm32")]
-use crate::components::hooks::use_input_otp;
-use crate::components::hooks::use_random::use_random_id;
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
+/// One-time-code field: renders the visible slots plus a hidden input that holds
+/// the value. Mirroring digits into the slots, the caret and focus handling are
+/// wired on the client.
 #[component]
 pub fn InputOTP(
     children: Children,
     max_length: u32,
     #[prop(optional)] disabled: bool,
-    #[prop(optional, into)] value: String,
-    #[prop(optional, into)] class: String,
+    #[prop(into, optional)] value: String,
+    #[prop(into, optional)] class: Signal<String>,
 ) -> impl IntoView {
-    #[cfg(target_arch = "wasm32")]
-    use_input_otp::init();
-
-    let id = use_random_id();
-    let container_id = format!("otp_{}", id);
-    let class = tw_merge!("relative flex items-center gap-2 has-[:disabled]:opacity-50", class);
+    use_input_otp();
+    let container_id = format!("otp_{}", use_random_id());
 
     view! {
-        <div data-slot="input-otp" data-otp-root="" id=container_id class=class>
+        <div
+            data-slot="input-otp"
+            data-otp-root=""
+            id=container_id
+            class=move || {
+                cn!("relative flex items-center gap-2 has-[:disabled]:opacity-50", class.get())
+            }
+        >
             {children()}
             <input
                 data-otp-input=""
@@ -35,41 +33,44 @@ pub fn InputOTP(
                 maxlength=max_length.to_string()
                 disabled=disabled
                 prop:value=value
-                // sr-only: hidden — sr-only breaks with src-tauri
                 class="hidden"
             />
         </div>
     }
 }
 
+/// Groups a run of [`InputOTPSlot`]s with joined edges.
 #[component]
-pub fn InputOTPGroup(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
-    let class = tw_merge!("flex items-center", class);
+pub fn InputOTPGroup(
+    children: Children,
+    #[prop(into, optional)] class: Signal<String>,
+) -> impl IntoView {
     view! {
-        <div data-slot="input-otp-group" class=class>
+        <div data-slot="input-otp-group" class=move || cn!("flex items-center", class.get())>
             {children()}
         </div>
     }
 }
 
+/// A single character slot at `index`; the active slot shows a blinking caret.
 #[component]
 pub fn InputOTPSlot(
     index: u32,
     #[prop(optional)] aria_invalid: bool,
-    #[prop(optional, into)] class: String,
+    #[prop(into, optional)] class: Signal<String>,
 ) -> impl IntoView {
-    let class = tw_merge!(
-        "relative flex h-9 w-9 cursor-text items-center justify-center border-y border-r border-input text-sm shadow-xs transition-all outline-none first:rounded-l-md first:border-l last:rounded-r-md data-[active=true]:z-10 data-[active=true]:border-ring data-[active=true]:ring-[3px] data-[active=true]:ring-ring/50 aria-invalid:border-destructive data-[active=true]:aria-invalid:ring-destructive/20 dark:bg-input/30",
-        class
-    );
-
     view! {
         <div
             data-slot="input-otp-slot"
             data-otp-slot=""
             data-otp-index=index.to_string()
             data-active="false"
-            class=class
+            class=move || {
+                cn!(
+                    "relative flex h-9 w-9 cursor-text items-center justify-center border-y border-r border-input text-sm shadow-xs transition-all outline-none first:rounded-l-md first:border-l last:rounded-r-md data-[active=true]:z-10 data-[active=true]:border-ring data-[active=true]:ring-[3px] data-[active=true]:ring-ring/50 aria-invalid:border-destructive data-[active=true]:aria-invalid:ring-destructive/20 dark:bg-input/30",
+                    class.get(),
+                )
+            }
             attr:aria-invalid=aria_invalid.then_some("true")
         >
             <span data-otp-char=""></span>
@@ -84,11 +85,15 @@ pub fn InputOTPSlot(
     }
 }
 
+/// Visual separator between OTP groups.
 #[component]
-pub fn InputOTPSeparator(#[prop(optional, into)] class: String) -> impl IntoView {
-    let class = tw_merge!("flex items-center justify-center text-muted-foreground", class);
+pub fn InputOTPSeparator(#[prop(into, optional)] class: Signal<String>) -> impl IntoView {
     view! {
-        <div data-slot="input-otp-separator" role="separator" class=class>
+        <div
+            data-slot="input-otp-separator"
+            role="separator"
+            class=move || cn!("flex items-center justify-center text-muted-foreground", class.get())
+        >
             <Icon icon=icondata::LuMinus attr:class="size-4" />
         </div>
     }

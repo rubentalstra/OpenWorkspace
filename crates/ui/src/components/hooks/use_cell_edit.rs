@@ -1,4 +1,4 @@
-use crate::components::ui::data_grid::DataGridColumn;
+use crate::DataGridColumn;
 use leptos::prelude::*;
 
 /// Shared in-place cell-edit state for a data grid, distributed via Leptos

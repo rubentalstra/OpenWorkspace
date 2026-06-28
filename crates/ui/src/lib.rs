@@ -8,7 +8,9 @@
 //! kit grows as each component is rewritten to the house standard (tasks #13–#23).
 
 mod components;
+mod constants;
 mod tw;
+mod utils;
 
 // The vendored `variants!`/`cn!` macros expand `$crate::paste` / `$crate::tw_merge`,
 // so those crates must be reachable at this crate's root.
@@ -19,3 +21,5 @@ pub use tw_merge;
 
 pub use components::hooks::*;
 pub use components::ui::*;
+pub use utils::country::Country;
+pub use utils::phone_number::{PhoneFormat, PhoneNumber};

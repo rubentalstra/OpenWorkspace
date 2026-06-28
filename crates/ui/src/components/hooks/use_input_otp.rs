@@ -32,7 +32,7 @@ thread_local! {
 /// this during server render is a no-op. On the client it installs a single
 /// shared manager that also watches the DOM for OTP roots added or removed
 /// later, so it can be invoked from any OTP component without coordinating.
-pub fn init() {
+pub fn use_input_otp() {
     Effect::new(move |_| {
         MANAGER.with(|manager| {
             if manager.borrow().is_some() {
@@ -58,7 +58,12 @@ struct OtpManager {
 
 impl OtpManager {
     fn new() -> Self {
-        Self { controllers: HashMap::new(), next_key: 0, observer: None, observer_callback: None }
+        Self {
+            controllers: HashMap::new(),
+            next_key: 0,
+            observer: None,
+            observer_callback: None,
+        }
     }
 
     fn init_all(&mut self) {
@@ -92,9 +97,15 @@ impl OtpManager {
         self.controllers.remove(&key);
     }
 
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "the MutationObserver callback owns the records array"
+    )]
     fn handle_mutations(&mut self, records: js_sys::Array) {
         for record in records.iter() {
-            let Ok(record) = record.dyn_into::<MutationRecord>() else { continue };
+            let Ok(record) = record.dyn_into::<MutationRecord>() else {
+                continue;
+            };
 
             self.handle_node_list(&record.removed_nodes(), false);
             self.handle_node_list(&record.added_nodes(), true);
@@ -103,13 +114,17 @@ impl OtpManager {
 
     fn handle_node_list(&mut self, nodes: &NodeList, added: bool) {
         for idx in 0..nodes.length() {
-            let Some(node) = nodes.item(idx) else { continue };
+            let Some(node) = nodes.item(idx) else {
+                continue;
+            };
             self.handle_node(node, added);
         }
     }
 
     fn handle_node(&mut self, node: Node, added: bool) {
-        let Ok(element) = node.dyn_into::<Element>() else { return };
+        let Ok(element) = node.dyn_into::<Element>() else {
+            return;
+        };
 
         for root in collect_roots(&element) {
             if added {
@@ -132,17 +147,21 @@ impl OtpManager {
     }
 
     fn observe_dom(&mut self) {
-        let Some(body) = document().body() else { return };
+        let Some(body) = document().body() else {
+            return;
+        };
 
         // The observer outlives this call, so it cannot borrow `self`; it reaches
         // the manager back through the shared `MANAGER` thread-local instead.
-        let callback = Closure::wrap(Box::new(move |records: js_sys::Array, _observer: MutationObserver| {
-            MANAGER.with(|manager| {
-                if let Some(manager) = manager.borrow_mut().as_mut() {
-                    manager.handle_mutations(records);
-                }
-            });
-        }) as Box<dyn FnMut(js_sys::Array, MutationObserver)>);
+        let callback = Closure::<dyn FnMut(js_sys::Array, MutationObserver)>::new(
+            move |records: js_sys::Array, _observer: MutationObserver| {
+                MANAGER.with(|manager| {
+                    if let Some(manager) = manager.borrow_mut().as_mut() {
+                        manager.handle_mutations(records);
+                    }
+                });
+            },
+        );
 
         let Ok(observer) = MutationObserver::new(callback.as_ref().unchecked_ref()) else {
             return;
@@ -152,7 +171,10 @@ impl OtpManager {
         options.set_child_list(true);
         options.set_subtree(true);
 
-        if observer.observe_with_options(body.as_ref(), &options).is_err() {
+        if observer
+            .observe_with_options(body.as_ref(), &options)
+            .is_err()
+        {
             return;
         }
 
@@ -177,12 +199,19 @@ struct OtpController {
 }
 
 impl OtpController {
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "takes the root element handle obtained from a DOM query to build the controller"
+    )]
     fn new(root: Element) -> Option<Self> {
         let input = find_input(&root)?;
         let dom = Rc::new(OtpDom::new(input, collect_slots(&root)));
         let listeners = register_listeners(&dom);
         update(&dom);
-        Some(Self { _dom: dom, _listeners: listeners })
+        Some(Self {
+            _dom: dom,
+            _listeners: listeners,
+        })
     }
 }
 
@@ -202,7 +231,11 @@ impl OtpDom {
             .and_then(|value| value.parse::<usize>().ok())
             .unwrap_or(DEFAULT_MAX_LEN);
 
-        Self { input, slots, max_len }
+        Self {
+            input,
+            slots,
+            max_len,
+        }
     }
 }
 
@@ -226,7 +259,10 @@ struct Listener {
 
 impl Drop for Listener {
     fn drop(&mut self) {
-        _ = self.target.remove_event_listener_with_callback(self.event, self.callback.as_ref().unchecked_ref());
+        _ = self.target.remove_event_listener_with_callback(
+            self.event,
+            self.callback.as_ref().unchecked_ref(),
+        );
     }
 }
 
@@ -238,7 +274,10 @@ fn elements(nodes: &NodeList) -> Vec<Element> {
 }
 
 fn find_input(root: &Element) -> Option<HtmlInputElement> {
-    root.query_selector(OTP_INPUT_SELECTOR).ok().flatten().and_then(|input| input.dyn_into::<HtmlInputElement>().ok())
+    root.query_selector(OTP_INPUT_SELECTOR)
+        .ok()
+        .flatten()
+        .and_then(|input| input.dyn_into::<HtmlInputElement>().ok())
 }
 
 fn collect_slots(root: &Element) -> Vec<OtpSlot> {
@@ -249,7 +288,9 @@ fn collect_slots(root: &Element) -> Vec<OtpSlot> {
     elements(&nodes)
         .into_iter()
         .filter_map(|slot| {
-            let index = slot.get_attribute(OTP_INDEX_ATTR).and_then(|value| value.parse::<usize>().ok())?;
+            let index = slot
+                .get_attribute(OTP_INDEX_ATTR)
+                .and_then(|value| value.parse::<usize>().ok())?;
             let char_el = slot.query_selector(OTP_CHAR_SELECTOR).ok().flatten();
             let caret_el = slot
                 .query_selector(OTP_CARET_SELECTOR)
@@ -257,7 +298,12 @@ fn collect_slots(root: &Element) -> Vec<OtpSlot> {
                 .flatten()
                 .and_then(|caret| caret.dyn_into::<HtmlElement>().ok());
 
-            Some(OtpSlot { index, slot, char_el, caret_el })
+            Some(OtpSlot {
+                index,
+                slot,
+                char_el,
+                caret_el,
+            })
         })
         .collect()
 }
@@ -348,9 +394,15 @@ fn add_listener<F>(target: EventTarget, event: &'static str, handler: F) -> Opti
 where
     F: FnMut(Event) + 'static,
 {
-    let callback = Closure::wrap(Box::new(handler) as Box<dyn FnMut(Event)>);
-    target.add_event_listener_with_callback(event, callback.as_ref().unchecked_ref()).ok()?;
-    Some(Listener { target, event, callback })
+    let callback = Closure::<dyn FnMut(Event)>::new(handler);
+    target
+        .add_event_listener_with_callback(event, callback.as_ref().unchecked_ref())
+        .ok()?;
+    Some(Listener {
+        target,
+        event,
+        callback,
+    })
 }
 
 /// Cancels insertion of any non-digit character so the input can only ever hold
@@ -364,7 +416,9 @@ fn filter_input(event: &Event) {
         return;
     }
 
-    let Some(data) = input_event.data() else { return };
+    let Some(data) = input_event.data() else {
+        return;
+    };
     if data.chars().all(|ch| ch.is_ascii_digit()) {
         return;
     }
@@ -393,28 +447,46 @@ where
 fn update(dom: &OtpDom) {
     let value: Vec<char> = dom.input.value().chars().collect();
     let input_element: Element = dom.input.clone().unchecked_into();
-    let focused = document().active_element().is_some_and(|active| active == input_element);
+    let focused = document()
+        .active_element()
+        .is_some_and(|active| active == input_element);
 
     let selection = if focused {
-        dom.input.selection_start().ok().flatten().map_or(0, |position| position as usize)
+        dom.input
+            .selection_start()
+            .ok()
+            .flatten()
+            .map_or(0, |position| position as usize)
     } else {
         usize::MAX
     };
 
     for slot in &dom.slots {
-        let ch = value.get(slot.index).copied().unwrap_or_default().to_string();
+        let ch = value
+            .get(slot.index)
+            .copied()
+            .unwrap_or_default()
+            .to_string();
         let is_active = focused
             && (selection == slot.index
-                || (selection >= value.len() && slot.index == value.len() && value.len() < dom.max_len));
+                || (selection >= value.len()
+                    && slot.index == value.len()
+                    && value.len() < dom.max_len));
 
         if let Some(char_el) = &slot.char_el {
             char_el.set_text_content(Some(&ch));
         }
 
-        _ = slot.slot.set_attribute("data-active", if is_active { "true" } else { "false" });
+        _ = slot
+            .slot
+            .set_attribute("data-active", if is_active { "true" } else { "false" });
 
         if let Some(caret_el) = &slot.caret_el {
-            let display = if is_active && ch.is_empty() { "flex" } else { "none" };
+            let display = if is_active && ch.is_empty() {
+                "flex"
+            } else {
+                "none"
+            };
             _ = caret_el.style().set_property("display", display);
         }
     }

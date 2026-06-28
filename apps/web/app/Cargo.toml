@@ -11,6 +11,10 @@ leptos_meta.workspace = true
 leptos_router.workspace = true
 leptos_axum = { workspace = true, optional = true }
 
+# The design-system kit. ssr/hydrate are forwarded so it emits identical
+# server/client HTML.
+ui = { path = "../../../crates/ui", version = "0.1.0", default-features = false }
+
 i18n = { path = "../../../crates/i18n", version = "0.1.0", default-features = false }
 # `tr!`/`move_tr!` are imported here directly: leptos-fluent's compile-time
 # `check_translations` forbids re-exporting them, so the macros are the one vendor
@@ -47,6 +51,7 @@ hydrate = [
     "leptos/hydrate",
     "leptos/nonce",
     "i18n/hydrate",
+    "ui/hydrate",
     "dep:server_fn",
     "dep:wasm-bindgen",
     "dep:web-sys",
@@ -63,6 +68,7 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "i18n/ssr",
+    "ui/ssr",
     "dep:leptos_axum",
 ]
 

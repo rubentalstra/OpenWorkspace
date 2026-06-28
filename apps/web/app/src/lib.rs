@@ -8,6 +8,7 @@ use leptos_router::{
 };
 
 mod csrf_client;
+pub mod showcase;
 pub use csrf_client::CsrfClient;
 
 /// The per-request CSRF token, provided as Leptos context by the server so the
@@ -40,6 +41,11 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
+    // Dark-mode state: light by default, resolved on the client from local
+    // storage (falling back to the OS color-scheme) and mirrored onto the
+    // document root's `dark` class. Pure Leptos — no inline theme script.
+    _ = ui::ThemeMode::init();
+
     // On SSR the server provides the per-request CSRF token; emit it into <head>
     // so both the header (JS) and hidden-field (no-JS) paths can read it. Absent
     // during hydration, where it is unneeded.
@@ -59,6 +65,7 @@ pub fn App() -> impl IntoView {
                 <main>
                     <Routes fallback=|| "Page not found.".into_view()>
                         <Route path=StaticSegment("") view=HomePage />
+                        <Route path=StaticSegment("ui") view=showcase::UiShowcase />
                     </Routes>
                 </main>
             </Router>

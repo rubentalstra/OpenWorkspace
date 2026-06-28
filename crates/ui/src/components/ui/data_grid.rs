@@ -1,20 +1,29 @@
+#![expect(
+    clippy::implicit_hasher,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::format_push_string,
+    clippy::semicolon_if_nothing_returned,
+    reason = "the data grid is a generic framework over HashSet column sets; generalizing the hasher, splitting the header builder, borrowing props, and write!/semicolon style add noise without value here"
+)]
+
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
-use leptos_icons::Icon;
+use crate::clx;
+use crate::cn;
 use leptos::ev::KeyboardEvent;
 use leptos::html;
 use leptos::prelude::*;
-use crate::clx;
-use tw_merge::*;
+use leptos_icons::Icon;
 
-use crate::components::hooks::use_cell_edit::CellEditContext;
-use crate::components::hooks::use_virtual_scroll::{VirtualScrollState, use_virtual_scroll};
-use crate::components::ui::checkbox::Checkbox;
-use crate::components::ui::dropdown_menu::{
-    DropdownMenu, DropdownMenuAction, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup,
-    DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
+use crate::CellEditContext;
+use crate::Checkbox;
+use crate::{
+    DropdownMenu, DropdownMenuAction, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
+    DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
 };
+use crate::{VirtualScrollState, use_virtual_scroll};
 
 /// Enforces display logic (class + value) to live in data structs, not inline in views.
 #[derive(Debug, Clone, Default)]
@@ -31,10 +40,6 @@ impl StyledGridCell {
 
 // * Source: https://tablecn.com/data-grid
 
-/* ========================================================== */
-/*                     ✨ TYPES ✨                            */
-/* ========================================================== */
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SortDirection {
     #[default]
@@ -42,10 +47,6 @@ pub enum SortDirection {
     Asc,
     Desc,
 }
-
-/* ========================================================== */
-/*                     ✨ TRAITS ✨                           */
-/* ========================================================== */
 
 /// Trait for columns that can be pinned in a data grid.
 /// Implement this trait on your Column enum to use the pinning utility functions.
@@ -83,10 +84,14 @@ pub trait SortableColumn<R: Default>: Copy {
         // Check if this column supports sorting
         if self.compare(&R::default(), &R::default()).is_some() {
             match direction {
-                SortDirection::Asc => rows.sort_by(|a, b| self.compare(a, b).unwrap_or(std::cmp::Ordering::Equal)),
-                SortDirection::Desc => {
-                    rows.sort_by(|a, b| self.compare(a, b).unwrap_or(std::cmp::Ordering::Equal).reverse())
+                SortDirection::Asc => {
+                    rows.sort_by(|a, b| self.compare(a, b).unwrap_or(std::cmp::Ordering::Equal))
                 }
+                SortDirection::Desc => rows.sort_by(|a, b| {
+                    self.compare(a, b)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                        .reverse()
+                }),
                 SortDirection::None => {}
             }
         }
@@ -122,7 +127,7 @@ pub trait SortableColumn<R: Default>: Copy {
 /// ```
 pub trait DataGridRow: Clone + Send + Sync + 'static {
     /// The ID type for this row (e.g., i32, Uuid).
-    type Id: Copy + Eq + std::hash::Hash + Send + Sync + 'static;
+    type Id: Copy + Eq + Hash + Send + Sync + 'static;
 
     /// The Column enum type for this data grid.
     type Column: DataGridColumn + std::fmt::Display + strum::IntoEnumIterator;
@@ -198,7 +203,11 @@ pub fn get_pinned_left_position<C: PinnableColumn + 'static>(col: C, pinned: &Ha
 
 /// Get the width for a pinnable column, or 150 as default if not found.
 pub fn get_column_width<C: PinnableColumn + 'static>(col: C) -> i32 {
-    C::pinnable_columns().iter().find(|(c, _)| *c == col).map(|(_, w)| *w).unwrap_or(150)
+    C::pinnable_columns()
+        .iter()
+        .find(|(c, _)| *c == col)
+        .map(|(_, w)| *w)
+        .unwrap_or(150)
 }
 
 /// Generates CSS custom properties for column sizes from pinnable columns.
@@ -209,7 +218,9 @@ pub fn generate_grid_style<C: PinnableColumn + AsRef<str> + 'static>() -> String
     for (col, width) in C::pinnable_columns() {
         // Remove spaces for CSS-safe variable names (e.g., "Is Active" -> "IsActive")
         let name: String = col.as_ref().chars().filter(|c| *c != ' ').collect();
-        style.push_str(&format!("--header-{name}-size: {width}; --col-{name}-size: {width}; "));
+        style.push_str(&format!(
+            "--header-{name}-size: {width}; --col-{name}-size: {width}; "
+        ));
     }
     style.push_str("max-height: calc(100vh - 16rem);");
     style
@@ -221,32 +232,20 @@ pub fn get_pinned_visible_columns<C>(
     visible_columns_signal: RwSignal<HashSet<String>>,
 ) -> Vec<(C, i32)>
 where
-    C: PinnableColumn + AsRef<str> + Copy + Eq + std::hash::Hash + Send + Sync + 'static,
+    C: PinnableColumn + AsRef<str> + Copy + Eq + Hash + Send + Sync + 'static,
 {
     C::pinnable_columns()
         .iter()
         .filter(|(col, _)| {
-            pinned_columns_signal.with(|p| p.contains(col)) && visible_columns_signal.with(|v| v.contains(col.as_ref()))
+            pinned_columns_signal.with(|p| p.contains(col))
+                && visible_columns_signal.with(|v| v.contains(col.as_ref()))
         })
         .copied()
         .collect()
 }
 
-/* ========================================================== */
-/*                     ✨ CLX COMPONENTS ✨                   */
-/* ========================================================== */
-
-mod components {
-    use super::*;
-    clx! {GridWrapper, div, "flex relative flex-col w-full"}
-    clx! {GridCellContent, span, ""}
-}
-
-pub use components::*;
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
+clx! {GridWrapper, div, "flex relative flex-col w-full"}
+clx! {GridCellContent, span, ""}
 
 #[component]
 pub fn Grid(
@@ -258,7 +257,10 @@ pub fn Grid(
     #[prop(optional)] node_ref: Option<NodeRef<html::Div>>,
 ) -> impl IntoView {
     // NOTE: Avoid `select-none` here to allow text selection via double-click
-    let merged_class = tw_merge!("grid overflow-auto relative rounded-md border focus:outline-none", class);
+    let merged_class = cn!(
+        "grid overflow-auto relative rounded-md border focus:outline-none",
+        class
+    );
 
     view! {
         <div
@@ -277,17 +279,13 @@ pub fn Grid(
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 #[component]
 pub fn GridBody(
     children: Children,
     #[prop(into)] style: Signal<String>,
     #[prop(optional, into)] class: String,
 ) -> impl IntoView {
-    let merged_class = tw_merge!("grid relative", class);
+    let merged_class = cn!("grid relative", class);
 
     view! {
         <div
@@ -302,10 +300,6 @@ pub fn GridBody(
         </div>
     }
 }
-
-/* ========================================================== */
-/*                     ✨ VIRTUALIZED GRID ✨                 */
-/* ========================================================== */
 
 /// A Grid wrapper that provides virtual scrolling context.
 /// Use with `VirtualizedGridBody` and `VirtualFor` for automatic virtualization.
@@ -350,10 +344,13 @@ pub fn VirtualizedGrid(
 /// Grid body that automatically uses virtual scroll context for height.
 /// Must be used within a `VirtualizedGrid`.
 #[component]
-pub fn VirtualizedGridBody(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
+pub fn VirtualizedGridBody(
+    children: Children,
+    #[prop(optional, into)] class: String,
+) -> impl IntoView {
     let virtual_scroll = expect_context::<VirtualScrollState>();
 
-    let merged_class = tw_merge!("grid relative", class);
+    let merged_class = cn!("grid relative", class);
 
     view! {
         <div
@@ -376,10 +373,14 @@ pub fn VirtualizedGridBody(children: Children, #[prop(optional, into)] class: St
 /// rows re-render when data changes. This fixes issues where deleting rows
 /// would not update the UI because Leptos reuses views with matching keys.
 #[component]
-pub fn VirtualFor<T, K, KF, CF, CV>(#[prop(into)] data: Signal<Vec<T>>, key: KF, children: CF) -> impl IntoView
+pub fn VirtualFor<T, K, KF, CF, CV>(
+    #[prop(into)] data: Signal<Vec<T>>,
+    key: KF,
+    children: CF,
+) -> impl IntoView
 where
     T: Clone + Send + Sync + 'static,
-    K: Eq + std::hash::Hash + Clone + Send + 'static,
+    K: Eq + Hash + Clone + Send + 'static,
     KF: Fn(&T) -> K + Clone + Send + Sync + 'static,
     CF: Fn(usize, T) -> CV + Clone + Send + Sync + 'static,
     CV: IntoView + 'static,
@@ -409,10 +410,6 @@ where
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 /// Grid row with absolute positioning for virtual scrolling.
 /// NOTE: `index` must be a Signal to ensure translateY updates when rows are reordered
 /// (e.g., during sorting). With keyed `<For>` loops, Leptos reuses DOM elements,
@@ -424,7 +421,7 @@ pub fn GridRow(
     #[prop(into)] index: Signal<usize>,
     #[prop(optional, into)] class: String,
 ) -> impl IntoView {
-    let merged_class = tw_merge!("flex absolute w-full border-b", class);
+    let merged_class = cn!("flex absolute w-full border-b", class);
 
     view! {
         <div
@@ -448,22 +445,14 @@ pub fn GridRow(
     }
 }
 
-/* ========================================================== */
-/*                     ✨ CONSTANTS ✨                        */
-/* ========================================================== */
-
-/// Z-index for pinned columns. Must be higher than TableSeparator's z-50.
+/// Z-index for pinned columns. Must be higher than `TableSeparator`'s z-50.
 const PINNED_Z_INDEX: i32 = 51;
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
 
 #[component]
 pub fn GridCellWrapper(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
     // TODO. slot=checkbox.
 
-    let merged_class = tw_merge!(
+    let merged_class = cn!(
         "py-1.5 px-2 text-sm text-left cursor-default outline-none size-full has-data-[slot=checkbox]:pt-2.5 **:data-[name=GridCellContent]:line-clamp-1",
         class
     );
@@ -475,10 +464,6 @@ pub fn GridCellWrapper(children: Children, #[prop(optional, into)] class: String
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 #[component]
 pub fn GridHeaderCell(
     children: Children,
@@ -487,7 +472,10 @@ pub fn GridHeaderCell(
     #[prop(optional, into)] class: String,
     #[prop(optional)] visible: Option<Signal<bool>>,
 ) -> impl IntoView {
-    let merged_class = tw_merge!("relative border-r opacity-100 bg-background data-[visible=false]:hidden", class);
+    let merged_class = cn!(
+        "relative border-r opacity-100 bg-background data-[visible=false]:hidden",
+        class
+    );
 
     let formatted_style = format!("width: calc(var(--header-{column}-size) * 1px);");
 
@@ -509,10 +497,6 @@ pub fn GridHeaderCell(
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 #[component]
 pub fn GridCell(
     children: Children,
@@ -528,7 +512,7 @@ pub fn GridCell(
     #[prop(optional)] on_mousedown: Option<Callback<()>>,
     #[prop(optional)] on_mouseenter: Option<Callback<()>>,
 ) -> impl IntoView {
-    let merged_class = tw_merge!(
+    let merged_class = cn!(
         "relative border-r opacity-100 bg-background select-none data-[visible=false]:hidden aria-selected:*:ring-2 aria-selected:*:ring-ring aria-selected:*:ring-inset aria-current:*:bg-neutral-400/20",
         class
     );
@@ -572,10 +556,6 @@ pub fn GridCell(
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 /// Sticky select header cell (checkbox column header).
 #[component]
 pub fn GridSelectHeaderCell(children: Children) -> impl IntoView {
@@ -595,10 +575,6 @@ pub fn GridSelectHeaderCell(children: Children) -> impl IntoView {
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 /// Sticky select cell (checkbox column).
 #[component]
 pub fn GridSelectCell(children: Children) -> impl IntoView {
@@ -617,10 +593,6 @@ pub fn GridSelectCell(children: Children) -> impl IntoView {
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 /// Sticky pinned header cell with dynamic left position.
 #[component]
 pub fn GridPinnedHeaderCell(children: Children, left: i32, width: i32) -> impl IntoView {
@@ -638,10 +610,6 @@ pub fn GridPinnedHeaderCell(children: Children, left: i32, width: i32) -> impl I
         </div>
     }
 }
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
 
 /// Sticky pinned cell with dynamic left position.
 #[component]
@@ -670,10 +638,6 @@ pub fn GridPinnedCell<C: DataGridColumn + 'static>(
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 #[component]
 pub fn TableSeparator(
     #[prop(default = 60)] valuemin: i32,
@@ -681,7 +645,7 @@ pub fn TableSeparator(
     valuenow: i32,
     #[prop(optional, into)] class: String,
 ) -> impl IntoView {
-    let merged_class = tw_merge!(
+    let merged_class = cn!(
         "absolute top-0 -right-px z-50 w-0.5 h-full opacity-0 transition-opacity select-none hover:opacity-100 focus:outline-none after:-translate-x-1/2 cursor-ew-resize touch-none bg-border after:absolute after:inset-y-0 after:left-1/2 after:h-full after:w-[18px] after:content-[''] hover:bg-primary focus:bg-primary",
         class
     );
@@ -701,10 +665,6 @@ pub fn TableSeparator(
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 /// A header cell with sorting and pinning dropdown menu.
 /// Works with any column type that implements `PinnableColumn`.
 #[component]
@@ -720,13 +680,14 @@ where
     C: PinnableColumn + AsRef<str> + Send + Sync + 'static,
 {
     let width = get_column_width(column);
-    let column_name = column.as_ref().to_string();
+    let column_name = StoredValue::new(column.as_ref().to_string());
+    let label = StoredValue::new(label);
 
     view! {
         <DropdownMenu>
             <DropdownMenuTrigger class="flex gap-2 justify-between items-center p-2 w-full h-full text-sm rounded-none border-0 shadow-none data-[state=open]:bg-accent/40 [&_svg]:size-4 hover:bg-accent/40">
                 <div class="flex flex-1 gap-1.5 items-center min-w-0">
-                    <span class="truncate">{label}</span>
+                    <span class="truncate">{move || label.get_value()}</span>
                 </div>
                 <Icon icon=icondata::LuChevronDown attr:class="shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
@@ -807,7 +768,7 @@ where
                 </DropdownMenuGroup>
                 {visible_columns_signal
                     .map(|signal| {
-                        let column_name = column_name.clone();
+                        let column_name = column_name.get_value();
                         view! {
                             <DropdownMenuGroup>
                                 <DropdownMenuItem on:click=move |_| {
@@ -833,10 +794,6 @@ where
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 /// Editable cell content component.
 /// Double-click to edit, Enter to save, Escape to cancel.
 #[component]
@@ -855,7 +812,7 @@ pub fn EditableCellContent<C: DataGridColumn + 'static>(
 
     view! {
         <Show
-            when=is_editing
+            when=move || is_editing.get()
             fallback=move || {
                 view! {
                     <GridCellContent
@@ -910,13 +867,9 @@ pub fn EditableCellContent<C: DataGridColumn + 'static>(
     }
 }
 
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
-
 #[component]
 pub fn DataGridToolbar(children: Children, #[prop(optional, into)] class: String) -> impl IntoView {
-    let merged_class = tw_merge!("flex gap-4 justify-between items-center mb-4", class);
+    let merged_class = cn!("flex gap-4 justify-between items-center mb-4", class);
 
     view! {
         <div
@@ -929,10 +882,6 @@ pub fn DataGridToolbar(children: Children, #[prop(optional, into)] class: String
         </div>
     }
 }
-
-/* ========================================================== */
-/*                     ✨ FUNCTIONS ✨                        */
-/* ========================================================== */
 
 /// Generic grid header component that works with any Column type.
 /// Handles the select-all checkbox, pinned headers, and non-pinned headers.
