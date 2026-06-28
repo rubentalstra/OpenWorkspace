@@ -18,6 +18,8 @@ paste.workspace = true
 # spinner loader, …) — shadcn's lucide-react equivalent on stable Leptos.
 leptos_icons = { workspace = true }
 icondata = { workspace = true }
+# Date math for the calendar / date-picker.
+time = { workspace = true }
 # Browser APIs for the SSR-safe hooks (media query, local storage, dark-mode
 # class). JS calls run only on the client, inside Effects/event handlers.
 web-sys = { version = "0.3", features = [

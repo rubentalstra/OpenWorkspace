@@ -37,14 +37,39 @@ pub use components::button::{Button, ButtonSize, ButtonVariant};
 pub use components::button_group::{
     ButtonGroup, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
 };
+pub use components::calendar::Calendar;
 pub use components::card::{
     Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
 };
 pub use components::checkbox::Checkbox;
 pub use components::collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger};
+pub use components::combobox::{
+    Combobox, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem,
+    ComboboxLabel, ComboboxList, ComboboxSeparator, ComboboxTrigger, ComboboxValue,
+};
+pub use components::command::{
+    Command, CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList,
+};
+pub use components::context_menu::{
+    ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuGroup, ContextMenuItem,
+    ContextMenuItemVariant, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem,
+    ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub, ContextMenuSubContent,
+    ContextMenuSubTrigger, ContextMenuTrigger,
+};
+pub use components::date_picker::DatePicker;
 pub use components::dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
     DialogTrigger,
+};
+pub use components::direction::{Direction, DirectionProvider, use_direction};
+pub use components::drawer::{
+    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle,
+    DrawerTrigger,
+};
+pub use components::dropdown_menu::{
+    DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuItemVariant, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
+    DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 };
 pub use components::empty::{
     Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
@@ -53,19 +78,31 @@ pub use components::field::{
     Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
     FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
 };
+pub use components::hover_card::{HoverCard, HoverCardContent, HoverCardTrigger};
 pub use components::input::Input;
 pub use components::input_group::{
     InputGroup, InputGroupAddon, InputGroupAddonAlign, InputGroupButton, InputGroupButtonSize,
     InputGroupInput, InputGroupText, InputGroupTextarea,
 };
+pub use components::input_otp::{InputOtp, InputOtpGroup, InputOtpSeparator, InputOtpSlot};
 pub use components::item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant,
 };
 pub use components::kbd::{Kbd, KbdGroup};
 pub use components::label::Label;
+pub use components::menubar::{
+    Menubar, MenubarCheckboxItem, MenubarContent, MenubarItem, MenubarItemVariant, MenubarLabel,
+    MenubarMenu, MenubarRadioGroup, MenubarRadioItem, MenubarSub, MenubarSubContent,
+    MenubarSubTrigger, MenubarTrigger,
+};
 pub use components::native_select::{
     NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize,
+};
+pub use components::navigation_menu::{
+    NAVIGATION_MENU_TRIGGER_STYLE, NavigationMenu, NavigationMenuContent, NavigationMenuIndicator,
+    NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger,
+    NavigationMenuViewport,
 };
 pub use components::pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
@@ -76,9 +113,19 @@ pub use components::popover::{
 };
 pub use components::progress::Progress;
 pub use components::radio_group::{RadioGroup, RadioGroupItem};
+pub use components::resizable::{ResizableHandle, ResizablePanel, ResizablePanelGroup};
+pub use components::select::{
+    Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger,
+    SelectValue,
+};
 pub use components::separator::{Separator, SeparatorOrientation};
+pub use components::sheet::{
+    Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide,
+    SheetTitle, SheetTrigger,
+};
 pub use components::skeleton::Skeleton;
 pub use components::slider::Slider;
+pub use components::sonner::{Toast, ToastVariant, Toaster, ToasterContext, provide_toaster};
 pub use components::spinner::Spinner;
 pub use components::switch::{Switch, SwitchSize};
 pub use components::table::{
@@ -90,6 +137,9 @@ pub use components::tabs::{
 pub use components::textarea::Textarea;
 pub use components::toggle::{Toggle, ToggleSize, ToggleVariant};
 pub use components::toggle_group::{ToggleGroup, ToggleGroupItem};
+pub use components::tooltip::{
+    Tooltip, TooltipContent, TooltipProvider, TooltipSide, TooltipTrigger,
+};
 pub use hooks::use_dismiss::use_dismiss;
 pub use hooks::use_is_mobile::{MOBILE_BREAKPOINT, use_is_mobile};
 pub use hooks::use_media_query::use_media_query;
