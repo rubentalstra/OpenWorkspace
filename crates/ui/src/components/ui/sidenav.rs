@@ -123,26 +123,6 @@ impl SidenavVariant {
             Self::Inset => "Inset",
         }
     }
-
-    fn gap_collapsed_width(self) -> &'static str {
-        match self {
-            Self::Sidenav => "group-data-[collapsible=Icon]:w-(--sidenav-width-icon)",
-            Self::Floating | Self::Inset => {
-                "group-data-[collapsible=Icon]:w-[calc(var(--sidenav-width-icon)+(--spacing(4)))]"
-            }
-        }
-    }
-
-    fn container_chrome(self) -> &'static str {
-        match self {
-            Self::Sidenav => {
-                "group-data-[collapsible=Icon]:w-(--sidenav-width-icon) group-data-[side=Left]:border-r group-data-[side=Right]:border-l"
-            }
-            Self::Floating | Self::Inset => {
-                "p-2 group-data-[collapsible=Icon]:w-[calc(var(--sidenav-width-icon)+(--spacing(4))+2px)]"
-            }
-        }
-    }
 }
 
 /// Edge of the viewport the [`Sidenav`] is anchored to.
@@ -160,17 +140,6 @@ impl SidenavSide {
         match self {
             Self::Left => "Left",
             Self::Right => "Right",
-        }
-    }
-
-    fn container_anchor(self) -> &'static str {
-        match self {
-            Self::Left => {
-                "left-0 group-data-[collapsible=Offcanvas]:left-[calc(var(--sidenav-width)*-1)]"
-            }
-            Self::Right => {
-                "right-0 group-data-[collapsible=Offcanvas]:right-[calc(var(--sidenav-width)*-1)]"
-            }
         }
     }
 }
@@ -292,34 +261,63 @@ pub fn Sidenav(
         }
         .into_any()
     } else {
+        // Width/position are computed from the open *state* (not just the
+        // collapsible mode): open → full width on-screen; collapsed → icon-width
+        // rail (Icon) or slid off-screen (Offcanvas). The container is fixed and
+        // `inset-y-0`, so the sidenav always spans the full viewport height while
+        // the in-flow gap reserves matching horizontal space for the content.
+        let gap_class = move || {
+            let width = if is_open.get() {
+                "w-(--sidenav-width)"
+            } else if collapsible.get() == SidenavCollapsible::Icon {
+                "w-(--sidenav-width-icon)"
+            } else {
+                "w-0"
+            };
+            cn!(
+                "relative h-svh bg-transparent transition-[width] duration-200 ease-linear",
+                width,
+            )
+        };
+        let container_class = move || {
+            let open = is_open.get();
+            let icon = collapsible.get() == SidenavCollapsible::Icon;
+            let (anchor, width) = match (side.get(), open, icon) {
+                (SidenavSide::Left, true, _) => ("left-0", "w-(--sidenav-width)"),
+                (SidenavSide::Left, false, true) => ("left-0", "w-(--sidenav-width-icon)"),
+                (SidenavSide::Left, false, false) => {
+                    ("left-[calc(var(--sidenav-width)*-1)]", "w-(--sidenav-width)")
+                }
+                (SidenavSide::Right, true, _) => ("right-0", "w-(--sidenav-width)"),
+                (SidenavSide::Right, false, true) => ("right-0", "w-(--sidenav-width-icon)"),
+                (SidenavSide::Right, false, false) => {
+                    ("right-[calc(var(--sidenav-width)*-1)]", "w-(--sidenav-width)")
+                }
+            };
+            let border = if side.get() == SidenavSide::Left {
+                "border-r border-sidenav-border"
+            } else {
+                "border-l border-sidenav-border"
+            };
+            cn!(
+                "fixed inset-y-0 z-10 hidden h-svh flex-col transition-[left,right,width] duration-200 ease-linear md:flex",
+                anchor,
+                width,
+                border,
+                class.get(),
+            )
+        };
+
         view! {
             <aside
                 data-name="Sidenav"
                 data-state=move || open_state_data(is_open.get())
                 data-side=move || side.get().as_data()
                 data-collapsible=move || collapsible.get().as_data()
-                class="hidden md:block group peer text-sidenav-foreground data-[state=Collapsed]:hidden"
+                class="hidden md:block group peer text-sidenav-foreground"
             >
-                <div
-                    data-name="SidenavGap"
-                    class=move || {
-                        cn!(
-                            "relative w-(--sidenav-width) bg-transparent transition-[width] duration-200 ease-linear group-data-[collapsible=Offcanvas]:w-0 group-data-[side=Right]:rotate-180",
-                            variant.get().gap_collapsed_width(),
-                        )
-                    }
-                />
-                <div
-                    data-name="SidenavContainer"
-                    class=move || {
-                        cn!(
-                            "fixed inset-y-0 z-10 hidden h-svh w-(--sidenav-width) transition-[left,right,width] duration-200 ease-linear md:flex",
-                            side.get().container_anchor(),
-                            variant.get().container_chrome(),
-                            class.get(),
-                        )
-                    }
-                >
+                <div data-name="SidenavGap" class=gap_class />
+                <div data-name="SidenavContainer" class=container_class>
                     <SidenavInner
                         attr:data-sidenav="Sidenav"
                         attr:data-variant=move || variant.get().as_data()

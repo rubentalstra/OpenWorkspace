@@ -8,8 +8,8 @@ use ui::{
     DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
     DropdownMenuSeparator, DropdownMenuSide, DropdownMenuSub, DropdownMenuSubContent,
     DropdownMenuSubTrigger, DropdownMenuTrigger, Sheet, SheetContent,
-    SheetDirection, SheetTrigger, Sidenav, SidenavContent, SidenavFooter, SidenavGroup,
-    SidenavGroupContent, SidenavGroupLabel, SidenavHeader, SidenavLink, SidenavMenu,
+    SheetDirection, SheetTrigger, Sidenav, SidenavCollapsible, SidenavContent, SidenavFooter,
+    SidenavGroup, SidenavGroupContent, SidenavGroupLabel, SidenavHeader, SidenavLink, SidenavMenu,
     SidenavMenuItem, SidenavMenuSub, SidenavTrigger, SidenavWrapper, ThemeToggle, Toaster,
     ToasterContext,
 };
@@ -66,7 +66,7 @@ pub fn ShowcaseLayout() -> impl IntoView {
 
     view! {
         <SidenavWrapper attr:style="--sidenav-width: 16rem;" class="min-h-screen bg-sidenav">
-            <Sidenav>
+            <Sidenav collapsible=SidenavCollapsible::Offcanvas>
                 <NavBody active_path=path />
             </Sidenav>
 
