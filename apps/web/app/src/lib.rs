@@ -21,7 +21,7 @@ pub struct CsrfToken(pub String);
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="en" class="style-nova">
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -67,17 +67,7 @@ pub fn App() -> impl IntoView {
                         <Route path=StaticSegment("") view=HomePage />
                         <ParentRoute path=StaticSegment("ui") view=showcase::ShowcaseLayout>
                             <Route path=StaticSegment("") view=showcase::ShowcaseIndex />
-                            <Route path=StaticSegment("buttons") view=showcase::ButtonsPage />
-                            <Route path=StaticSegment("inputs") view=showcase::InputsPage />
-                            <Route path=StaticSegment("forms") view=showcase::FormsPage />
-                            <Route path=StaticSegment("overlays") view=showcase::OverlaysPage />
-                            <Route path=StaticSegment("navigation") view=showcase::NavigationPage />
-                            <Route path=StaticSegment("data") view=showcase::DataPage />
-                            <Route path=StaticSegment("dates") view=showcase::DatesPage />
-                            <Route path=StaticSegment("feedback") view=showcase::FeedbackPage />
-                            <Route path=StaticSegment("layout") view=showcase::LayoutPage />
-                            <Route path=StaticSegment("theme") view=showcase::ThemePage />
-                            <Route path=StaticSegment("hooks") view=showcase::HooksPage />
+                            <Route path=StaticSegment("components") view=showcase::ComponentsPage />
                         </ParentRoute>
                     </Routes>
                 </div>

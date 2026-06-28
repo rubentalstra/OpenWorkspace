@@ -7,28 +7,28 @@ license.workspace = true
 
 [dependencies]
 # Leptos drives the components; ssr/hydrate are forwarded from apps/web/app so the
-# kit emits identical server/client HTML.
+# kit emits identical server/client HTML. (`leptos::wasm_bindgen` re-exports
+# wasm-bindgen, so no direct wasm-bindgen dep is needed.)
 leptos = { workspace = true }
-# The vendored `variants!` macro emits leptos_router::* for its link/anchor variant.
-leptos_router = { workspace = true }
-# STABLE styling stack — the rust-ui registry's `icons`/`leptos_ui` force
-# `leptos/nightly` and are NOT used; tw_merge gives the same cn()/variants! API on
-# stable, and leptos_icons+icondata provide Lucide on stable Leptos 0.8.
+# Class merging behind the first-party `cn!` facade — shadcn's `cn()` equivalent.
 tw_merge = { workspace = true }
-leptos_icons = { workspace = true }
-icondata = { workspace = true }
-strum.workspace = true
-serde.workspace = true
-validator.workspace = true
-serde_json.workspace = true
+# The `variants!`/`cn!` macros expand `$crate::paste`.
 paste.workspace = true
-time.workspace = true
-# Browser APIs used by the interactive components/hooks (media query, clipboard,
-# scroll lock, key handling). Compiled for both targets; the JS calls run only on
-# the client (inside Effect/event handlers).
-wasm-bindgen = { workspace = true }
-js-sys = "0.3"
-web-sys = { version = "0.3", features = ["Clipboard", "CssStyleDeclaration", "CustomEvent", "Document", "DomRect", "Element", "Event", "History", "HtmlElement", "HtmlInputElement", "KeyboardEvent", "Location", "MediaQueryList", "MediaQueryListEvent", "MouseEvent", "MutationObserver", "MutationObserverInit", "MutationRecord", "Navigator", "Node", "NodeList", "Storage", "UrlSearchParams", "Window"] }
+# Browser APIs for the SSR-safe hooks (media query, local storage, dark-mode
+# class). JS calls run only on the client, inside Effects/event handlers.
+web-sys = { version = "0.3", features = [
+    "Document",
+    "DomTokenList",
+    "Element",
+    "EventTarget",
+    "MediaQueryList",
+    "Storage",
+    "Window",
+] }
+
+# Dependencies are added per wave as components need them. Expected returns:
+# leptos_router (nav/sidebar active-link state), leptos_icons + icondata (Lucide
+# glyphs), time (calendar/date-picker date math).
 
 [features]
 ssr = ["leptos/ssr"]

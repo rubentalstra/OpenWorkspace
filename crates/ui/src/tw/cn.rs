@@ -1,10 +1,11 @@
-/// Merges Tailwind classes, resolving conflicts so later utilities win and
-/// duplicates collapse. First-party facade over `tw_merge` — component code uses
-/// `cn!` rather than calling the vendor macro directly.
+//! `cn!` — the first-party class-merge facade over `tw_merge`, mirroring shadcn's
+//! `cn()` (`twMerge(clsx(...))`). Later classes win on Tailwind conflicts, so a
+//! caller's `class` can always override a component's defaults.
+
+/// Merge Tailwind class fragments, de-duplicating conflicts (last wins).
 ///
-/// ```ignore
-/// let class = cn!("px-2 py-1", active.then_some("bg-primary").unwrap_or_default());
-/// ```
+/// Accepts string literals, `String`, and `Option<_>` fragments (a `None` is
+/// skipped), e.g. `cn!("cn-button", active.then_some("cn-button-active"), class)`.
 #[macro_export]
 macro_rules! cn {
     ($($class:expr),* $(,)?) => {
