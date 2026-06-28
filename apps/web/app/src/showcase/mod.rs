@@ -6,9 +6,10 @@
 use leptos::prelude::*;
 use leptos_router::components::Outlet;
 use ui::{
-    Badge, BadgeVariant, Button, ButtonSize, ButtonVariant, Card, CardContent, CardDescription,
-    CardFooter, CardHeader, CardTitle, Input, Label, Separator, SeparatorOrientation, Skeleton,
-    use_theme_mode,
+    AspectRatio, Avatar, AvatarFallback, Badge, BadgeVariant, Button, ButtonSize, ButtonVariant,
+    Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Checkbox, Input, Kbd,
+    KbdGroup, Label, Progress, Separator, SeparatorOrientation, Skeleton, Spinner, Switch,
+    Textarea, Toggle, use_theme_mode,
 };
 
 /// Top-level frame: a sticky header with nav + theme toggle, and the routed page.
@@ -79,7 +80,7 @@ pub fn ShowcaseIndex() -> impl IntoView {
                 </CardHeader>
                 <CardContent>
                     <p class="text-muted-foreground text-sm">
-                        "Buttons, badges, cards, inputs, labels, separators, skeletons."
+                        "Buttons, badges, cards, inputs, switches, checkboxes, toggles, avatars, progress, and more."
                     </p>
                 </CardContent>
                 <CardFooter>
@@ -104,6 +105,10 @@ fn Section(#[prop(into)] title: String, children: Children) -> impl IntoView {
 /// Gallery of the ported primitives.
 #[component]
 pub fn ComponentsPage() -> impl IntoView {
+    let switch_on = RwSignal::new(true);
+    let checked = RwSignal::new(true);
+    let bold = RwSignal::new(false);
+
     view! {
         <div class="flex flex-col gap-10">
             <Section title="Button variants">
@@ -129,10 +134,40 @@ pub fn ComponentsPage() -> impl IntoView {
                 <Badge variant=BadgeVariant::Destructive>"Destructive"</Badge>
             </Section>
 
+            <Section title="Switch / Checkbox / Toggle">
+                <Switch checked=switch_on on_change=Callback::new(move |v| switch_on.set(v)) />
+                <Checkbox checked=checked on_change=Callback::new(move |v| checked.set(v)) />
+                <Toggle pressed=bold on_change=Callback::new(move |v| bold.set(v))>
+                    "Bold"
+                </Toggle>
+            </Section>
+
+            <Section title="Avatars">
+                <Avatar>
+                    <AvatarFallback>"OW"</AvatarFallback>
+                </Avatar>
+                <Avatar>
+                    <AvatarFallback>"RT"</AvatarFallback>
+                </Avatar>
+            </Section>
+
+            <Section title="Progress / Spinner">
+                <Progress value=66.0 class="w-64" />
+                <Spinner />
+            </Section>
+
+            <Section title="Kbd">
+                <KbdGroup>
+                    <Kbd>"⌘"</Kbd>
+                    <Kbd>"K"</Kbd>
+                </KbdGroup>
+            </Section>
+
             <Section title="Field">
                 <div class="flex w-full max-w-sm flex-col gap-2">
                     <Label attr:r#for="email">"Email"</Label>
                     <Input attr:id="email" attr:r#type="email" attr:placeholder="you@example.com" />
+                    <Textarea attr:placeholder="Notes…" />
                 </div>
             </Section>
 
@@ -152,6 +187,15 @@ pub fn ComponentsPage() -> impl IntoView {
                         </Button>
                     </CardFooter>
                 </Card>
+            </Section>
+
+            <Section title="Aspect ratio">
+                <AspectRatio
+                    ratio=1.7777
+                    class="bg-muted text-muted-foreground flex w-64 items-center justify-center rounded-md text-sm"
+                >
+                    "16 / 9"
+                </AspectRatio>
             </Section>
 
             <Section title="Separator">
