@@ -1,0 +1,10 @@
+# GitHub Linguist overrides — keep the repository language breakdown reflective
+# of the first-party source (Rust). Excluded paths stay tracked and diffable;
+# they are only dropped from the language statistics.
+
+# Vendored port reference: the shadcn Base UI source kept as raw material for the
+# crates/ui rewrite — third-party, not our code.
+crates/ui/reference/** linguist-vendored
+
+# End-to-end test tooling (Playwright + TypeScript specs), not application source.
+end2end/** linguist-vendored
