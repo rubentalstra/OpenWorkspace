@@ -125,6 +125,8 @@ impl From<db::CredentialRow> for User {
 // always-available policy plus the ssr-only backend/bootstrap; `session` and
 // `mfa` are ssr-only. The public surface is re-exported flat at the crate root.
 #[cfg(feature = "ssr")]
+mod authz;
+#[cfg(feature = "ssr")]
 mod mfa;
 #[cfg(feature = "ssr")]
 mod oidc;
@@ -134,6 +136,8 @@ mod session;
 
 pub use password::policy::{MIN_PASSWORD_LENGTH, PasswordPolicyError, validate_password};
 
+#[cfg(feature = "ssr")]
+pub use authz::{AuthzBackend, AuthzError, Target};
 #[cfg(feature = "ssr")]
 pub use mfa::keyring::FieldKeyring;
 #[cfg(feature = "ssr")]
