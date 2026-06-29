@@ -25,7 +25,7 @@ pub use enums::{
     BookingSource, BookingStatus, BookingVisibility, OccurrenceKind, ResourceKind, SegmentationMode,
 };
 pub use ids::{
-    BookingId, FloorZoneId, LocationId, OccurrenceId, OrganizationId, ResourceId, RoleId, TeamId,
-    UserId,
+    AssetId, BookingId, FloorZoneId, LocationId, OccurrenceId, OrganizationId, ResourceId, RoleId,
+    TeamId, UserId,
 };
 pub use time_range::TimeRange;
