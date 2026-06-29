@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Validates every commit message against the repository's rules, regardless of
+# how the commit was made (editor or -m). Activated by: git config core.hooksPath .githooks
+set -euo pipefail
+
+hook_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$hook_dir/lib/validate-commit-msg.sh" < "$1"
