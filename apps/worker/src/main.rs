@@ -11,8 +11,13 @@ async fn main() -> anyhow::Result<()> {
         metrics_enabled: cfg.observability.metrics_enabled,
     })?;
 
-    let pool = db::connect(&cfg.database.url, cfg.database.max_connections).await?;
-    db::run_migrations(&pool).await?;
+    // Migrations and the system-role seed run under the owner/migrator role
+    // (advisory-locked, idempotent — safe to run from web and worker both). Job
+    // backends will connect under the least-privilege runtime role in P16.
+    let owner_pool = db::connect(&cfg.database.migrator_url, cfg.database.max_connections).await?;
+    db::run_migrations(&owner_pool).await?;
+    db::seed_system_roles(&owner_pool).await?;
+    owner_pool.close().await;
 
     tracing::info!("openworkspace-worker started (no jobs registered yet)");
     Ok(())

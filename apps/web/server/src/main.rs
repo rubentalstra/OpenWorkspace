@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use app::{App, CsrfToken, shell};
-use auth::{AuthSession, Credentials, MfaSession, TotpService, WebauthnService};
+use auth::{AuthSession, AuthzBackend, Credentials, MfaSession, TotpService, WebauthnService};
 use axum::extract::{FromRef, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -24,6 +24,7 @@ mod oidc;
 struct AppState {
     leptos_options: LeptosOptions,
     db: Db,
+    authz: AuthzBackend,
     webauthn: WebauthnService,
     totp: TotpService,
     oidc: oidc::OidcServices,
@@ -44,6 +45,12 @@ impl FromRef<AppState> for oidc::OidcServices {
 impl FromRef<AppState> for Db {
     fn from_ref(state: &AppState) -> Self {
         state.db.clone()
+    }
+}
+
+impl FromRef<AppState> for AuthzBackend {
+    fn from_ref(state: &AppState) -> Self {
+        state.authz.clone()
     }
 }
 
@@ -69,12 +76,25 @@ async fn main() -> anyhow::Result<()> {
         metrics_enabled: cfg.observability.metrics_enabled,
     })?;
 
-    let pool = db::connect(&cfg.database.url, cfg.database.max_connections).await?;
-    db::run_migrations(&pool).await?;
-
-    auth::bootstrap_admin(&pool, &cfg.auth)
+    // Privileged setup runs once under the owner/migrator role (DDL + RLS-bypassing
+    // reads/writes): migrations, the system-role seed, the bootstrap admin, and the
+    // field-encryption keyring. The pool is then dropped — the process serves under
+    // the least-privilege runtime role only.
+    let owner_pool = db::connect(&cfg.database.migrator_url, cfg.database.max_connections).await?;
+    db::run_migrations(&owner_pool).await?;
+    db::seed_system_roles(&owner_pool)
+        .await
+        .context("seeding system roles")?;
+    auth::bootstrap_admin(&owner_pool, &cfg.auth)
         .await
         .context("bootstrapping instance admin")?;
+    let keyring = auth::FieldKeyring::load(&owner_pool, &cfg.auth.field_encryption_key)
+        .await
+        .context("loading the field-encryption keyring")?;
+    owner_pool.close().await;
+
+    // The runtime pool: every request-time query runs as `openworkspace_app`.
+    let pool = db::connect(&cfg.database.url, cfg.database.max_connections).await?;
 
     // Reap expired session rows so the table cannot grow unbounded. Expired rows
     // never authenticate (the store filters them on load); this is housekeeping.
@@ -87,11 +107,8 @@ async fn main() -> anyhow::Result<()> {
         cfg.auth.session_idle_timeout,
     );
 
-    // Field-encryption keyring (unwraps the TOTP-secret data key under the root
-    // KEK), the TOTP service that seals secrets with it, and the WebAuthn engine.
-    let keyring = auth::FieldKeyring::load(&pool, &cfg.auth.field_encryption_key)
-        .await
-        .context("loading the field-encryption keyring")?;
+    // The TOTP service that seals secrets with the keyring's data key, and the
+    // WebAuthn engine.
     let totp = TotpService::new(
         cfg.auth.webauthn_rp_name.clone(),
         keyring.totp_dek().clone(),
@@ -121,6 +138,7 @@ async fn main() -> anyhow::Result<()> {
 
     let state = AppState {
         leptos_options: leptos_options.clone(),
+        authz: AuthzBackend::new(pool.clone()),
         db: pool,
         webauthn,
         totp,

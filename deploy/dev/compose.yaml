@@ -18,6 +18,9 @@ services:
       # PostgreSQL 18+ stores data in a major-version subdirectory, so the mount
       # goes at /var/lib/postgresql (not /var/lib/postgresql/data).
       - pgdata:/var/lib/postgresql
+      # Provisions the least-privilege runtime role on a fresh cluster (runs once,
+      # before migrations). For an existing volume, run the SQL manually once.
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U openworkspace"]
       interval: 5s
