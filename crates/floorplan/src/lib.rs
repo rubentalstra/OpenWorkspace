@@ -14,6 +14,8 @@ pub use model::*;
 pub use domain::SpaceState;
 
 #[cfg(any(feature = "ssr", feature = "hydrate"))]
+pub mod builder;
+#[cfg(any(feature = "ssr", feature = "hydrate"))]
 pub mod catalog;
 #[cfg(any(feature = "ssr", feature = "hydrate"))]
 pub mod render;
