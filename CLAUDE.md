@@ -11,6 +11,7 @@ Self-hosted, MIT, multi-site workspace-booking platform in Rust on Leptos (SSR) 
 - **Conventional Commits** for every commit; **SemVer** for every version bump (see Workflow below).
 - **Minimal comments.** Write self-explanatory code. A comment explains *why*, never *what*. The only required comments: `// SAFETY:` on any `unsafe`, and doc comments (`///`) on public items. Delete commentary that restates the code.
 - Every third-party crate stays behind a thin first-party facade (plan §6.1) — never call a vendor API directly from app code.
+- **UI from the kit ONLY — never raw controls.** Every interactive UI element MUST be a `crates/ui` component (`Button`, `NativeSelect`, `Input`, `Checkbox`, `Switch`, `Select`, …). NEVER hand-roll a raw `<button>`, `<select>`, `<input>`, `<textarea>` or any control the kit provides — in *any* app or feature crate. Active/selected state is a component `variant`, not a raw `data-*` button. Forward native attributes/events with `attr:`/`on:` (the shadcn `{...props}` pattern). Plain layout/text/SVG elements (`<div>` `<span>` `<ul>` `<p>` `<h1>` `<svg>` shapes) are fine. A feature crate that renders UI (e.g. `floorplan`) depends on `ui` (gated `ssr`/`hydrate`). If the kit lacks a needed component, add it to `crates/ui` first — do not inline a one-off. **No exceptions.**
 
 ## Workflow: commits, PRs, versioning
 
