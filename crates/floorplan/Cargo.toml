@@ -6,6 +6,44 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+# The scene model is pure serde and always available (no Leptos), so `db` and any
+# server code can (de)serialize the `floor_plans.scene` jsonb without pulling a UI
+# framework. `load_scene`/migrations operate on `serde_json::Value`.
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+# EnumIter drives the registry-completeness test (every CatalogKind is registered).
+strum = { workspace = true }
+# `SpaceState` (the six floor UI states) is a domain read-model; the renderer maps it
+# to `data-state`. `domain` is pure (no leptos/I/O), so the model stays UI-free.
+domain = { path = "../domain", version = "0.1.0" }
+
+# The catalog + renderer are Leptos and gated behind ssr/hydrate, so the model
+# stays UI-free. `icondata` carries catalog palette icons (plain data);
+# `leptos_icons` renders them; `web-sys` backs the pan/zoom pointer/wheel handlers.
+leptos = { workspace = true, optional = true }
+leptos_icons = { workspace = true, optional = true }
+icondata = { workspace = true, optional = true }
+web-sys = { version = "0.3", optional = true, features = [
+    "DomRect",
+    "Element",
+    "EventTarget",
+    "KeyboardEvent",
+    "MouseEvent",
+    "PointerEvent",
+    "SvgElement",
+    "SvgsvgElement",
+    "WheelEvent",
+    "Window",
+] }
+
+[dev-dependencies]
+insta = "1.43.2"
+proptest = "1"
+
+[features]
+ssr = ["dep:leptos", "leptos/ssr", "dep:leptos_icons", "dep:icondata", "dep:web-sys"]
+hydrate = ["dep:leptos", "leptos/hydrate", "dep:leptos_icons", "dep:icondata", "dep:web-sys"]
 
 [lints]
 workspace = true
