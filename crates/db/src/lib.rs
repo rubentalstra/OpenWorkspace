@@ -3,8 +3,11 @@
 mod access;
 mod assets;
 mod bookings;
+mod equipment;
 mod floorplan;
 mod identity;
+mod locations;
+mod resources;
 
 pub use access::audit::{ActorKindRow, AuditOutcomeRow, NewAuditEntry, record_audit};
 pub use access::context::{set_system_context, set_viewer_context};
@@ -22,7 +25,13 @@ pub use bookings::{
     Booking, BookingSourceRow, BookingStatusRow, BookingVisibilityRow, CreatedBooking, NewBooking,
     OccurrenceKindRow, apply_transition, auto_release, cancel, check_in, check_out, create_booking,
 };
-pub use floorplan::{FloorPlanRow, FloorPlanStatusRow, load_floor_plan};
+pub use equipment::{
+    EquipmentItem, create_equipment_item, delete_equipment_item, list_equipment_items,
+    update_equipment_item,
+};
+pub use floorplan::{
+    FloorBuilderDoc, FloorPlanRow, FloorPlanStatusRow, load_floor_plan, save_floor_builder_doc,
+};
 pub use identity::credentials::{
     CredentialRow, UserStatusRow, change_password, insert_bootstrap_admin, instance_admin_exists,
     load_credential_by_email, load_credential_by_id, touch_last_login, update_password_hash,
@@ -41,6 +50,14 @@ pub use identity::oidc::{
     find_oidc_identity, jit_create_user, link_oidc_identity, load_enabled_provider_by_slug,
     load_enabled_provider_summaries, load_role_mappings, touch_oidc_identity,
     update_user_display_name,
+};
+pub use locations::{
+    BuildingMarker, CampusEditor, FloorSummary, ZoneRow, ZoneSpec, list_floor_zones, list_floors,
+    load_campus_editor, set_campus_map_image, update_building_marker,
+};
+pub use resources::{
+    ResourceKindRow, ResourceRow, ResourceRulesSpec, ResourceSpec, ResourceStatusRow,
+    list_resources,
 };
 
 use secrecy::{ExposeSecret, SecretString};

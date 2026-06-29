@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM resource_equipment WHERE resource_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ae8cd5c92243a6eddd5db1ad38614e6b7801b356b3a42cd8d98f18c5e48a4f84"
+}

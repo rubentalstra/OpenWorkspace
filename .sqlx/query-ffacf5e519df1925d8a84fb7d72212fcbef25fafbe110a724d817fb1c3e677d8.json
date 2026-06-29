@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM floor_zones\n        WHERE floor_id = $1 AND COALESCE(scene_node_id, '') <> ALL($2)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ffacf5e519df1925d8a84fb7d72212fcbef25fafbe110a724d817fb1c3e677d8"
+}

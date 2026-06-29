@@ -271,3 +271,47 @@ pub async fn set_campus_map_image(
     .map_err(classify)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Db;
+
+    #[sqlx::test]
+    async fn marker_round_trips_and_rejects_non_building(pool: Db) {
+        let campus: Uuid = sqlx::query_scalar(
+            "INSERT INTO locations (kind, name, path, depth) \
+             VALUES ('campus', 'Campus', '/c', 0) RETURNING id",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        let building: Uuid = sqlx::query_scalar(
+            "INSERT INTO locations (kind, name, path, depth, parent_id) \
+             VALUES ('building', 'Building A', '/c/a', 1, $1) RETURNING id",
+        )
+        .bind(campus)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        update_building_marker(&pool, LocationId::new(building), Some((0.25, 0.75)))
+            .await
+            .unwrap();
+        let editor = load_campus_editor(&pool, LocationId::new(campus))
+            .await
+            .unwrap()
+            .expect("campus exists");
+        assert_eq!(editor.buildings.len(), 1);
+        let marker = &editor.buildings[0];
+        assert!((marker.marker_x.unwrap() - 0.25).abs() < 1e-6);
+        assert!((marker.marker_y.unwrap() - 0.75).abs() < 1e-6);
+
+        // The CHECK forbids a marker on a non-building (here, the campus itself).
+        assert!(
+            update_building_marker(&pool, LocationId::new(campus), Some((0.5, 0.5)))
+                .await
+                .is_err()
+        );
+    }
+}

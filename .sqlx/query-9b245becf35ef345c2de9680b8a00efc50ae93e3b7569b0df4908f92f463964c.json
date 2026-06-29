@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO resource_rules\n            (resource_id, max_advance_days, min_advance_minutes, min_duration_minutes,\n             max_duration_minutes, slot_granularity_minutes, buffer_minutes,\n             max_per_user_per_day, max_active_per_user, cancellation_deadline_minutes,\n             allow_recurrence, max_recurrence_count, max_recurrence_horizon_days,\n             require_approval)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)\n        ON CONFLICT (resource_id) DO UPDATE SET\n            max_advance_days = EXCLUDED.max_advance_days,\n            min_advance_minutes = EXCLUDED.min_advance_minutes,\n            min_duration_minutes = EXCLUDED.min_duration_minutes,\n            max_duration_minutes = EXCLUDED.max_duration_minutes,\n            slot_granularity_minutes = EXCLUDED.slot_granularity_minutes,\n            buffer_minutes = EXCLUDED.buffer_minutes,\n            max_per_user_per_day = EXCLUDED.max_per_user_per_day,\n            max_active_per_user = EXCLUDED.max_active_per_user,\n            cancellation_deadline_minutes = EXCLUDED.cancellation_deadline_minutes,\n            allow_recurrence = EXCLUDED.allow_recurrence,\n            max_recurrence_count = EXCLUDED.max_recurrence_count,\n            max_recurrence_horizon_days = EXCLUDED.max_recurrence_horizon_days,\n            require_approval = EXCLUDED.require_approval\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Bool",
+        "Int4",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9b245becf35ef345c2de9680b8a00efc50ae93e3b7569b0df4908f92f463964c"
+}

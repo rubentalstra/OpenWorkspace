@@ -16,7 +16,6 @@ pub enum ResourceKindRow {
     Desk,
     Room,
     Parking,
-    Vehicle,
     Equipment,
 }
 
@@ -26,7 +25,6 @@ impl From<ResourceKind> for ResourceKindRow {
             ResourceKind::Desk => Self::Desk,
             ResourceKind::Room => Self::Room,
             ResourceKind::Parking => Self::Parking,
-            ResourceKind::Vehicle => Self::Vehicle,
             ResourceKind::Equipment => Self::Equipment,
         }
     }

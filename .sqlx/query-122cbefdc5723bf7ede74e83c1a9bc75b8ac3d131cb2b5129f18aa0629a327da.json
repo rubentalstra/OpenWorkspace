@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE locations SET marker_x = $2::float8::numeric, marker_y = $3::float8::numeric WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Float8",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "122cbefdc5723bf7ede74e83c1a9bc75b8ac3d131cb2b5129f18aa0629a327da"
+}

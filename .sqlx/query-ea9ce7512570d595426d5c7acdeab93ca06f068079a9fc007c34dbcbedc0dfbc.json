@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO resource_positions (resource_id, floor_id, scene_node_id)\n        VALUES ($1, $2, $3)\n        ON CONFLICT (resource_id) DO UPDATE\n            SET floor_id = EXCLUDED.floor_id, scene_node_id = EXCLUDED.scene_node_id\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ea9ce7512570d595426d5c7acdeab93ca06f068079a9fc007c34dbcbedc0dfbc"
+}
