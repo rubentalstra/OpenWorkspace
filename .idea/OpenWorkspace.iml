@@ -18,6 +18,8 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/observability/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/auth/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/i18n/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/storage/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/storage/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

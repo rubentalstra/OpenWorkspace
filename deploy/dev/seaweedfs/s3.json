@@ -1,0 +1,11 @@
+{
+  "identities": [
+    {
+      "name": "openworkspace",
+      "credentials": [
+        { "accessKey": "openworkspacedev", "secretKey": "openworkspacedevsecret" }
+      ],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

@@ -16,6 +16,8 @@ doc-valid-idents = [
     "TOTP",
     "WebAuthn",
     "SVG",
+    "SeaweedFS",
+    "WebP",
     "PQC",
     "KMS",
     "CBOM",

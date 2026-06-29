@@ -78,3 +78,7 @@ uuid_newtype!(
     /// Identifies a `floor_zones` row.
     FloorZoneId
 );
+uuid_newtype!(
+    /// Identifies an `assets` row (an uploaded binary object).
+    AssetId
+);

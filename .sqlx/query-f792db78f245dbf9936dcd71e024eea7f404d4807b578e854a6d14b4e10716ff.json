@@ -1,0 +1,198 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, kind AS \"kind: AssetKindRow\", storage_key, content_type, byte_size,\n               width, height, checksum, original_filename, alt_text, parent_asset_id,\n               variant, uploaded_by, created_at\n        FROM assets WHERE id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "kind: AssetKindRow",
+        "type_info": {
+          "Custom": {
+            "name": "asset_kind",
+            "kind": {
+              "Enum": [
+                "reference_image",
+                "campus_map",
+                "floor_background",
+                "object_photo",
+                "logo",
+                "export"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "storage_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "storage_key"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "content_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "content_type"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "byte_size",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "byte_size"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "width",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "width"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "height",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "height"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "checksum",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "checksum"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "original_filename",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "original_filename"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "alt_text",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "alt_text"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "parent_asset_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "parent_asset_id"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "variant",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "variant"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "uploaded_by",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "uploaded_by"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "f792db78f245dbf9936dcd71e024eea7f404d4807b578e854a6d14b4e10716ff"
+}

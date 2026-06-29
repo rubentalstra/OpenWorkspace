@@ -18,6 +18,21 @@ service_name = "openworkspace-dev"
 log_filter = "info,openworkspace=debug,sqlx=warn"
 metrics_enabled = true
 
+[dev.storage]
+# Dev SeaweedFS S3 gateway (deploy/dev/compose.yaml). Dev-only credentials match
+# deploy/dev/seaweedfs/s3.json; production supplies these via APP_STORAGE__* env.
+kind = "s3"
+s3_endpoint = "http://localhost:8333"
+s3_region = "us-east-1"
+s3_bucket = "openworkspace"
+s3_access_key = "openworkspacedev"
+s3_secret_key = "openworkspacedevsecret"
+s3_allow_http = true
+s3_force_path_style = true
+presign_ttl = "15m"
+max_upload_bytes = 10485760
+thumbnail_max_px = 512
+
 [dev.auth]
 # Dev-only root key-encryption key (base64 of 32 bytes). Production supplies this
 # via APP_AUTH__FIELD_ENCRYPTION_KEY; never reuse this value outside local dev.

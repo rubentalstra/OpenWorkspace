@@ -11,20 +11,26 @@ config = { path = "../../../crates/config", version = "0.1.0" }
 db = { path = "../../../crates/db", version = "0.1.0" }
 auth = { path = "../../../crates/auth", version = "0.1.0", features = ["ssr"] }
 domain = { path = "../../../crates/domain", version = "0.1.0" }
+storage = { path = "../../../crates/storage", version = "0.1.0" }
 observability = { path = "../../../crates/observability", version = "0.1.0" }
 leptos = { workspace = true, features = ["ssr"] }
 leptos_axum.workspace = true
 
-axum.workspace = true
+# `multipart` for the asset-upload endpoint (off by default in axum).
+axum = { workspace = true, features = ["multipart"] }
 tokio.workspace = true
 tower.workspace = true
 tower-http.workspace = true
 
 anyhow.workspace = true
+# Typed HTTP error for the asset endpoints (status mapping via IntoResponse);
+# startup/setup still uses anyhow + .context().
+thiserror.workspace = true
+tracing.workspace = true
 secrecy.workspace = true
 serde.workspace = true
 # JSON views for the MFA endpoints: passkey ids and timestamps.
-uuid = { version = "1", features = ["serde"] }
+uuid = { version = "1", features = ["serde", "v7"] }
 chrono = { version = "0.4.45", default-features = false, features = ["serde"] }
 
 [lints]

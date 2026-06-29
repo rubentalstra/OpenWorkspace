@@ -17,6 +17,7 @@ use tower_http::trace::TraceLayer;
 
 mod mfa;
 mod oidc;
+mod upload;
 
 /// Shared web state. `FromRef` lets Leptos pull `LeptosOptions` and the handlers
 /// pull the `Db`, the WebAuthn engine and the TOTP service from the one state.
@@ -28,6 +29,8 @@ struct AppState {
     webauthn: WebauthnService,
     totp: TotpService,
     oidc: oidc::OidcServices,
+    storage: storage::Storage,
+    upload_limits: storage::ImageLimits,
 }
 
 impl FromRef<AppState> for LeptosOptions {
@@ -51,6 +54,18 @@ impl FromRef<AppState> for Db {
 impl FromRef<AppState> for AuthzBackend {
     fn from_ref(state: &AppState) -> Self {
         state.authz.clone()
+    }
+}
+
+impl FromRef<AppState> for storage::Storage {
+    fn from_ref(state: &AppState) -> Self {
+        state.storage.clone()
+    }
+}
+
+impl FromRef<AppState> for storage::ImageLimits {
+    fn from_ref(state: &AppState) -> Self {
+        state.upload_limits
     }
 }
 
@@ -131,6 +146,14 @@ async fn main() -> anyhow::Result<()> {
         base_url: Arc::from(cfg.auth.public_base_url.trim_end_matches('/')),
     };
 
+    // Object storage for binary assets (presigned URLs via the S3 backend).
+    let object_storage =
+        storage::Storage::from_config(&cfg.storage).context("building object storage")?;
+    let upload_limits = storage::ImageLimits {
+        max_bytes: cfg.storage.max_upload_bytes,
+        thumbnail_max_px: cfg.storage.thumbnail_max_px,
+    };
+
     let conf = get_configuration(None).context("loading Leptos configuration")?;
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
@@ -143,6 +166,8 @@ async fn main() -> anyhow::Result<()> {
         webauthn,
         totp,
         oidc,
+        storage: object_storage,
+        upload_limits,
     };
 
     // Operational probes live outside the auth/session/CSRF stack.
@@ -174,6 +199,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/change-password", post(change_password))
         .merge(mfa::routes())
         .merge(oidc::routes())
+        .merge(upload::routes(cfg.storage.max_upload_bytes))
         .leptos_routes_with_context(&state, routes, provide_csrf_context, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())

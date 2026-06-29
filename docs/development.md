@@ -81,6 +81,21 @@ podman exec -i openworkspace-dev-postgres-1 psql -U openworkspace -d openworkspa
       EXCEPTION WHEN duplicate_object THEN ALTER ROLE openworkspace_app LOGIN PASSWORD 'devapp' NOBYPASSRLS; END \$\$;"
 ```
 
+### Object storage (SeaweedFS S3)
+
+The bundled SeaweedFS exposes an S3 gateway at `http://localhost:8333` with a
+dev identity (`deploy/dev/seaweedfs/s3.json`: `openworkspacedev` /
+`openworkspacedevsecret`) so presigned URLs (sigv4) work. The app/tests use the
+`openworkspace` bucket — create it once (the S3 storage tests need it):
+
+```sh
+podman exec openworkspace-dev-seaweedfs-1 sh -c 'echo "s3.bucket.create -name openworkspace" | weed shell'
+```
+
+The `crates/storage` S3 round-trip tests read `OWK_S3_ENDPOINT`/`OWK_S3_BUCKET`/
+`OWK_S3_ACCESS_KEY`/`OWK_S3_SECRET_KEY` (defaulting to the dev values above), so
+`podman compose up` + `cargo nextest run` works with no extra env.
+
 ## Database migrations (sqlx-cli)
 
 Migrations live in `crates/db/migrations/` (reversible `-r`: a `.up.sql` + `.down.sql`).

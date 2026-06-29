@@ -19,6 +19,7 @@ pub struct AppConfig {
     pub database: DatabaseConfig,
     pub observability: ObservabilityConfig,
     pub auth: AuthConfig,
+    pub storage: StorageConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -158,6 +159,59 @@ impl Default for AuthConfig {
             oidc_discovery_cache: Duration::from_hours(1),
             oidc_http_timeout: Duration::from_secs(10),
             oidc_default_clock_skew: Duration::from_mins(1),
+        }
+    }
+}
+
+/// Object-storage (binary assets) configuration. `object_store` over an
+/// S3-compatible backend (SeaweedFS in dev/on-prem) or local disk.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct StorageConfig {
+    /// Backend selector: `"s3"` (S3-compatible, incl. SeaweedFS) or `"local"`
+    /// (filesystem under [`StorageConfig::local_dir`], no presigned URLs).
+    pub kind: String,
+    /// S3 endpoint URL (e.g. `http://localhost:8333` for dev SeaweedFS). Empty
+    /// uses the AWS default endpoint for the region.
+    pub s3_endpoint: String,
+    /// S3 region. SeaweedFS ignores it but sigv4 still requires a value.
+    pub s3_region: String,
+    /// Bucket holding all assets. Provisioned out-of-band (dev compose / deploy).
+    pub s3_bucket: String,
+    /// S3 access key id. A secret: redacted. Env: `APP_STORAGE__S3_ACCESS_KEY`.
+    pub s3_access_key: SecretString,
+    /// S3 secret access key. A secret: redacted. Env: `APP_STORAGE__S3_SECRET_KEY`.
+    pub s3_secret_key: SecretString,
+    /// Allow plain HTTP to the endpoint (dev SeaweedFS). Keep `false` in prod.
+    pub s3_allow_http: bool,
+    /// Use path-style addressing (`endpoint/bucket/key`). Required by SeaweedFS.
+    pub s3_force_path_style: bool,
+    /// How long a generated presigned URL stays valid. Humantime (e.g. `15m`).
+    #[serde(with = "humantime_serde")]
+    pub presign_ttl: Duration,
+    /// Hard cap on an accepted upload's byte size (pre-decode rejection).
+    pub max_upload_bytes: u64,
+    /// Longest edge (px) of the generated thumbnail variant.
+    pub thumbnail_max_px: u32,
+    /// Root directory for the `local` backend. `None` unless `kind = "local"`.
+    pub local_dir: Option<String>,
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self {
+            kind: "s3".to_owned(),
+            s3_endpoint: String::new(),
+            s3_region: "us-east-1".to_owned(),
+            s3_bucket: String::new(),
+            s3_access_key: SecretString::from(String::new()),
+            s3_secret_key: SecretString::from(String::new()),
+            s3_allow_http: false,
+            s3_force_path_style: true,
+            presign_ttl: Duration::from_mins(15),
+            max_upload_bytes: 10 * 1024 * 1024,
+            thumbnail_max_px: 512,
+            local_dir: None,
         }
     }
 }

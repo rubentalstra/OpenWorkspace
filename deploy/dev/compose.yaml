@@ -40,7 +40,9 @@ services:
 
   seaweedfs:
     image: docker.io/chrislusf/seaweedfs:4.36
-    command: ["server", "-s3", "-dir=/data"]
+    # -s3.config gives the S3 gateway a dev identity (access/secret) so presigned
+    # sigv4 URLs can be verified. Dev-only credentials; prod provisions its own.
+    command: ["server", "-s3", "-dir=/data", "-s3.config=/etc/seaweedfs/s3.json"]
     environment:
       WEED_S3_SSE_KEK_PASSPHRASE: "openworkspace-dev-sse-kek"
     ports:
@@ -50,6 +52,7 @@ services:
       - seaweeddata:/data
       - ./seaweedfs/security.toml:/etc/seaweedfs/security.toml:ro
       - ./seaweedfs/filer.toml:/etc/seaweedfs/filer.toml:ro
+      - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
 
   mailpit:
     image: docker.io/axllent/mailpit:latest
