@@ -62,6 +62,8 @@ wasm-bindgen = { workspace = true, optional = true }
 # and awaits the returned Promise — browser-only, behind `hydrate`.
 js-sys = { version = "0.3.103", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
+# base64url codec for the WebAuthn binary fields (challenge, ids, attestation).
+base64 = { version = "0.22", optional = true }
 web-sys = { version = "0.3.103", optional = true, features = [
     "Document",
     "Window",
@@ -93,6 +95,7 @@ hydrate = [
     "dep:web-sys",
     "dep:js-sys",
     "dep:wasm-bindgen-futures",
+    "dep:base64",
     "dep:bytes",
     "dep:futures",
 ]

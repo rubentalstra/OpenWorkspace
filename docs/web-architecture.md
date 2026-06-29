@@ -69,7 +69,7 @@ JSON strings so it stays wasm-safe (no `webauthn-rs` types cross it).
 ## Dev sign-in
 
 `config/app.toml` `[dev.auth]` seeds a bootstrap admin
-(`admin@openworkspace.test` / `devadminpw`) and the local Keycloak provider
+(`admin@openworkspace.test` / `devadminpassword`) and the local Keycloak provider
 (`dev_seed_keycloak = true`). At `/login`: password sign-in, or "Continue with
 Keycloak" (realm users `alice` / `alicepw`, `bob` / `bobpw`). Never enable these in
 production — real deployments configure providers per environment and supply the

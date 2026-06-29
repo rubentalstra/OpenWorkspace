@@ -47,7 +47,9 @@ dev_seed_keycloak = true
 # production sets these via APP_AUTH__BOOTSTRAP_ADMIN_*. The account is flagged
 # must-change. Sign in at /login with these, or via Keycloak SSO (alice / alicepw).
 bootstrap_admin_email = "admin@openworkspace.test"
-bootstrap_admin_password = "devadminpw"
+# ≥12 chars to satisfy the password policy (so it can also be re-set via the
+# change-password flow in dev/e2e).
+bootstrap_admin_password = "devadminpassword"
 
 [prod.observability]
 service_name = "openworkspace"

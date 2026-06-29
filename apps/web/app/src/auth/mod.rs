@@ -68,11 +68,24 @@ pub async fn logout() -> Result<Option<String>, ServerFnError> {
     backend::logout().await
 }
 
+/// Begin a passwordless passkey sign-in for `email`; returns the
+/// `RequestChallengeResponse` JSON (the account's credentials) for the ceremony.
+#[server(client = CsrfClient)]
+pub async fn passkey_login_start(email: String) -> Result<String, ServerFnError> {
+    backend::passkey_login_start(email).await
+}
+
+/// Finish a passwordless passkey sign-in from the ceremony's assertion JSON.
+#[server(client = CsrfClient)]
+pub async fn passkey_login_finish(credential_json: String) -> Result<(), ServerFnError> {
+    backend::passkey_login_finish(credential_json).await
+}
+
 #[cfg(feature = "ssr")]
 mod backend {
     use auth::{
-        AuthSession, Credentials, MfaSession, OidcSession, PasswordOutcome, ProviderRegistry,
-        StoredTotp, TotpService,
+        AuthSession, Credentials, MfaSession, OidcSession, PasskeyCandidate, PasswordOutcome,
+        ProviderRegistry, PublicKeyCredential, StoredTotp, TotpService,
     };
     use leptos::prelude::*;
     use secrecy::SecretString;
@@ -219,5 +232,89 @@ mod backend {
             &post_logout,
             &state,
         ))
+    }
+
+    async fn load_candidates(
+        pool: &db::Db,
+        user_id: uuid::Uuid,
+    ) -> Result<Vec<PasskeyCandidate>, ServerFnError> {
+        Ok(db::load_passkeys_for_user(pool, user_id)
+            .await
+            .map_err(|_| fail())?
+            .into_iter()
+            .map(|r| PasskeyCandidate {
+                credential_id: r.credential_id,
+                passkey: r.passkey,
+                sign_count: r.sign_count,
+            })
+            .collect())
+    }
+
+    pub(super) async fn passkey_login_start(email: String) -> Result<String, ServerFnError> {
+        let mfa: MfaSession = leptos_axum::extract().await?;
+        let webauthn = expect_context::<auth::WebauthnService>();
+        let pool = db();
+        let no_passkey = || ServerFnError::new("no passkey is registered for that email");
+
+        let user_id = db::load_user_id_by_email(&pool, &email)
+            .await
+            .map_err(|_| fail())?
+            .ok_or_else(no_passkey)?;
+        let candidates = load_candidates(&pool, user_id).await?;
+        if candidates.is_empty() {
+            return Err(no_passkey());
+        }
+        let (challenge, state) = webauthn
+            .start_authentication(&candidates)
+            .map_err(|_| fail())?;
+        mfa.set_passkey_authentication(&state)
+            .await
+            .map_err(|_| fail())?;
+        serde_json::to_string(&challenge).map_err(|_| fail())
+    }
+
+    pub(super) async fn passkey_login_finish(credential_json: String) -> Result<(), ServerFnError> {
+        let mut auth_session: AuthSession = leptos_axum::extract().await?;
+        let mfa: MfaSession = leptos_axum::extract().await?;
+        let webauthn = expect_context::<auth::WebauthnService>();
+        let pool = db();
+
+        let credential: PublicKeyCredential = serde_json::from_str(&credential_json)
+            .map_err(|_| ServerFnError::new("invalid credential"))?;
+        let state = mfa
+            .take_passkey_authentication()
+            .await
+            .map_err(|_| fail())?
+            .ok_or_else(|| ServerFnError::new("no sign-in in progress"))?;
+        // The credential id identifies the owner; verify against their candidates.
+        let owner = db::load_passkey_by_credential_id(&pool, credential.get_credential_id())
+            .await
+            .map_err(|_| fail())?
+            .ok_or_else(|| ServerFnError::new("unknown passkey"))?
+            .user_id;
+        let candidates = load_candidates(&pool, owner).await?;
+        let outcome = webauthn
+            .finish_authentication(&credential, &state, &candidates)
+            .map_err(|_| fail())?;
+
+        let passkey = db::load_passkey_by_credential_id(&pool, &outcome.credential_id)
+            .await
+            .map_err(|_| fail())?
+            .ok_or_else(fail)?;
+        db::update_passkey_after_auth(
+            &pool,
+            passkey.id,
+            &outcome.updated_passkey,
+            outcome.new_sign_count,
+        )
+        .await
+        .map_err(|_| fail())?;
+        auth::login_verified_user(&mut auth_session, domain::UserId::new(owner))
+            .await
+            .map_err(|_| fail())?;
+        auth::rotate_csrf_token(&auth_session)
+            .await
+            .map_err(|_| fail())?;
+        Ok(())
     }
 }

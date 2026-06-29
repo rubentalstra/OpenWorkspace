@@ -14,7 +14,10 @@ use ui::{
     InputOtpSeparator, InputOtpSlot,
 };
 
-use super::{OidcProviderDto, list_oidc_providers, login, verify_recovery, verify_totp};
+use super::{
+    OidcProviderDto, list_oidc_providers, login, passkey_login_finish, passkey_login_start,
+    verify_recovery, verify_totp,
+};
 
 /// login page: brand mark over the login card, centered on a muted background.
 #[component]
@@ -24,7 +27,11 @@ pub fn LoginPage() -> impl IntoView {
             <div class="flex w-full max-w-sm flex-col gap-6">
                 <a href="/" class="flex items-center gap-2 self-center font-medium">
                     <div class="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-                        <Icon icon=icondata::LuGalleryVerticalEnd attr:class="size-4" />
+                        <Icon
+                            icon=icondata::LuGalleryVerticalEnd
+                            attr:class="size-4"
+                            attr:aria-hidden="true"
+                        />
                     </div>
                     "OpenWorkspace"
                 </a>
@@ -99,6 +106,38 @@ fn LoginForm() -> impl IntoView {
         })
     };
 
+    // Passwordless sign-in: the email selects the account, then the WebAuthn
+    // ceremony asserts one of its registered passkeys.
+    let passkey = move |_| {
+        if pending.get_untracked() {
+            return;
+        }
+        let email_v = email.get_untracked();
+        if email_v.trim().is_empty() {
+            error.set(Some(
+                "Enter your email, then sign in with your passkey.".to_owned(),
+            ));
+            return;
+        }
+        error.set(None);
+        pending.set(true);
+        let target = return_to();
+        spawn_local(async move {
+            let result: Result<(), ()> = async {
+                let options = passkey_login_start(email_v).await.map_err(|_| ())?;
+                let assertion = crate::webauthn::get(options).await.map_err(|_| ())?;
+                passkey_login_finish(assertion).await.map_err(|_| ())
+            }
+            .await;
+            if result.is_ok() {
+                navigate_to(&target);
+            } else {
+                pending.set(false);
+                error.set(Some("Passkey sign-in failed or was cancelled.".to_owned()));
+            }
+        });
+    };
+
     view! {
         <div class="flex flex-col gap-6">
             <Show
@@ -159,6 +198,14 @@ fn LoginForm() -> impl IntoView {
                                         attr:disabled=move || pending.get()
                                     >
                                         "Sign in"
+                                    </Button>
+                                    <Button
+                                        variant=ButtonVariant::Outline
+                                        attr:r#type="button"
+                                        attr:disabled=move || pending.get()
+                                        on:click=passkey
+                                    >
+                                        "Sign in with a passkey"
                                     </Button>
                                     <FieldDescription class="text-center">
                                         "Don't have an account? " <a href="/signup">"Sign up"</a>
@@ -353,7 +400,11 @@ pub fn SignupPage() -> impl IntoView {
             <div class="flex w-full max-w-sm flex-col gap-6">
                 <a href="/" class="flex items-center gap-2 self-center font-medium">
                     <div class="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-                        <Icon icon=icondata::LuGalleryVerticalEnd attr:class="size-4" />
+                        <Icon
+                            icon=icondata::LuGalleryVerticalEnd
+                            attr:class="size-4"
+                            attr:aria-hidden="true"
+                        />
                     </div>
                     "OpenWorkspace"
                 </a>
