@@ -11,18 +11,24 @@ use object_store::local::LocalFileSystem;
 use object_store::memory::InMemory;
 use object_store::path::Path as ObjectPath;
 use object_store::signer::Signer as _;
-use object_store::{Attribute, AttributeValue, Attributes, ObjectStore, PutOptions, PutPayload};
+use object_store::{
+    Attribute, AttributeValue, Attributes, ObjectStore, ObjectStoreExt as _, PutOptions, PutPayload,
+};
 use secrecy::ExposeSecret as _;
 
 use config::StorageConfig;
 
 use crate::StorageError;
 
-/// Builds the configured store. Returns the dyn store (all backends) plus the
-/// concrete `AmazonS3` when the backend can sign URLs (S3 only).
-pub(crate) fn build(
-    cfg: &StorageConfig,
-) -> Result<(Arc<dyn ObjectStore>, Option<Arc<AmazonS3>>), StorageError> {
+/// A constructed backend: the dyn store (all backends) plus the concrete
+/// `AmazonS3` when the backend can sign URLs (S3 only).
+pub(crate) struct Built {
+    pub store: Arc<dyn ObjectStore>,
+    pub signer: Option<Arc<AmazonS3>>,
+}
+
+/// Builds the configured store.
+pub(crate) fn build(cfg: &StorageConfig) -> Result<Built, StorageError> {
     match cfg.kind.as_str() {
         "s3" => {
             let mut builder = AmazonS3Builder::new()
@@ -36,16 +42,28 @@ pub(crate) fn build(
                 builder = builder.with_endpoint(cfg.s3_endpoint.as_str());
             }
             let s3 = Arc::new(builder.build().map_err(map_err)?);
-            Ok((Arc::clone(&s3) as Arc<dyn ObjectStore>, Some(s3)))
+            let signer = Arc::clone(&s3);
+            // Move the concrete Arc into the trait-object binding (unsize coercion).
+            let store: Arc<dyn ObjectStore> = s3;
+            Ok(Built {
+                store,
+                signer: Some(signer),
+            })
         }
         "local" => {
             let dir = cfg.local_dir.as_deref().ok_or_else(|| {
                 StorageError::Config("local_dir is required for kind=local".to_owned())
             })?;
             let lfs = LocalFileSystem::new_with_prefix(dir).map_err(map_err)?;
-            Ok((Arc::new(lfs), None))
+            Ok(Built {
+                store: Arc::new(lfs),
+                signer: None,
+            })
         }
-        "memory" => Ok((Arc::new(InMemory::new()), None)),
+        "memory" => Ok(Built {
+            store: Arc::new(InMemory::new()),
+            signer: None,
+        }),
         other => Err(StorageError::Config(format!(
             "unknown storage kind `{other}`"
         ))),

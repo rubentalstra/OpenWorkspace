@@ -9,7 +9,7 @@ license.workspace = true
 # Object storage over S3-compatible backends (SeaweedFS in dev/on-prem), local
 # disk and in-memory. The `aws` feature pulls reqwest/rustls + aws-lc-rs — the
 # workspace's single crypto provider, no ring (verified against the crate source).
-object_store = { version = "0.14.0", default-features = false, features = ["aws"] }
+object_store = { version = "0.14.0", default-features = false, features = ["aws", "fs"] }
 # Raster decode/re-encode + thumbnails. Pure-Rust codecs only (no avif/gif), so no
 # C build deps; re-encoding via DynamicImage strips EXIF/metadata.
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }

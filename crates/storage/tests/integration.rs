@@ -4,6 +4,14 @@
 //! round-trip + presigned-URL tests talk to a real SeaweedFS S3 gateway — the dev
 //! stack (`deploy/dev/compose.yaml`) or the CI-started container — defaulting to
 //! `localhost:8333` with the dev identity, overridable via `OWK_S3_*` env.
+#![expect(
+    clippy::tests_outside_test_module,
+    reason = "integration-test crate: every item is a test or its fixture, so a nested test module adds no separation"
+)]
+#![expect(
+    clippy::unwrap_used,
+    reason = "fixture helpers unwrap setup; a failure is a test failure (clippy's allow-unwrap-in-tests covers only #[test] fns)"
+)]
 
 use std::io::Cursor;
 

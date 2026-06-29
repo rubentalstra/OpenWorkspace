@@ -16,6 +16,7 @@ members = [
     "crates/ui",
     "crates/config",
     "crates/observability",
+    "crates/storage",
 ]
 
 [workspace.package]

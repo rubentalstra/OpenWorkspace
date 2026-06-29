@@ -68,7 +68,7 @@ impl std::fmt::Debug for Storage {
         f.debug_struct("Storage")
             .field("presign_capable", &self.signer.is_some())
             .field("presign_ttl", &self.presign_ttl)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -81,10 +81,10 @@ impl Storage {
     /// [`StorageError::Config`] on a bad backend kind, [`StorageError::Backend`]
     /// if the backend client cannot be constructed.
     pub fn from_config(cfg: &StorageConfig) -> Result<Self, StorageError> {
-        let (store, signer) = backend::build(cfg)?;
+        let built = backend::build(cfg)?;
         Ok(Self {
-            store,
-            signer,
+            store: built.store,
+            signer: built.signer,
             presign_ttl: cfg.presign_ttl,
         })
     }
@@ -95,7 +95,12 @@ impl Storage {
     /// # Errors
     ///
     /// [`StorageError::Backend`] on any backend failure.
-    pub async fn put(&self, key: &str, bytes: Bytes, content_type: &str) -> Result<(), StorageError> {
+    pub async fn put(
+        &self,
+        key: &str,
+        bytes: Bytes,
+        content_type: &str,
+    ) -> Result<(), StorageError> {
         backend::put(self.store.as_ref(), key, bytes, content_type).await
     }
 
@@ -125,10 +130,9 @@ impl Storage {
     /// [`StorageError::Sign`] if the backend has no presign support or signing
     /// fails.
     pub async fn signed_get_url(&self, key: &str) -> Result<String, StorageError> {
-        let signer = self
-            .signer
-            .as_ref()
-            .ok_or_else(|| StorageError::Sign("backend does not support presigned urls".to_owned()))?;
+        let signer = self.signer.as_ref().ok_or_else(|| {
+            StorageError::Sign("backend does not support presigned urls".to_owned())
+        })?;
         backend::signed_get_url(signer.as_ref(), key, self.presign_ttl).await
     }
 }
