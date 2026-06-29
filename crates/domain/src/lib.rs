@@ -22,7 +22,8 @@ pub use booking::{recurrence, state_machine, validation};
 pub use model::{enums, ids, time_range};
 
 pub use enums::{
-    BookingSource, BookingStatus, BookingVisibility, OccurrenceKind, ResourceKind, SegmentationMode,
+    BookingSource, BookingStatus, BookingVisibility, OccurrenceKind, ResourceKind,
+    SegmentationMode, SpaceState,
 };
 pub use ids::{
     AssetId, BookingId, FloorZoneId, LocationId, OccurrenceId, OrganizationId, ResourceId, RoleId,
