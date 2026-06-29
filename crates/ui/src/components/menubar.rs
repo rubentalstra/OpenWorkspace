@@ -107,7 +107,7 @@ pub fn MenubarTrigger(
     let ctx = expect_context::<MenubarMenuCtx>();
     let open = ctx.open;
     let toggle_id = ctx.id.clone();
-    let hover_id = ctx.id.clone();
+    let hover_id = ctx.id;
     view! {
         <button
             type="button"

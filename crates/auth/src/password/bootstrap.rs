@@ -151,7 +151,7 @@ mod tests {
     }
 
     impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for BufWriter {
-        type Writer = BufWriter;
+        type Writer = Self;
         fn make_writer(&'a self) -> Self::Writer {
             self.clone()
         }

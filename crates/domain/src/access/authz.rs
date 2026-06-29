@@ -555,7 +555,7 @@ impl Delegation {
     #[must_use]
     pub fn as_principal(
         actor: AuthzContext,
-        on_behalf_of: Option<&Delegation>,
+        on_behalf_of: Option<&Self>,
         now: DateTime<Utc>,
     ) -> Option<AuthzContext> {
         let Some(delegation) = on_behalf_of else {
@@ -613,7 +613,7 @@ mod tests {
     fn loc(n: u128, path: &str) -> LocationNode {
         LocationNode {
             id: LocationId::new(Uuid::from_u128(n)),
-            path: path.to_string(),
+            path: path.to_owned(),
         }
     }
 
@@ -1113,7 +1113,7 @@ mod tests {
         actor.user = uid(2);
         let delegation = Delegation {
             delegate: actor.user,
-            principal: principal.clone(),
+            principal,
             window: ValidityWindow::unbounded(),
         };
         let resolved = Delegation::as_principal(actor, Some(&delegation), at(0))
@@ -1259,9 +1259,9 @@ mod tests {
 
     fn arb_sep() -> impl Strategy<Value = String> {
         prop_oneof![
-            Just("/".to_string()),
+            Just("/".to_owned()),
             Just(String::new()),
-            Just("::".to_string()),
+            Just("::".to_owned()),
         ]
     }
 

@@ -118,7 +118,7 @@ fn TeamSwitcher() -> impl IntoView {
                         size=SidebarMenuButtonSize::Lg
                         class=Signal::derive(move || {
                             if open.get() {
-                                "bg-sidebar-accent text-sidebar-accent-foreground".to_string()
+                                "bg-sidebar-accent text-sidebar-accent-foreground".to_owned()
                             } else {
                                 String::new()
                             }
@@ -223,7 +223,7 @@ fn NavMain() -> impl IntoView {
                             <SidebarMenuItem>
                                 <Collapsible open=open class="group/collapsible">
                                     <SidebarMenuButton
-                                        tooltip=title.to_string()
+                                        tooltip=title.to_owned()
                                         on_click=Callback::new(move |()| {
                                             open.update(|value| *value = !*value);
                                         })
@@ -370,7 +370,7 @@ fn NavUser() -> impl IntoView {
                     <SidebarMenuButton
                         size=SidebarMenuButtonSize::Lg
                         class=Signal::derive(move || {
-                            if open.get() { "bg-muted".to_string() } else { String::new() }
+                            if open.get() { "bg-muted".to_owned() } else { String::new() }
                         })
                         on_click=Callback::new(move |()| open.update(|value| *value = !*value))
                     >
