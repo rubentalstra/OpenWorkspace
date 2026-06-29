@@ -153,8 +153,6 @@ pub enum ResourceKind {
     Room,
     /// A parking space.
     Parking,
-    /// A vehicle.
-    Vehicle,
     /// A piece of equipment.
     Equipment,
 }
