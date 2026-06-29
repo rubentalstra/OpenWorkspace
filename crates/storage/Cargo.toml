@@ -1,0 +1,32 @@
+[package]
+name = "storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+# Object storage over S3-compatible backends (SeaweedFS in dev/on-prem), local
+# disk and in-memory. The `aws` feature pulls reqwest/rustls + aws-lc-rs — the
+# workspace's single crypto provider, no ring (verified against the crate source).
+object_store = { version = "0.14.0", default-features = false, features = ["aws"] }
+# Raster decode/re-encode + thumbnails. Pure-Rust codecs only (no avif/gif), so no
+# C build deps; re-encoding via DynamicImage strips EXIF/metadata.
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
+# First-party SHA-256 (content checksum) over the workspace's aws-lc-rs provider.
+crypto = { path = "../crypto", version = "0.1.0" }
+config = { path = "../config", version = "0.1.0" }
+bytes = "1"
+http = { workspace = true }
+uuid = { version = "1", features = ["v7"] }
+secrecy.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true }
+reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-webpki-roots-no-provider"] }
+rustls = { version = "0.23.41" }
+
+[lints]
+workspace = true

@@ -19,6 +19,17 @@ pub use field::{
     generate_data_key, hash_token, unwrap_key, wrap_key,
 };
 
+/// SHA-256 of arbitrary bytes — a content checksum for integrity/dedup (e.g. an
+/// uploaded asset's bytes), not for passwords (use [`hash_password`]). Returns the
+/// 32-byte digest. Computed with the workspace's single crypto provider (aws-lc-rs).
+#[must_use]
+pub fn sha256(bytes: &[u8]) -> [u8; 32] {
+    let computed = aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, bytes);
+    let mut out = [0u8; 32];
+    out.copy_from_slice(computed.as_ref());
+    out
+}
+
 /// A PHC-format password hash (e.g. `$argon2id$v=19$m=19456,t=2,p=1$…`). Store this.
 ///
 /// `Debug` is redacted so the PHC string (salt + digest) never reaches logs or
