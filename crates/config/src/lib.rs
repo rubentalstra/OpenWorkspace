@@ -141,6 +141,11 @@ pub struct AuthConfig {
     /// humantime string (e.g. `60s`). Env: `APP_AUTH__OIDC_DEFAULT_CLOCK_SKEW`.
     #[serde(with = "humantime_serde")]
     pub oidc_default_clock_skew: Duration,
+    /// Dev-only: seed the local Keycloak OIDC provider row (slug `keycloak`,
+    /// pointing at the compose realm) at startup, idempotently. **Never enable in
+    /// production** — real providers are configured per deployment. Defaults to
+    /// `false`; `[dev.auth]` turns it on. Env: `APP_AUTH__DEV_SEED_KEYCLOAK`.
+    pub dev_seed_keycloak: bool,
 }
 
 impl Default for AuthConfig {
@@ -159,6 +164,7 @@ impl Default for AuthConfig {
             oidc_discovery_cache: Duration::from_hours(1),
             oidc_http_timeout: Duration::from_secs(10),
             oidc_default_clock_skew: Duration::from_mins(1),
+            dev_seed_keycloak: false,
         }
     }
 }
@@ -264,5 +270,7 @@ mod tests {
         assert_eq!(cfg.auth.webauthn_rp_id, "localhost");
         assert_eq!(cfg.auth.webauthn_rp_origin, "http://localhost:3000");
         assert_eq!(cfg.auth.webauthn_rp_name, "OpenWorkspace");
+        // Provider seeding is a dev-only convenience, off unless a profile opts in.
+        assert!(!cfg.auth.dev_seed_keycloak);
     }
 }

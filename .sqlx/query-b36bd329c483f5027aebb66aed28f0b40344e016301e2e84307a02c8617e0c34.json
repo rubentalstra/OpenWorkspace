@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE floor_zones\n            SET name = $2, organization_id = $3, team_id = $4, scene_node_id = $5\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b36bd329c483f5027aebb66aed28f0b40344e016301e2e84307a02c8617e0c34"
+}

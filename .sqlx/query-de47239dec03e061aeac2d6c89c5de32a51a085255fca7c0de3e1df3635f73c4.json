@@ -1,0 +1,339 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT r.id, p.scene_node_id, r.kind AS \"kind: ResourceKindRow\", r.name, r.code,\n               r.category_id, r.capacity, r.bookable, r.requires_checkin, r.is_accessible,\n               r.description, r.status AS \"status: ResourceStatusRow\",\n               rr.max_advance_days, rr.min_advance_minutes, rr.min_duration_minutes,\n               rr.max_duration_minutes, rr.slot_granularity_minutes, rr.buffer_minutes,\n               rr.max_per_user_per_day, rr.max_active_per_user, rr.cancellation_deadline_minutes,\n               rr.allow_recurrence AS \"allow_recurrence?\", rr.max_recurrence_count,\n               rr.max_recurrence_horizon_days, rr.require_approval AS \"require_approval?\"\n        FROM resource_positions p\n        JOIN resources r ON r.id = p.resource_id\n        LEFT JOIN resource_rules rr ON rr.resource_id = r.id\n        WHERE p.floor_id = $1\n        ORDER BY r.name\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "scene_node_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "resource_positions",
+            "name": "scene_node_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "kind: ResourceKindRow",
+        "type_info": {
+          "Custom": {
+            "name": "resource_kind",
+            "kind": {
+              "Enum": [
+                "desk",
+                "room",
+                "parking",
+                "equipment"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "category_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "category_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "capacity",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "capacity"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "bookable",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "bookable"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "requires_checkin",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "requires_checkin"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "is_accessible",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "is_accessible"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "status: ResourceStatusRow",
+        "type_info": {
+          "Custom": {
+            "name": "resource_status",
+            "kind": {
+              "Enum": [
+                "active",
+                "inactive",
+                "maintenance"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "max_advance_days",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "max_advance_days"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "min_advance_minutes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "min_advance_minutes"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "min_duration_minutes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "min_duration_minutes"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "max_duration_minutes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "max_duration_minutes"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "slot_granularity_minutes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "slot_granularity_minutes"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "buffer_minutes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "buffer_minutes"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "max_per_user_per_day",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "max_per_user_per_day"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "max_active_per_user",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "max_active_per_user"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "cancellation_deadline_minutes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "cancellation_deadline_minutes"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "allow_recurrence?",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "allow_recurrence"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "max_recurrence_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "max_recurrence_count"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "max_recurrence_horizon_days",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "max_recurrence_horizon_days"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "require_approval?",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "resource_rules",
+            "name": "require_approval"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "de47239dec03e061aeac2d6c89c5de32a51a085255fca7c0de3e1df3635f73c4"
+}

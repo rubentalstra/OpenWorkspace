@@ -1,21 +1,19 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use app::{App, CsrfToken, shell};
-use auth::{AuthSession, AuthzBackend, Credentials, MfaSession, TotpService, WebauthnService};
+use app::{App, shell};
+use auth::{AuthzBackend, TotpService, WebauthnService};
+use axum::Router;
 use axum::extract::{FromRef, State};
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
-use axum::{Form, Json, Router};
+use axum::routing::get;
 use db::Db;
 use leptos::logging::log;
 use leptos::prelude::*;
 use leptos_axum::{LeptosRoutes, generate_route_list};
-use secrecy::SecretString;
 use tower_http::trace::TraceLayer;
 
-mod mfa;
+mod context;
 mod oidc;
 mod upload;
 
@@ -106,6 +104,11 @@ async fn main() -> anyhow::Result<()> {
     let keyring = auth::FieldKeyring::load(&owner_pool, &cfg.auth.field_encryption_key)
         .await
         .context("loading the field-encryption keyring")?;
+    // Dev-only: seed the local Keycloak SSO provider (sealing its secret with the
+    // keyring) so `/login` offers a working SSO button. No-op in production.
+    auth::seed_dev_oidc_provider(&owner_pool, &keyring, &cfg.auth)
+        .await
+        .context("seeding the dev OIDC provider")?;
     owner_pool.close().await;
 
     // The runtime pool: every request-time query runs as `openworkspace_app`.
@@ -180,27 +183,23 @@ async fn main() -> anyhow::Result<()> {
         )
         .with_state(state.clone());
 
-    // Authenticated surface: Leptos routes plus the login/logout/change-password
-    // endpoints. The CSRF middleware runs inside the session/auth layer (it needs
-    // the session) and is outermost over the handlers; the auth layer is outermost
-    // overall.
+    // Authenticated surface. The web layer is Leptos: every UI-facing operation
+    // (login, logout, change-password, MFA, …) is a `#[server]` fn in the `app`
+    // crate, reached under `/api/*`. Raw Axum routes survive only for the protocol
+    // needs that a server fn cannot express: the OIDC redirect flow and asset
+    // upload/serve. See `docs/web-architecture.md`.
     //
     // FAIL-CLOSED CSRF: `auth::csrf_layer` rejects every unsafe method lacking a
     // valid token, INCLUDING the Leptos server-fn endpoints under `/api/*`. A
     // mutating `#[server]` fn must attach the token via the first-party
     // `app::CsrfClient` (`#[server(client = CsrfClient)]`), which reads
     // `<meta name="csrf-token">` and sets `X-CSRF-Token`; read-only queries use a
-    // real GET (`#[server(input = GetUrl)]`) and are CSRF-exempt by method. P5
-    // ships no server fns yet, so there is nothing to annotate. Do NOT exempt
-    // `/api/*` from CSRF to work around a 403 — see csrf.rs.
+    // real GET (`#[server(input = GetUrl)]`) and are CSRF-exempt by method. Do NOT
+    // exempt `/api/*` from CSRF to work around a 403 — see csrf.rs.
     let app = Router::new()
-        .route("/api/login", post(login))
-        .route("/api/logout", post(oidc::logout))
-        .route("/api/change-password", post(change_password))
-        .merge(mfa::routes())
         .merge(oidc::routes())
         .merge(upload::routes(cfg.storage.max_upload_bytes))
-        .leptos_routes_with_context(&state, routes, provide_csrf_context, {
+        .leptos_routes_with_context(&state, routes, context::provider(&state), {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())
         })
@@ -219,127 +218,6 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("serving HTTP")?;
     Ok(())
-}
-
-/// Per-request Leptos context: surface the CSRF token (set in request extensions
-/// by the CSRF middleware) to the `App` so it can render the `<meta>` tag.
-fn provide_csrf_context() {
-    if let Some(parts) = use_context::<axum::http::request::Parts>()
-        && let Some(token) = parts.extensions.get::<auth::CsrfToken>()
-    {
-        provide_context(CsrfToken(token.as_str().to_owned()));
-    }
-}
-
-/// Login endpoint (first factor). Verifies the password; if the account has a
-/// confirmed second factor it stops short of signing in, records a pending-MFA
-/// marker in the session, and answers `{ "mfa_required": true }` so the client
-/// continues to `/api/mfa/totp/verify` or `/api/mfa/recovery/verify`. Otherwise
-/// it signs the user in (cycling the session id, defeating fixation) and rotates
-/// the CSRF token across the auth boundary.
-///
-/// If the session is already authenticated (re-auth/step-up), the existing
-/// session is flushed first so the id always rotates afresh.
-async fn login(
-    mut auth_session: AuthSession,
-    mfa_session: MfaSession,
-    State(db): State<Db>,
-    Form(creds): Form<Credentials>,
-) -> Response {
-    if auth_session.user.is_some() && auth::cycle_session_id(&auth_session).await.is_err() {
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-    let user = match auth_session.authenticate(creds).await {
-        Ok(Some(user)) => user,
-        Ok(None) => return StatusCode::UNAUTHORIZED.into_response(),
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    };
-
-    match auth::second_factor_required(&db, user.id.as_uuid()).await {
-        Ok(true) => {
-            if mfa_session
-                .set_pending_mfa(&mfa::pending_for(user.id.as_uuid()))
-                .await
-                .is_err()
-            {
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-            }
-            Json(mfa::LoginResponse { mfa_required: true }).into_response()
-        }
-        Ok(false) => match auth_session.login(&user).await {
-            Ok(()) => match auth::rotate_csrf_token(&auth_session).await {
-                Ok(()) => Json(mfa::LoginResponse {
-                    mfa_required: false,
-                })
-                .into_response(),
-                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            },
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        },
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
-}
-
-/// Change-password form. `Debug` is derived only via the redacting `SecretString`,
-/// so neither password reaches logs.
-#[derive(serde::Deserialize)]
-struct ChangePassword {
-    current_password: SecretString,
-    new_password: SecretString,
-}
-
-/// Change-password endpoint.
-///
-/// Requires an authenticated session (else `401`). Validates the new password
-/// against the policy (length over composition; see [`auth::validate_password`]),
-/// then verifies the current password and persists the new hash. On success it
-/// re-binds **this** session via [`auth::rebind_after_password_change`] (reload +
-/// cycle id + re-login, re-stamping the stored auth hash) and rotates the CSRF
-/// token, so the active session stays valid under the new hash while
-/// `session_auth_hash` invalidates every *other* live session on its next
-/// request.
-///
-/// `must_change` is surfaced (cleared by the change) but **not** enforced with a
-/// blanket forced-redirect here: route-gating that forces a flagged user to this
-/// endpoint before anything else is P8's job. Mirrors the deferral note in
-/// `bootstrap.rs` / `auth::User`.
-///
-/// Status mapping: wrong current password → `403` (never revealing which field);
-/// policy failure → `400`; missing auth → `401`; infrastructure error → `500`.
-async fn change_password(
-    mut auth_session: AuthSession,
-    Form(form): Form<ChangePassword>,
-) -> StatusCode {
-    let Some(user) = auth_session.user.clone() else {
-        return StatusCode::UNAUTHORIZED;
-    };
-    if auth::validate_password(&form.new_password).is_err() {
-        return StatusCode::BAD_REQUEST;
-    }
-    match auth_session
-        .backend
-        .change_password(
-            user.id.as_uuid(),
-            &form.current_password,
-            &form.new_password,
-        )
-        .await
-    {
-        Ok(()) => {}
-        Err(auth::AuthError::WrongPassword) => return StatusCode::FORBIDDEN,
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
-    }
-    // Re-bind THIS session to the new hash (cycle id + re-login) so it stays valid
-    // while session_auth_hash invalidates every OTHER session; then rotate the
-    // per-session CSRF token across the change.
-    if auth::rebind_after_password_change(&mut auth_session, user.id)
-        .await
-        .is_err()
-        || auth::rotate_csrf_token(&auth_session).await.is_err()
-    {
-        return StatusCode::INTERNAL_SERVER_ERROR;
-    }
-    StatusCode::OK
 }
 
 /// Readiness probe: 200 when the database is reachable, 503 otherwise.

@@ -284,6 +284,13 @@
   stroke-width: 0.4;
 }
 
+/* Furniture: the shared desk surface a multi-seat desk's seats sit on. */
+.cn-floor-desk-block {
+  fill: var(--muted);
+  stroke: var(--border);
+  stroke-width: 0.3;
+}
+
 /* Zoning & annotation. */
 .cn-floor-zone-area {
   fill: var(--accent);
@@ -373,4 +380,99 @@
   background: var(--cnf-fill);
   color: var(--cnf-fg);
   border-color: var(--cnf-fg);
+}
+
+/* ── Floor builder chrome (P11) ────────────────────────────────────────────── */
+.cn-floor-builder {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.cn-floor-builder-canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.cn-floor-builder-svg {
+  width: 100%;
+  height: 100%;
+  background: var(--muted);
+  touch-action: none;
+  user-select: none;
+}
+.cn-floor-builder-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+}
+.cn-floor-builder-group {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border);
+}
+.cn-floor-builder-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.625rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  cursor: pointer;
+}
+.cn-floor-builder-tool:hover {
+  background: var(--accent);
+}
+.cn-floor-builder-tool[data-active="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+.cn-floor-builder-tool:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.cn-floor-builder-node {
+  cursor: pointer;
+}
+.cn-floor-builder-node[data-selected="true"] {
+  filter: drop-shadow(0 0 1px var(--ring)) drop-shadow(0 0 1px var(--ring));
+}
+.cn-floor-builder-underlay {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── Campus map + draggable building markers (P11) ─────────────────────────── */
+.cn-campus-canvas {
+  background: var(--muted);
+  overflow: hidden;
+  touch-action: none;
+}
+.cn-campus-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  cursor: grab;
+  touch-action: none;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+}
+.cn-campus-marker:active {
+  cursor: grabbing;
 }

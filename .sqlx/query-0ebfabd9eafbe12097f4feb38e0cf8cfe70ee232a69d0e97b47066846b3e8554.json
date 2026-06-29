@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO oidc_providers\n            (slug, display_name, issuer_url, client_id,\n             client_auth_method, client_secret_encrypted, groups_claim, button_label)\n        VALUES ($1::citext, $2, $3, $4, 'client_secret_basic', $5, $6, $7)\n        ON CONFLICT (slug) DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "citext",
+            "kind": "Simple"
+          }
+        },
+        "Text",
+        "Text",
+        "Text",
+        "Bytea",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0ebfabd9eafbe12097f4feb38e0cf8cfe70ee232a69d0e97b47066846b3e8554"
+}

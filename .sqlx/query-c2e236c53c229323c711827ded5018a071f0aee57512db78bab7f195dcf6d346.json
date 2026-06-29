@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM resource_positions WHERE floor_id = $1 AND scene_node_id <> ALL($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c2e236c53c229323c711827ded5018a071f0aee57512db78bab7f195dcf6d346"
+}

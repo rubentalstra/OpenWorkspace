@@ -108,6 +108,112 @@ pub async fn login_verified_user(
     Ok(())
 }
 
+/// The result of verifying a password first factor — the single decision every
+/// password sign-in entry point reports to its caller.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PasswordOutcome {
+    /// Password verified and the session is now authenticated.
+    Authenticated,
+    /// Password verified, but the account owes a confirmed second factor; a
+    /// pending-MFA marker has been recorded and the session is **not** yet
+    /// authenticated. The caller drives the second-factor step.
+    MfaRequired,
+    /// The email/password did not match (uniform failure — no enumeration).
+    InvalidCredentials,
+}
+
+/// Verify a password first factor and advance the session accordingly.
+///
+/// This is the **one** implementation of the password sign-in sequence: re-auth
+/// over a live session cycles the id first (fixation defence); the password is
+/// verified; an account with a confirmed second factor stops at
+/// [`PasswordOutcome::MfaRequired`] after recording the pending marker; otherwise
+/// the user is signed in (which cycles the id) and the CSRF token is rotated.
+/// Every entry point (the `login` server function, and the integration-test
+/// handler) calls this rather than re-assembling the steps.
+///
+/// # Errors
+///
+/// [`AuthError::Session`] if any session-store step fails;
+/// [`AuthError::Db`]/[`AuthError::Crypto`]/[`AuthError::Task`] from credential
+/// lookup and verification.
+pub async fn password_first_factor(
+    auth_session: &mut AuthSession,
+    mfa: &crate::MfaSession,
+    db: &Db,
+    creds: crate::Credentials,
+) -> Result<PasswordOutcome, crate::AuthError> {
+    if auth_session.user.is_some() {
+        cycle_session_id(auth_session)
+            .await
+            .map_err(|_| crate::AuthError::Session)?;
+    }
+    let Some(user) = auth_session
+        .authenticate(creds)
+        .await
+        .map_err(|_| crate::AuthError::Session)?
+    else {
+        return Ok(PasswordOutcome::InvalidCredentials);
+    };
+
+    if crate::second_factor_required(db, user.id.as_uuid()).await? {
+        let pending = crate::PendingMfa {
+            user_id: user.id.as_uuid(),
+            totp: true,
+        };
+        mfa.set_pending_mfa(&pending)
+            .await
+            .map_err(|_| crate::AuthError::Session)?;
+        return Ok(PasswordOutcome::MfaRequired);
+    }
+
+    auth_session
+        .login(&user)
+        .await
+        .map_err(|_| crate::AuthError::Session)?;
+    crate::rotate_csrf_token(auth_session)
+        .await
+        .map_err(|_| crate::AuthError::Session)?;
+    Ok(PasswordOutcome::Authenticated)
+}
+
+/// Complete a sign-in from the pending-MFA marker after a second factor (a TOTP
+/// code, a recovery code, or a passkey assertion) has been verified: consume the
+/// marker, sign the user in (cycling the pending id), and rotate the CSRF token.
+/// The single implementation of the MFA-completion sequence.
+///
+/// # Errors
+///
+/// Returns [`ReauthError`] if the marker cannot be cleared or the sign-in/rotation
+/// fails.
+pub async fn complete_second_factor(
+    auth_session: &mut AuthSession,
+    mfa: &crate::MfaSession,
+    user_id: domain::UserId,
+) -> Result<(), ReauthError> {
+    mfa.take_pending_mfa().await.map_err(|_| ReauthError)?;
+    login_verified_user(auth_session, user_id).await?;
+    crate::rotate_csrf_token(auth_session)
+        .await
+        .map_err(|_| ReauthError)?;
+    Ok(())
+}
+
+/// Sign the current session out: rotate the CSRF token across the boundary, then
+/// clear the session. Keeps the only `axum-login` `logout` call inside the facade
+/// (as with [`login_verified_user`]/[`rebind_after_password_change`]).
+///
+/// # Errors
+///
+/// Returns [`ReauthError`] if rotating the token or clearing the session fails.
+pub async fn sign_out(auth_session: &mut AuthSession) -> Result<(), ReauthError> {
+    crate::rotate_csrf_token(auth_session)
+        .await
+        .map_err(|_| ReauthError)?;
+    auth_session.logout().await.map_err(|_| ReauthError)?;
+    Ok(())
+}
+
 /// Builds the auth-manager layer: an [`AuthManagerLayer`] wrapping the
 /// [`Backend`] and the first-party [`PgSessionStore`].
 ///
@@ -1048,7 +1154,7 @@ mod tests {
 
     use axum::extract::State;
 
-    use crate::{MfaSession, PendingMfa, login_verified_user, second_factor_required};
+    use crate::{MfaSession, login_verified_user};
 
     /// Seed a user that already has a confirmed TOTP enrolment, so the login flow
     /// demands a second factor.
@@ -1077,26 +1183,11 @@ mod tests {
         State(pool): State<PgPool>,
         Form(creds): Form<Credentials>,
     ) -> StatusCode {
-        let user = match auth_session.authenticate(creds).await {
-            Ok(Some(user)) => user,
-            Ok(None) => return StatusCode::UNAUTHORIZED,
-            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
-        };
-        match second_factor_required(&pool, user.id.as_uuid()).await {
-            Ok(true) => {
-                let pending = PendingMfa {
-                    user_id: user.id.as_uuid(),
-                    totp: true,
-                };
-                if mfa.set_pending_mfa(&pending).await.is_err() {
-                    return StatusCode::INTERNAL_SERVER_ERROR;
-                }
-                StatusCode::ACCEPTED // 202: a second factor is required
-            }
-            Ok(false) => match auth_session.login(&user).await {
-                Ok(()) => StatusCode::OK,
-                Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            },
+        // Exercises the production sequence directly via the facade.
+        match crate::password_first_factor(&mut auth_session, &mfa, &pool, creds).await {
+            Ok(crate::PasswordOutcome::MfaRequired) => StatusCode::ACCEPTED, // 202
+            Ok(crate::PasswordOutcome::Authenticated) => StatusCode::OK,
+            Ok(crate::PasswordOutcome::InvalidCredentials) => StatusCode::UNAUTHORIZED,
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

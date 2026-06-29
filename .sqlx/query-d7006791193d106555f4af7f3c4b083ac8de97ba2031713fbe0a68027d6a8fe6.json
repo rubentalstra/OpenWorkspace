@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE floor_plans\n            SET scene = $2, scene_schema_version = $3, viewbox = $4,\n                background_asset_id = $5, status = $6, version = version + 1,\n                updated_by = $7,\n                published_at = CASE WHEN $9 THEN now() ELSE published_at END\n            WHERE floor_id = $1 AND version = $8\n            RETURNING version\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "floor_plans",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Int4",
+        "Text",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "floor_plan_status",
+            "kind": {
+              "Enum": [
+                "draft",
+                "published"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d7006791193d106555f4af7f3c4b083ac8de97ba2031713fbe0a68027d6a8fe6"
+}

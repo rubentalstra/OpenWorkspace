@@ -1,16 +1,23 @@
+// Deeply-nested `view!` trees (the floor builder page) exceed the default type
+// recursion limit during monomorphization.
+#![recursion_limit = "512"]
+
 use i18n::I18nProvider;
 use leptos::prelude::*;
 use leptos_fluent::move_tr;
 use leptos_meta::{Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
-    StaticSegment,
+    ParamSegment, StaticSegment,
     components::{ParentRoute, Route, Router, Routes},
 };
 
+pub mod account;
 pub mod auth;
+pub mod build;
 mod csrf_client;
 pub mod dashboard;
 pub mod showcase;
+pub mod webauthn;
 pub use csrf_client::CsrfClient;
 
 /// The per-request CSRF token, provided as Leptos context by the server so the
@@ -19,6 +26,13 @@ pub use csrf_client::CsrfClient;
 /// hydrates cleanly when the context is absent.
 #[derive(Clone, Debug)]
 pub struct CsrfToken(pub String);
+
+/// The app's public base URL (scheme/host[/port], no trailing slash), provided as
+/// Leptos context by the server so server functions (e.g. `logout`) can build
+/// absolute redirect/post-logout URLs without naming the server's `AppState`.
+/// Defined here so the app crate stays free of the ssr-only server types.
+#[derive(Clone, Debug)]
+pub struct PublicBaseUrl(pub String);
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -80,8 +94,22 @@ pub fn App() -> impl IntoView {
                                 <Route path=StaticSegment("floor") view=showcase::FloorPage />
                             </ParentRoute>
                             <Route path=StaticSegment("dashboard") view=dashboard::Dashboard />
+                            <Route path=StaticSegment("build") view=build::page::BuildIndexPage />
+                            <Route
+                                path=(StaticSegment("build"), ParamSegment("floor_id"))
+                                view=build::page::BuildPage
+                            />
+                            <Route
+                                path=(
+                                    StaticSegment("build"),
+                                    StaticSegment("campus"),
+                                    ParamSegment("campus_id"),
+                                )
+                                view=build::page::CampusPage
+                            />
                             <Route path=StaticSegment("login") view=auth::LoginPage />
                             <Route path=StaticSegment("signup") view=auth::SignupPage />
+                            <Route path=StaticSegment("account") view=account::page::AccountPage />
                         </Routes>
                     </div>
                 </Router>

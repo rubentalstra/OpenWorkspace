@@ -69,27 +69,36 @@ checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 name = "app"
 version = "0.1.0"
 dependencies = [
+ "auth",
+ "base64 0.22.1",
  "bytes",
  "cfg-if",
+ "db",
+ "domain",
  "floorplan",
  "futures",
  "http",
  "i18n",
  "icondata",
+ "js-sys",
  "leptos",
  "leptos-fluent",
  "leptos_axum",
  "leptos_icons",
  "leptos_meta",
  "leptos_router",
+ "secrecy",
  "serde",
+ "serde_json",
  "server_fn",
  "strum",
  "thiserror 2.0.18",
  "time",
  "ui",
+ "uuid",
  "validator",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
@@ -1632,6 +1641,7 @@ dependencies = [
  "serde_json",
  "strum",
  "thiserror 2.0.18",
+ "ui",
  "web-sys",
 ]
 

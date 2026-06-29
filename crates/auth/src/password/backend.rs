@@ -82,6 +82,10 @@ pub enum AuthError {
     /// Field-encryption or relying-party configuration was missing or invalid.
     #[error("authentication configuration is invalid")]
     Config,
+    /// A session-store operation failed (id cycle, sign-in, CSRF rotation, or the
+    /// pending-MFA marker). The vendor cause is logged inside the facade.
+    #[error("session operation failed")]
+    Session,
 }
 
 impl AuthnBackend for Backend {

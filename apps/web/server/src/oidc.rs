@@ -10,14 +10,12 @@
 use std::sync::Arc;
 
 use auth::{AuthSession, LogoutHint, OidcCallback, OidcHttpClient, OidcSession, ProviderRegistry};
-use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
 use db::Db;
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use serde::Deserialize;
 
 /// OIDC services held in `AppState`: the provider registry (discovery + cache),
 /// the shared outbound HTTP client, and the app's public base URL.
@@ -32,12 +30,6 @@ pub(crate) struct OidcServices {
 #[derive(Deserialize)]
 pub(crate) struct StartParams {
     return_to: Option<String>,
-}
-
-/// Body of `POST /api/logout`: the IdP logout URL to navigate to, if any.
-#[derive(Serialize)]
-pub(crate) struct LogoutResponse {
-    pub(crate) oidc_logout_url: Option<String>,
 }
 
 /// Map a facade error to a client status, keeping the body generic. Auth-style
@@ -157,50 +149,12 @@ pub(crate) async fn callback(
     Redirect::to(&return_to).into_response()
 }
 
-/// `GET /api/oidc/providers` — the enabled providers, for rendering sign-in buttons.
-pub(crate) async fn provider_list(State(svc): State<OidcServices>) -> Response {
-    match svc.registry.button_list().await {
-        Ok(buttons) => Json(buttons).into_response(),
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
-}
-
-/// Clear the local session, then (when the provider offers it) return the IdP
-/// logout URL for the client to navigate to. The logout hint is read before the
-/// session is cleared. Called as `POST /api/logout` (CSRF-protected).
-pub(crate) async fn logout(
-    mut auth_session: AuthSession,
-    oidc_session: OidcSession,
-    State(svc): State<OidcServices>,
-) -> Response {
-    let hint = oidc_session.take_logout_hint().await.ok().flatten();
-    if auth::rotate_csrf_token(&auth_session).await.is_err() {
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-    if auth_session.logout().await.is_err() {
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    let oidc_logout_url = match hint {
-        Some(hint) => match svc.registry.discovered(&hint.provider_slug).await {
-            Ok(provider) => {
-                let post_logout =
-                    format!("{}/auth/{}/logged-out", svc.base_url, hint.provider_slug);
-                let state = Uuid::new_v4().simple().to_string();
-                auth::logout_url(&provider, &hint.id_token, &post_logout, &state)
-            }
-            Err(_) => None,
-        },
-        None => None,
-    };
-
-    Json(LogoutResponse { oidc_logout_url }).into_response()
-}
-
-/// Build the OIDC route subtree, wired under the auth + CSRF layers.
+/// Build the OIDC route subtree, wired under the auth + CSRF layers. Only the
+/// browser-redirect endpoints live here; the provider list and logout are
+/// `#[server]` functions in `app::auth` (logout returns the IdP logout URL it
+/// builds from this same `base_url`).
 pub(crate) fn routes() -> axum::Router<crate::AppState> {
     axum::Router::new()
         .route("/auth/{slug}/start", get(start))
         .route("/auth/{slug}/callback", get(callback))
-        .route("/api/oidc/providers", get(provider_list))
 }

@@ -23,9 +23,12 @@ pub enum CatalogKind {
     Window,
     Column,
     RoomEnclosure,
-    // Bookable resources.
+    // Furniture (non-bookable surfaces). A `DeskBlock` is the shared desk surface a
+    // multi-seat desk is drawn on; its seats are separate `Desk` nodes.
+    DeskBlock,
+    // Bookable resources. A single bookable unit is one seat; a multi-person desk is
+    // several `Desk` seats over a `DeskBlock` (see the builder's placement templates).
     Desk,
-    DeskBench,
     MeetingRoom,
     ParkingSpace,
     // Zoning.
@@ -46,10 +49,20 @@ impl CatalogKind {
     /// Whether this kind is a bookable resource (focusable, carries `data-state`).
     #[must_use]
     pub const fn bookable(self) -> bool {
-        matches!(
-            self,
-            Self::Desk | Self::DeskBench | Self::MeetingRoom | Self::ParkingSpace
-        )
+        matches!(self, Self::Desk | Self::MeetingRoom | Self::ParkingSpace)
+    }
+
+    /// The booking-domain resource type a bound node of this kind maps to, if any —
+    /// the single bridge from the scene vocabulary to [`domain::ResourceKind`] (used
+    /// when the builder creates a resource for a bound bookable node).
+    #[must_use]
+    pub const fn resource_kind(self) -> Option<domain::ResourceKind> {
+        match self {
+            Self::Desk => Some(domain::ResourceKind::Desk),
+            Self::MeetingRoom => Some(domain::ResourceKind::Room),
+            Self::ParkingSpace => Some(domain::ResourceKind::Parking),
+            _ => None,
+        }
     }
 }
 
@@ -76,5 +89,23 @@ mod tests {
         assert!(CatalogKind::MeetingRoom.bookable());
         assert!(!CatalogKind::Wall.bookable());
         assert!(!CatalogKind::Zone.bookable());
+        // A desk block is furniture, not bookable (its seats are).
+        assert!(!CatalogKind::DeskBlock.bookable());
+    }
+
+    #[test]
+    fn resource_kind_maps_only_bookables() {
+        use domain::ResourceKind;
+        assert_eq!(CatalogKind::Desk.resource_kind(), Some(ResourceKind::Desk));
+        assert_eq!(
+            CatalogKind::MeetingRoom.resource_kind(),
+            Some(ResourceKind::Room)
+        );
+        assert_eq!(
+            CatalogKind::ParkingSpace.resource_kind(),
+            Some(ResourceKind::Parking)
+        );
+        assert_eq!(CatalogKind::DeskBlock.resource_kind(), None);
+        assert_eq!(CatalogKind::Wall.resource_kind(), None);
     }
 }

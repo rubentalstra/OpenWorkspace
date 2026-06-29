@@ -5,6 +5,7 @@
 //! components plus external `open` signals and Leptos attribute forwarding.
 
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos_icons::Icon;
 use ui::{
     Align, Avatar, AvatarFallback, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
@@ -363,6 +364,25 @@ fn NavUser() -> impl IntoView {
             Side::Right
         }
     });
+    let go = move |path: &str| {
+        if let Some(window) = web_sys::window() {
+            _ = window.location().set_href(path);
+        }
+    };
+    let open_account = Callback::new(move |()| go("/account"));
+    // Sign out, then follow the IdP's RP-initiated logout URL when present.
+    let sign_out = Callback::new(move |()| {
+        spawn_local(async move {
+            let dest = crate::auth::logout()
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| "/login".to_owned());
+            if let Some(window) = web_sys::window() {
+                _ = window.location().set_href(&dest);
+            }
+        });
+    });
     view! {
         <SidebarMenu>
             <SidebarMenuItem>
@@ -406,9 +426,9 @@ fn NavUser() -> impl IntoView {
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem on_select=open_account>
                                 <Icon icon=icondata::LuBadgeCheck />
-                                "Account"
+                                "Account & security"
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                                 <Icon icon=icondata::LuCreditCard />
@@ -420,7 +440,7 @@ fn NavUser() -> impl IntoView {
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem on_select=sign_out>
                             <Icon icon=icondata::LuLogOut />
                             "Log out"
                         </DropdownMenuItem>
