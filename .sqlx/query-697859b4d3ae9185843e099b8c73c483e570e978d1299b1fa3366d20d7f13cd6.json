@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT l.id AS location_id, l.path AS location_path,\n               COALESCE(r.organization_id, l.organization_id) AS org\n        FROM resources r\n        JOIN locations l ON l.id = r.location_id\n        WHERE r.id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "location_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "locations",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "location_path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "locations",
+            "name": "path"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "org",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "697859b4d3ae9185843e099b8c73c483e570e978d1299b1fa3366d20d7f13cd6"
+}

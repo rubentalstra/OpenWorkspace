@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO audit_log\n            (actor_kind, actor_user_id, on_behalf_of_user_id, action, outcome, target_type, target_id, metadata)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "actor_kind",
+            "kind": {
+              "Enum": [
+                "user",
+                "api_key",
+                "system"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Uuid",
+        "Text",
+        {
+          "Custom": {
+            "name": "audit_outcome",
+            "kind": {
+              "Enum": [
+                "success",
+                "failure",
+                "denied"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "27b7a6a284b15917164541ac4d2e7546d4bc57c9f0b4b0aa0e894abf3c7abeaf"
+}

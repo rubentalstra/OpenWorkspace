@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            r.organization_id  AS res_org,\n            r.team_id          AS res_team,\n            fz.organization_id AS zone_org,\n            fz.team_id         AS zone_team,\n            l.organization_id  AS loc_org\n        FROM resources r\n        LEFT JOIN floor_zones fz ON fz.id = r.floor_zone_id\n        JOIN locations l ON l.id = r.location_id\n        WHERE r.id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "res_org",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "organization_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "res_team",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "resources",
+            "name": "team_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "zone_org",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "floor_zones",
+            "name": "organization_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "zone_team",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "floor_zones",
+            "name": "team_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "loc_org",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "locations",
+            "name": "organization_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "4c7838204418ad03bdaf01f2dfca08790e55b03e67b0bcde0eb51a428fe93ea5"
+}
