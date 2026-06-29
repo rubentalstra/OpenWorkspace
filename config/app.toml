@@ -40,6 +40,14 @@ field_encryption_key = "TVQh4Ye4yQtl6ma/awrxgWSmo3JS5dUwkuVtBtda+70="
 webauthn_rp_id = "localhost"
 webauthn_rp_origin = "http://localhost:3000"
 webauthn_rp_name = "OpenWorkspace"
+# Seed the local Keycloak SSO provider (deploy/dev/compose.yaml realm) at startup,
+# so `/login` shows a "Continue with Keycloak" button and the flow works. Dev-only.
+dev_seed_keycloak = true
+# First-boot instance admin for password login (and the e2e). Dev-only credentials;
+# production sets these via APP_AUTH__BOOTSTRAP_ADMIN_*. The account is flagged
+# must-change. Sign in at /login with these, or via Keycloak SSO (alice / alicepw).
+bootstrap_admin_email = "admin@openworkspace.test"
+bootstrap_admin_password = "devadminpw"
 
 [prod.observability]
 service_name = "openworkspace"

@@ -205,6 +205,61 @@ pub async fn load_enabled_provider_summaries(
     Ok(rows)
 }
 
+/// Parameters for seeding a minimal `client_secret_basic` OIDC provider. Only the
+/// fields a confidential client needs; everything else uses the table defaults
+/// (discovery on, standard claims/scopes, JIT provisioning, `verified_email`
+/// linking). The `auth` facade seals the secret before calling this.
+#[derive(Clone, Debug)]
+pub struct OidcProviderSeed<'a> {
+    /// URL-stable `/auth/{slug}/…` key.
+    pub slug: &'a str,
+    /// Human-readable provider name.
+    pub display_name: &'a str,
+    /// IdP issuer (discovery base; the `iss` claim must match exactly).
+    pub issuer_url: &'a str,
+    /// OAuth client id registered with the IdP.
+    pub client_id: &'a str,
+    /// AEAD-sealed client secret (envelope from the `crypto` facade).
+    pub client_secret_encrypted: &'a [u8],
+    /// Claim carrying group values for `oidc_role_mappings`, if any.
+    pub groups_claim: Option<&'a str>,
+    /// Sign-in button label override (falls back to `display_name`).
+    pub button_label: Option<&'a str>,
+}
+
+/// Insert the provider only if no row with this `slug` exists; returns whether a
+/// row was created. Idempotent — a second call is a no-op. Used by the dev seed
+/// (and later the admin create path).
+///
+/// # Errors
+///
+/// [`DbError::Sqlx`] on any database error.
+pub async fn insert_oidc_provider_if_absent(
+    pool: &Db,
+    seed: &OidcProviderSeed<'_>,
+) -> Result<bool, DbError> {
+    let affected = sqlx::query!(
+        r#"
+        INSERT INTO oidc_providers
+            (slug, display_name, issuer_url, client_id,
+             client_auth_method, client_secret_encrypted, groups_claim, button_label)
+        VALUES ($1::citext, $2, $3, $4, 'client_secret_basic', $5, $6, $7)
+        ON CONFLICT (slug) DO NOTHING
+        "#,
+        seed.slug,
+        seed.display_name,
+        seed.issuer_url,
+        seed.client_id,
+        seed.client_secret_encrypted,
+        seed.groups_claim,
+        seed.button_label,
+    )
+    .execute(pool)
+    .await?
+    .rows_affected();
+    Ok(affected > 0)
+}
+
 /// Find the federated identity for `(provider_id, subject)` — the immutable
 /// `(issuer, sub)` key. Returns `None` on first sign-in.
 ///
@@ -395,4 +450,65 @@ pub async fn assign_membership(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::PgPool;
+
+    use super::{
+        OidcProviderSeed, insert_oidc_provider_if_absent, load_enabled_provider_by_slug,
+        load_enabled_provider_summaries,
+    };
+
+    fn keycloak_seed() -> OidcProviderSeed<'static> {
+        OidcProviderSeed {
+            slug: "keycloak",
+            display_name: "Keycloak",
+            issuer_url: "http://localhost:8080/realms/openworkspace",
+            client_id: "openworkspace",
+            client_secret_encrypted: b"sealed-secret-envelope",
+            groups_claim: Some("groups"),
+            button_label: Some("Keycloak"),
+        }
+    }
+
+    #[sqlx::test(migrations = "../db/migrations")]
+    async fn seed_inserts_once_and_is_idempotent(pool: PgPool) {
+        let seed = keycloak_seed();
+
+        assert!(
+            insert_oidc_provider_if_absent(&pool, &seed).await.unwrap(),
+            "first seed creates the provider"
+        );
+        assert!(
+            !insert_oidc_provider_if_absent(&pool, &seed).await.unwrap(),
+            "second seed is a no-op"
+        );
+
+        let count: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM oidc_providers WHERE slug = 'keycloak'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(count, 1, "exactly one row exists after two seeds");
+
+        // The seeded row is loadable for both the flow and the button list.
+        let row = load_enabled_provider_by_slug(&pool, "keycloak")
+            .await
+            .unwrap()
+            .expect("provider is enabled and loadable");
+        assert_eq!(row.client_auth_method, "client_secret_basic");
+        assert_eq!(row.issuer_url, "http://localhost:8080/realms/openworkspace");
+        assert_eq!(row.groups_claim.as_deref(), Some("groups"));
+        assert!(row.client_secret_encrypted.is_some());
+
+        let buttons = load_enabled_provider_summaries(&pool).await.unwrap();
+        assert!(
+            buttons
+                .iter()
+                .any(|b| b.slug == "keycloak" && b.button_label.as_deref() == Some("Keycloak")),
+            "the seeded provider appears in the button list"
+        );
+    }
 }

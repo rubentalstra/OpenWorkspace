@@ -15,4 +15,5 @@ pub(crate) mod http;
 pub(crate) mod logout;
 pub(crate) mod provider;
 pub(crate) mod provision;
+pub(crate) mod seed;
 pub(crate) mod session;

@@ -171,6 +171,8 @@ pub use oidc::provider::{
 #[cfg(feature = "ssr")]
 pub use oidc::provision::provision_user;
 #[cfg(feature = "ssr")]
+pub use oidc::seed::seed_dev_oidc_provider;
+#[cfg(feature = "ssr")]
 pub use oidc::session::{LogoutHint, OidcSession};
 #[cfg(feature = "ssr")]
 pub use password::backend::{AuthError, Backend};
@@ -180,8 +182,9 @@ pub use password::bootstrap::bootstrap_admin;
 pub use session::csrf::{CsrfError, CsrfToken, csrf_layer, hidden_field, rotate_csrf_token};
 #[cfg(feature = "ssr")]
 pub use session::layer::{
-    AuthSession, ReauthError, build_auth_layer, cycle_session_id, login_verified_user,
-    rebind_after_password_change,
+    AuthSession, PasswordOutcome, ReauthError, build_auth_layer, complete_second_factor,
+    cycle_session_id, login_verified_user, password_first_factor, rebind_after_password_change,
+    sign_out,
 };
 #[cfg(feature = "ssr")]
 pub use session::store::{PgSessionStore, spawn_session_reaper};

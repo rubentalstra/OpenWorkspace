@@ -46,10 +46,10 @@ pub use identity::mfa::{
     totp_is_confirmed, update_passkey_after_auth, upsert_totp_pending,
 };
 pub use identity::oidc::{
-    OidcIdentityRow, OidcProviderRow, OidcProviderSummary, OidcRoleMappingRow, assign_membership,
-    find_oidc_identity, jit_create_user, link_oidc_identity, load_enabled_provider_by_slug,
-    load_enabled_provider_summaries, load_role_mappings, touch_oidc_identity,
-    update_user_display_name,
+    OidcIdentityRow, OidcProviderRow, OidcProviderSeed, OidcProviderSummary, OidcRoleMappingRow,
+    assign_membership, find_oidc_identity, insert_oidc_provider_if_absent, jit_create_user,
+    link_oidc_identity, load_enabled_provider_by_slug, load_enabled_provider_summaries,
+    load_role_mappings, touch_oidc_identity, update_user_display_name,
 };
 pub use locations::{
     BuildingMarker, CampusEditor, FloorSummary, ZoneRow, ZoneSpec, list_floor_zones, list_floors,

@@ -79,12 +79,14 @@ dependencies = [
  "http",
  "i18n",
  "icondata",
+ "js-sys",
  "leptos",
  "leptos-fluent",
  "leptos_axum",
  "leptos_icons",
  "leptos_meta",
  "leptos_router",
+ "secrecy",
  "serde",
  "serde_json",
  "server_fn",
@@ -95,6 +97,7 @@ dependencies = [
  "uuid",
  "validator",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
