@@ -211,7 +211,7 @@ mod backend {
             return Ok(None);
         };
         let base = expect_context::<crate::PublicBaseUrl>().0;
-        let post_logout = format!("{base}/auth/{}/logged-out", hint.provider_slug);
+        let post_logout = format!("{base}/login");
         let state = uuid::Uuid::new_v4().simple().to_string();
         Ok(auth::logout_url(
             &provider,

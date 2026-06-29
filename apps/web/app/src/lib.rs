@@ -109,6 +109,7 @@ pub fn App() -> impl IntoView {
                             />
                             <Route path=StaticSegment("login") view=auth::LoginPage />
                             <Route path=StaticSegment("signup") view=auth::SignupPage />
+                            <Route path=StaticSegment("account") view=account::page::AccountPage />
                         </Routes>
                     </div>
                 </Router>

@@ -7,6 +7,8 @@
 //! ceremony exchanges its WebAuthn JSON as opaque strings so the server-fn
 //! boundary stays wasm-safe (the browser ceremony lives in [`crate::webauthn`]).
 
+pub mod page;
+
 use leptos::prelude::*;
 use leptos::server_fn::codec::GetUrl;
 use serde::{Deserialize, Serialize};
@@ -28,6 +30,13 @@ pub struct RecoveryCodesDto {
     pub codes: Vec<String>,
 }
 
+/// The signed-in user's current MFA posture, for the security page.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct MfaStatusDto {
+    pub totp_enabled: bool,
+    pub recovery_remaining: i64,
+}
+
 /// A registered passkey, for the management list.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PasskeyDto {
@@ -36,6 +45,12 @@ pub struct PasskeyDto {
     pub backup_state: bool,
     pub created_at: String,
     pub last_used_at: Option<String>,
+}
+
+/// The signed-in user's MFA status (TOTP enabled, recovery codes remaining).
+#[server(input = GetUrl)]
+pub async fn mfa_status() -> Result<MfaStatusDto, ServerFnError> {
+    backend::mfa_status().await
 }
 
 /// Change the signed-in user's password (re-binds this session, invalidates others).
@@ -109,7 +124,7 @@ mod backend {
     use leptos::prelude::*;
     use secrecy::SecretString;
 
-    use super::{PasskeyDto, RecoveryCodesDto, TotpEnrollDto};
+    use super::{MfaStatusDto, PasskeyDto, RecoveryCodesDto, TotpEnrollDto};
 
     fn db() -> db::Db {
         expect_context::<db::Db>()
@@ -139,6 +154,21 @@ mod backend {
             .await
             .map_err(|_| fail())?;
         Ok(codes.plaintext)
+    }
+
+    pub(super) async fn mfa_status() -> Result<MfaStatusDto, ServerFnError> {
+        let (_session, user) = require_user().await?;
+        let pool = db();
+        let totp_enabled = db::totp_is_confirmed(&pool, user.id.as_uuid())
+            .await
+            .map_err(|_| fail())?;
+        let recovery_remaining = db::count_unused_recovery_codes(&pool, user.id.as_uuid())
+            .await
+            .map_err(|_| fail())?;
+        Ok(MfaStatusDto {
+            totp_enabled,
+            recovery_remaining,
+        })
     }
 
     pub(super) async fn change_password(current: String, new: String) -> Result<(), ServerFnError> {
