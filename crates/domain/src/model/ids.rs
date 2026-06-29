@@ -82,3 +82,8 @@ uuid_newtype!(
     /// Identifies an `assets` row (an uploaded binary object).
     AssetId
 );
+uuid_newtype!(
+    /// Identifies an `equipment_items` row (a named catalog item assigned to
+    /// resources with a quantity).
+    EquipmentItemId
+);

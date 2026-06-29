@@ -159,6 +159,18 @@ pub enum ResourceKind {
     Equipment,
 }
 
+/// Lifecycle status of a bookable resource (`resource_status`).
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+pub enum ResourceStatus {
+    /// In service and (subject to `bookable`) bookable.
+    #[default]
+    Active,
+    /// Retired from service; not shown for booking.
+    Inactive,
+    /// Temporarily out for maintenance.
+    Maintenance,
+}
+
 /// How a resource's organization/team binding restricts its visibility
 /// (`segmentation_mode`).
 ///

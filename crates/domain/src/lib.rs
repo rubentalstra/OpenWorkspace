@@ -22,11 +22,11 @@ pub use booking::{recurrence, state_machine, validation};
 pub use model::{enums, ids, time_range};
 
 pub use enums::{
-    BookingSource, BookingStatus, BookingVisibility, OccurrenceKind, ResourceKind,
+    BookingSource, BookingStatus, BookingVisibility, OccurrenceKind, ResourceKind, ResourceStatus,
     SegmentationMode, SpaceState,
 };
 pub use ids::{
-    AssetId, BookingId, FloorZoneId, LocationId, OccurrenceId, OrganizationId, ResourceId, RoleId,
-    TeamId, UserId,
+    AssetId, BookingId, EquipmentItemId, FloorZoneId, LocationId, OccurrenceId, OrganizationId,
+    ResourceId, RoleId, TeamId, UserId,
 };
 pub use time_range::TimeRange;
