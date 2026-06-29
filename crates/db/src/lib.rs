@@ -3,6 +3,7 @@
 mod access;
 mod assets;
 mod bookings;
+mod floorplan;
 mod identity;
 
 pub use access::audit::{ActorKindRow, AuditOutcomeRow, NewAuditEntry, record_audit};
@@ -21,6 +22,7 @@ pub use bookings::{
     Booking, BookingSourceRow, BookingStatusRow, BookingVisibilityRow, CreatedBooking, NewBooking,
     OccurrenceKindRow, apply_transition, auto_release, cancel, check_in, check_out, create_booking,
 };
+pub use floorplan::{FloorPlanRow, FloorPlanStatusRow, load_floor_plan};
 pub use identity::credentials::{
     CredentialRow, UserStatusRow, change_password, insert_bootstrap_admin, instance_admin_exists,
     load_credential_by_email, load_credential_by_id, touch_last_login, update_password_hash,

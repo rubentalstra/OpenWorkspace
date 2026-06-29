@@ -19,6 +19,9 @@ serde_json = "1"
 [dev-dependencies]
 tokio = { workspace = true }
 proptest = "1"
+# The Scene↔jsonb round-trip test stores `floorplan::samples::office()` and loads it
+# back through `floorplan::load_scene`; production `db` carries no `floorplan` dep.
+floorplan = { path = "../floorplan" }
 
 [lints]
 workspace = true
