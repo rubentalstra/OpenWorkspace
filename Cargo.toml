@@ -164,3 +164,24 @@ map_unwrap_or = "allow"
 default_trait_access = "allow"
 struct_excessive_bools = "allow"
 cast_precision_loss = "allow"
+# rust-skills baseline (.claude/skills/rust-skills). Selected nursery lints at
+# warn — CI's -D warnings still makes them must-fix, while warn keeps local
+# clippy non-red so a false positive can be triaged instead of forcing an
+# #[expect]. Promote proven-clean ones to deny later.
+redundant_clone = "warn"             # own-borrow-over-clone, own-clone-explicit
+use_self = "warn"                    # idiomatic Self over the type name
+trivially_copy_pass_by_ref = "warn"  # own-copy-small (pass Copy by value)
+needless_pass_by_ref_mut = "warn"    # take &mut only when it is used mutably
+# redundant_pub_crate is intentionally NOT enabled: it fights the documented
+# `pub(crate) mod …` submodule convention (CLAUDE.md / docs/rust-style.md).
+# Selected restriction lints at deny — precise, low false-positive.
+format_push_string = "deny"          # mem-write-over-format (write! over push_str(format!()))
+str_to_string = "deny"               # prefer to_owned() over to_string() on &str (String->String covered by pedantic implicit_clone)
+rc_buffer = "deny"                   # mem-zero-copy (Rc<String>/Rc<Vec<T>> -> Rc<str>/Rc<[T]>)
+rc_mutex = "deny"                    # concurrency correctness (Arc<Mutex<_>>, never Rc)
+unnecessary_safety_comment = "deny"  # unsafe-safety-comment (pairs with undocumented_unsafe_blocks)
+tests_outside_test_module = "deny"   # test-cfg-test-module
+# Opt-in during the fix pass (high churn; map to rust-skills but over-reach as a
+# blanket deny — rust-skills scopes them to hot paths / correctness, not "never"):
+#   indexing_slicing = "deny"        # opt-bounds-check / anti-index-over-iter (flags every a[i], incl. tests)
+#   string_slice = "deny"            # anti-string-for-str (flags all &s[a..b]; panics off char boundaries)
