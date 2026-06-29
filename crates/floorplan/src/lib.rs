@@ -21,4 +21,6 @@ pub mod catalog;
 pub mod render;
 
 #[cfg(any(feature = "ssr", feature = "hydrate"))]
+pub use builder::FloorBuilder;
+#[cfg(any(feature = "ssr", feature = "hydrate"))]
 pub use render::FloorPlan;
