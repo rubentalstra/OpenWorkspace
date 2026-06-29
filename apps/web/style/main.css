@@ -450,3 +450,29 @@
   opacity: 0.5;
   pointer-events: none;
 }
+
+/* ── Campus map + draggable building markers (P11) ─────────────────────────── */
+.cn-campus-canvas {
+  background: var(--muted);
+  overflow: hidden;
+  touch-action: none;
+}
+.cn-campus-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  cursor: grab;
+  touch-action: none;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+}
+.cn-campus-marker:active {
+  cursor: grabbing;
+}

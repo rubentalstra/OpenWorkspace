@@ -86,6 +86,14 @@ pub fn App() -> impl IntoView {
                                 path=(StaticSegment("build"), ParamSegment("floor_id"))
                                 view=build::page::BuildPage
                             />
+                            <Route
+                                path=(
+                                    StaticSegment("build"),
+                                    StaticSegment("campus"),
+                                    ParamSegment("campus_id"),
+                                )
+                                view=build::page::CampusPage
+                            />
                             <Route path=StaticSegment("login") view=auth::LoginPage />
                             <Route path=StaticSegment("signup") view=auth::SignupPage />
                         </Routes>

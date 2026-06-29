@@ -9,11 +9,14 @@ use floorplan::{CatalogKind, Scene, SceneNodeId};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos_router::hooks::use_params_map;
-use ui::{Button, ButtonSize, ButtonVariant, Card, CardContent, CardHeader, CardTitle, Input};
+use ui::{
+    Button, ButtonSize, ButtonVariant, Card, CardContent, CardHeader, CardTitle, Input,
+    NativeSelect, NativeSelectOption,
+};
 
 use super::{
-    BuildDocDto, EquipAssignDto, EquipmentItemDto, ResourceDto, RulesDto, list_buildable_floors,
-    load_build_doc, save_build_doc,
+    BuildDocDto, CampusDto, EquipAssignDto, EquipmentItemDto, ResourceDto, RulesDto,
+    list_buildable_floors, load_build_doc, load_campus, move_building_marker, save_build_doc,
 };
 
 /// `/build` — the floors the admin can open in the builder.
@@ -42,13 +45,14 @@ pub fn BuildIndexPage() -> impl IntoView {
                                             let sub = f.building.unwrap_or_default();
                                             view! {
                                                 <li>
-                                                    <a
+                                                    <Button
                                                         href=href
-                                                        class="cn-floor-builder-tool inline-flex items-center gap-2"
+                                                        variant=ButtonVariant::Outline
+                                                        class="w-full justify-start gap-2"
                                                     >
                                                         <span class="font-medium">{f.name}</span>
                                                         <span class="text-muted-foreground text-sm">{sub}</span>
-                                                    </a>
+                                                    </Button>
                                                 </li>
                                             }
                                         })
@@ -68,11 +72,11 @@ pub fn BuildIndexPage() -> impl IntoView {
 fn sign_in_or_error(message: &str) -> AnyView {
     let msg = message.to_owned();
     view! {
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col items-start gap-2">
             <p class="text-destructive text-sm">{msg}</p>
-            <a href="/login" class="cn-floor-builder-tool w-fit">
+            <Button href="/login".to_owned() variant=ButtonVariant::Outline>
                 "Sign in"
-            </a>
+            </Button>
         </div>
     }
     .into_any()
@@ -404,24 +408,25 @@ fn EquipmentEditor(
                         .collect_view()
                 }}
             </ul>
-            <select
-                class="cn-floor-builder-tool"
-                on:change=move |ev| {
-                    let v = event_target_value(&ev);
-                    if !v.is_empty() {
-                        add(v);
-                    }
+            <NativeSelect on:change=move |ev| {
+                let v = event_target_value(&ev);
+                if !v.is_empty() {
+                    add(v);
                 }
-            >
-                <option value="">"Add equipment…"</option>
+            }>
+                <NativeSelectOption attr:value="">"Add equipment…"</NativeSelectOption>
                 {move || {
                     equipment
                         .get()
                         .into_iter()
-                        .map(|i| view! { <option value=i.id>{i.name}</option> })
+                        .map(|i| {
+                            view! {
+                                <NativeSelectOption attr:value=i.id>{i.name}</NativeSelectOption>
+                            }
+                        })
                         .collect_view()
                 }}
-            </select>
+            </NativeSelect>
         </div>
     }
 }
@@ -436,4 +441,151 @@ fn catalog_kind_token(kind: CatalogKind) -> &'static str {
         CatalogKind::ParkingSpace => "parking",
         _ => "desk",
     }
+}
+
+/// `/build/campus/:campus_id` — the campus map + draggable building markers.
+#[component]
+pub fn CampusPage() -> impl IntoView {
+    let params = use_params_map();
+    let campus_id = move || params.read().get("campus_id").unwrap_or_default();
+    let loaded = Resource::new(campus_id, load_campus);
+
+    view! {
+        <Suspense fallback=move || {
+            view! { <p class="text-muted-foreground p-8">"Loading campus…"</p> }
+        }>
+            {move || Suspend::new(async move {
+                match loaded.await {
+                    Ok(campus) => campus_editor_view(campus),
+                    Err(e) => sign_in_or_error(&e.to_string()),
+                }
+            })}
+        </Suspense>
+    }
+}
+
+#[expect(
+    clippy::too_many_lines,
+    reason = "the campus canvas wires the map, markers and drag handlers in one view"
+)]
+fn campus_editor_view(campus: CampusDto) -> AnyView {
+    let container = NodeRef::<leptos::html::Div>::new();
+    let positions: RwSignal<HashMap<String, (f64, f64)>> = RwSignal::new(
+        campus
+            .buildings
+            .iter()
+            .map(|b| {
+                (
+                    b.id.clone(),
+                    (b.marker_x.unwrap_or(0.5), b.marker_y.unwrap_or(0.5)),
+                )
+            })
+            .collect(),
+    );
+    let dragging = RwSignal::new(Option::<String>::None);
+    let map_src = campus
+        .map_image_asset_id
+        .as_ref()
+        .map(|a| format!("/api/assets/{a}"));
+
+    let to_fraction = move |cx: f64, cy: f64| -> Option<(f64, f64)> {
+        let el = container.get_untracked()?;
+        let rect = el.get_bounding_client_rect();
+        if rect.width() <= 0.0 || rect.height() <= 0.0 {
+            return None;
+        }
+        Some((
+            ((cx - rect.left()) / rect.width()).clamp(0.0, 1.0),
+            ((cy - rect.top()) / rect.height()).clamp(0.0, 1.0),
+        ))
+    };
+
+    let on_move = move |ev: web_sys::PointerEvent| {
+        if let Some(id) = dragging.get_untracked()
+            && let Some(frac) = to_fraction(f64::from(ev.client_x()), f64::from(ev.client_y()))
+        {
+            positions.update(|m| {
+                m.insert(id, frac);
+            });
+        }
+    };
+    let on_up = move |_: web_sys::PointerEvent| {
+        let Some(id) = dragging.get_untracked() else {
+            return;
+        };
+        dragging.set(None);
+        if let Some((x, y)) = positions.with_untracked(|m| m.get(&id).copied()) {
+            spawn_local(async move {
+                if let Err(err) = move_building_marker(id, Some(x), Some(y)).await {
+                    leptos::logging::error!("marker save failed: {err}");
+                }
+            });
+        }
+    };
+
+    view! {
+        <div class="cn-campus-editor flex h-svh flex-col">
+            <header class="flex items-center justify-between gap-4 border-b px-4 py-2">
+                <a href="/build" class="text-muted-foreground text-sm">
+                    "← Floors"
+                </a>
+                <h1 class="cn-font-heading font-semibold">
+                    {format!("Campus · {}", campus.name)}
+                </h1>
+                <span class="text-muted-foreground text-sm">
+                    "Drag a marker to place a building"
+                </span>
+            </header>
+            <div
+                node_ref=container
+                class="cn-campus-canvas relative min-h-0 flex-1"
+                on:pointermove=on_move
+                on:pointerup=on_up
+                on:pointerleave=on_up
+            >
+                {map_src
+                    .map(|src| {
+                        view! {
+                            <img
+                                src=src
+                                alt="Campus map"
+                                class="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                            />
+                        }
+                    })}
+                {campus
+                    .buildings
+                    .into_iter()
+                    .map(|b| {
+                        let id_pos = b.id.clone();
+                        let id_down = b.id.clone();
+                        let label = b.name.clone();
+                        let aria = b.name;
+                        let pos = move || {
+                            positions.with(|m| m.get(&id_pos).copied().unwrap_or((0.5, 0.5)))
+                        };
+                        let on_down = move |ev: web_sys::PointerEvent| {
+                            ev.stop_propagation();
+                            dragging.set(Some(id_down.clone()));
+                        };
+                        view! {
+                            <Button
+                                class="cn-campus-marker"
+                                variant=ButtonVariant::Default
+                                attr:style=move || {
+                                    let (x, y) = pos();
+                                    format!("left:{}%;top:{}%", x * 100.0, y * 100.0)
+                                }
+                                on:pointerdown=on_down
+                                attr:aria-label=aria
+                            >
+                                {label}
+                            </Button>
+                        }
+                    })
+                    .collect_view()}
+            </div>
+        </div>
+    }
+    .into_any()
 }

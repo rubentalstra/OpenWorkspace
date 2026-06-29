@@ -61,6 +61,8 @@ web-sys = { version = "0.3.103", optional = true, features = [
     "Window",
     "HtmlMetaElement",
     "Element",
+    "DomRect",
+    "PointerEvent",
 ] }
 # `Client::send`/`open_websocket` signatures name these; pinned to the versions
 # already resolved for the server-fn browser client.
@@ -103,6 +105,9 @@ ssr = [
     "dep:uuid",
     "dep:bytes",
     "dep:futures",
+    # web-sys types/methods used by the campus drag handlers compile on both targets
+    # (the closures are built server-side too, though only attached on hydrate).
+    "dep:web-sys",
     # Server-side server-fn client (satisfies the `CsrfClient` Client bound on ssr;
     # never invoked — the server runs fn bodies directly).
     "server_fn/reqwest",

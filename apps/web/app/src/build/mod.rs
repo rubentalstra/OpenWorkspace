@@ -132,16 +132,60 @@ pub async fn create_equipment_item(
     backend::create_equipment(name, description).await
 }
 
+/// A campus + its child-building markers, for the campus editor.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CampusDto {
+    pub campus_id: String,
+    pub name: String,
+    pub map_image_asset_id: Option<String>,
+    pub buildings: Vec<BuildingMarkerDto>,
+}
+
+/// A building and its (optional) marker fraction on the campus map.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BuildingMarkerDto {
+    pub id: String,
+    pub name: String,
+    pub marker_x: Option<f64>,
+    pub marker_y: Option<f64>,
+}
+
+/// Loads a campus + its building markers (authz: HierarchyEdit on the campus).
+#[server(input = GetUrl)]
+pub async fn load_campus(campus_id: String) -> Result<CampusDto, ServerFnError> {
+    backend::load_campus(campus_id).await
+}
+
+/// Sets (or clears) a building's marker fraction (authz: HierarchyEdit).
+#[server(client = CsrfClient)]
+pub async fn move_building_marker(
+    building_id: String,
+    x: Option<f64>,
+    y: Option<f64>,
+) -> Result<(), ServerFnError> {
+    backend::move_marker(building_id, x, y).await
+}
+
+/// Sets (or clears) a campus map image (authz: HierarchyEdit).
+#[server(client = CsrfClient)]
+pub async fn set_campus_map(
+    campus_id: String,
+    asset_id: Option<String>,
+) -> Result<(), ServerFnError> {
+    backend::set_campus_map(campus_id, asset_id).await
+}
+
 #[cfg(feature = "ssr")]
 mod backend {
     use super::{
-        BuildDocDto, EquipAssignDto, EquipmentItemDto, FloorDto, LoadedBuildDto, ResourceDto,
-        RulesDto, ZoneDto,
+        BuildDocDto, BuildingMarkerDto, CampusDto, EquipAssignDto, EquipmentItemDto, FloorDto,
+        LoadedBuildDto, ResourceDto, RulesDto, ZoneDto,
     };
     use auth::{AuthSession, AuthzBackend, Target};
     use domain::authz::Action;
     use domain::{
-        EquipmentItemId, FloorZoneId, LocationId, OrganizationId, ResourceId, TeamId, UserId,
+        AssetId, EquipmentItemId, FloorZoneId, LocationId, OrganizationId, ResourceId, TeamId,
+        UserId,
     };
     use leptos::prelude::*;
     use uuid::Uuid;
@@ -316,6 +360,72 @@ mod backend {
             name,
             description,
         })
+    }
+
+    async fn ensure_hierarchy_edit(location: LocationId) -> Result<(), ServerFnError> {
+        let user = current_user().await?;
+        authz()
+            .authorize(
+                user,
+                Action::HierarchyEdit,
+                Target::Location(location),
+                None,
+            )
+            .await
+            .map_err(|e| ServerFnError::new(e.to_string()))
+    }
+
+    pub(super) async fn load_campus(campus_id: String) -> Result<CampusDto, ServerFnError> {
+        let campus = LocationId::new(parse_id(&campus_id)?);
+        ensure_hierarchy_edit(campus).await?;
+        let editor = db::load_campus_editor(&db(), campus)
+            .await
+            .map_err(|e| ServerFnError::new(e.to_string()))?
+            .ok_or_else(|| ServerFnError::new("not a campus"))?;
+        Ok(CampusDto {
+            campus_id,
+            name: editor.name,
+            map_image_asset_id: editor.map_image_asset_id.map(|a| a.to_string()),
+            buildings: editor
+                .buildings
+                .into_iter()
+                .map(|b| BuildingMarkerDto {
+                    id: b.id.to_string(),
+                    name: b.name,
+                    marker_x: b.marker_x,
+                    marker_y: b.marker_y,
+                })
+                .collect(),
+        })
+    }
+
+    pub(super) async fn move_marker(
+        building_id: String,
+        x: Option<f64>,
+        y: Option<f64>,
+    ) -> Result<(), ServerFnError> {
+        let building = LocationId::new(parse_id(&building_id)?);
+        ensure_hierarchy_edit(building).await?;
+        let marker = x.zip(y);
+        db::update_building_marker(&db(), building, marker)
+            .await
+            .map_err(|e| ServerFnError::new(e.to_string()))
+    }
+
+    pub(super) async fn set_campus_map(
+        campus_id: String,
+        asset_id: Option<String>,
+    ) -> Result<(), ServerFnError> {
+        let campus = LocationId::new(parse_id(&campus_id)?);
+        ensure_hierarchy_edit(campus).await?;
+        let asset = asset_id
+            .as_deref()
+            .map(parse_id)
+            .transpose()?
+            .map(AssetId::new);
+        db::set_campus_map_image(&db(), campus, asset)
+            .await
+            .map_err(|e| ServerFnError::new(e.to_string()))
     }
 
     fn resource_kind_row(token: &str) -> Result<db::ResourceKindRow, ServerFnError> {
