@@ -125,6 +125,21 @@
   --surface-foreground: var(--foreground);
   --selection: oklch(0% 0 0);
   --selection-foreground: oklch(1 0 0);
+
+  /* Floor-plan availability palette (cn-floor-*): `-fill` paints the node, `-fg`
+   * the outline + Lucide glyph. Reuses the Tailwind palette (like the charts). */
+  --cn-floor-free-fill: var(--color-green-100);
+  --cn-floor-free-fg: var(--color-green-700);
+  --cn-floor-partially-free-fill: var(--color-amber-100);
+  --cn-floor-partially-free-fg: var(--color-amber-700);
+  --cn-floor-not-free-fill: var(--color-red-100);
+  --cn-floor-not-free-fg: var(--color-red-700);
+  --cn-floor-temporarily-blocked-fill: var(--color-orange-100);
+  --cn-floor-temporarily-blocked-fg: var(--color-orange-700);
+  --cn-floor-permanent-user-fill: var(--color-indigo-100);
+  --cn-floor-permanent-user-fg: var(--color-indigo-700);
+  --cn-floor-cannot-be-booked-fill: var(--color-neutral-200);
+  --cn-floor-cannot-be-booked-fg: var(--color-neutral-500);
 }
 
 .dark {
@@ -164,6 +179,20 @@
   --surface-foreground: oklch(0.708 0 0);
   --selection: oklch(0.922 0 0);
   --selection-foreground: oklch(0.205 0 0);
+
+  /* Floor-plan availability palette — dark shades. */
+  --cn-floor-free-fill: var(--color-green-950);
+  --cn-floor-free-fg: var(--color-green-300);
+  --cn-floor-partially-free-fill: var(--color-amber-950);
+  --cn-floor-partially-free-fg: var(--color-amber-300);
+  --cn-floor-not-free-fill: var(--color-red-950);
+  --cn-floor-not-free-fg: var(--color-red-300);
+  --cn-floor-temporarily-blocked-fill: var(--color-orange-950);
+  --cn-floor-temporarily-blocked-fg: var(--color-orange-300);
+  --cn-floor-permanent-user-fill: var(--color-indigo-950);
+  --cn-floor-permanent-user-fg: var(--color-indigo-300);
+  --cn-floor-cannot-be-booked-fill: var(--color-neutral-800);
+  --cn-floor-cannot-be-booked-fg: var(--color-neutral-400);
 }
 
 @layer base {
@@ -210,4 +239,138 @@
 
 @utility container {
   @apply mx-auto max-w-[1400px] px-4 3xl:max-w-screen-2xl lg:px-8;
+}
+
+/* ── Floor-plan catalog layer (cn-floor-*) ─────────────────────────────────────
+ * Themes the semantic classes emitted by `crates/floorplan` (the renderer + SVG
+ * catalog). SVG `fill`/`stroke`/`color` inherit, so a node's group cascades to its
+ * shapes and — via `currentColor` — its Lucide glyph. Re-theme the whole floor by
+ * overriding the `--cn-floor-*` tokens above or these rules; availability is shown
+ * by icon AND colour (WCAG 1.4.1). */
+.cn-floor {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  color: var(--foreground);
+}
+
+/* Structure & shell. */
+.cn-floor-wall {
+  fill: none;
+  stroke: var(--foreground);
+  stroke-width: 0.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cn-floor-door {
+  fill: none;
+  stroke: var(--muted-foreground);
+  stroke-width: 0.5;
+  stroke-dasharray: 1.5 1;
+}
+.cn-floor-window {
+  fill: none;
+  stroke: var(--ring);
+  stroke-width: 0.6;
+}
+.cn-floor-column {
+  fill: var(--muted-foreground);
+}
+.cn-floor-room {
+  fill: var(--card);
+  stroke: var(--border);
+  stroke-width: 0.4;
+}
+
+/* Zoning & annotation. */
+.cn-floor-zone-area {
+  fill: var(--accent);
+  fill-opacity: 0.25;
+  stroke: var(--accent-foreground);
+  stroke-opacity: 0.4;
+  stroke-width: 0.4;
+  stroke-dasharray: 2 1.5;
+}
+.cn-floor-zone-label,
+.cn-floor-label {
+  font-family: var(--font-sans);
+  font-size: 3px;
+  fill: var(--muted-foreground);
+}
+.cn-floor-label {
+  fill: var(--foreground);
+}
+
+/* Wayfinding markers (the Lucide glyph inherits `color`). */
+.cn-floor-entrance {
+  color: var(--color-green-600);
+}
+.cn-floor-exit {
+  color: var(--color-red-600);
+}
+.cn-floor-amenity {
+  color: var(--muted-foreground);
+}
+
+/* Unregistered / Unknown kinds: a neutral dashed placeholder (fail-soft). */
+.cn-floor-unknown {
+  fill: none;
+  stroke: var(--muted-foreground);
+  stroke-width: 0.4;
+  stroke-dasharray: 1 1;
+}
+
+/* Bookable nodes: focusable; fill + glyph driven by data-state. */
+.cn-floor-bookable {
+  fill: var(--cnf-fill, var(--secondary));
+  stroke: var(--cnf-fg, var(--border));
+  color: var(--cnf-fg, var(--secondary-foreground));
+  stroke-width: 0.3;
+  outline: none;
+  transition: fill 120ms ease;
+}
+.cn-floor-bookable:focus-visible {
+  stroke: var(--ring);
+  stroke-width: 0.9;
+}
+
+/* data-state → palette, shared by the SVG node and the legend swatch. */
+.cn-floor-bookable[data-state="free"],
+.cn-floor-legend[data-state="free"] {
+  --cnf-fill: var(--cn-floor-free-fill);
+  --cnf-fg: var(--cn-floor-free-fg);
+}
+.cn-floor-bookable[data-state="partially_free"],
+.cn-floor-legend[data-state="partially_free"] {
+  --cnf-fill: var(--cn-floor-partially-free-fill);
+  --cnf-fg: var(--cn-floor-partially-free-fg);
+}
+.cn-floor-bookable[data-state="not_free"],
+.cn-floor-legend[data-state="not_free"] {
+  --cnf-fill: var(--cn-floor-not-free-fill);
+  --cnf-fg: var(--cn-floor-not-free-fg);
+}
+.cn-floor-bookable[data-state="temporarily_blocked"],
+.cn-floor-legend[data-state="temporarily_blocked"] {
+  --cnf-fill: var(--cn-floor-temporarily-blocked-fill);
+  --cnf-fg: var(--cn-floor-temporarily-blocked-fg);
+}
+.cn-floor-bookable[data-state="permanent_user"],
+.cn-floor-legend[data-state="permanent_user"] {
+  --cnf-fill: var(--cn-floor-permanent-user-fill);
+  --cnf-fg: var(--cn-floor-permanent-user-fg);
+}
+.cn-floor-bookable[data-state="cannot_be_booked"],
+.cn-floor-legend[data-state="cannot_be_booked"] {
+  --cnf-fill: var(--cn-floor-cannot-be-booked-fill);
+  --cnf-fg: var(--cn-floor-cannot-be-booked-fg);
+}
+
+/* Legend swatch inherits the --cnf-* vars set on its list item. */
+.cn-floor-legend-swatch {
+  background: var(--cnf-fill);
+  color: var(--cnf-fg);
+  border-color: var(--cnf-fg);
 }

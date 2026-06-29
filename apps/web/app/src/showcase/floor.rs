@@ -9,10 +9,10 @@ use leptos::prelude::*;
 use leptos_icons::Icon;
 use ui::{Button, ButtonSize, ButtonVariant, Card, CardContent, CardHeader, CardTitle};
 
-/// The six states with the Lucide icon + label the legend shows (matching the
-/// renderer's per-node glyph, so the floor is read by icon and label — never colour
+/// The six floor states with the Lucide icon + label the legend shows (matching the
+/// renderer's per-node glyph, so the floor reads by icon and label, never colour
 /// alone).
-const LEGEND: &[(SpaceState, icondata::Icon, &str)] = &[
+const FLOOR_LEGEND: &[(SpaceState, icondata::Icon, &str)] = &[
     (SpaceState::Free, icondata::LuPlus, "Free"),
     (
         SpaceState::PartiallyFree,
@@ -38,7 +38,7 @@ const LEGEND: &[(SpaceState, icondata::Icon, &str)] = &[
 ];
 
 /// Initial demo availability — a few desks in distinct states.
-fn demo_states() -> HashMap<SceneNodeId, SpaceState> {
+fn demo_floor_states() -> HashMap<SceneNodeId, SpaceState> {
     HashMap::from([
         (SceneNodeId::new("desk-1"), SpaceState::Free),
         (SceneNodeId::new("desk-2"), SpaceState::NotFree),
@@ -48,7 +48,7 @@ fn demo_states() -> HashMap<SceneNodeId, SpaceState> {
 
 /// The next state in the demo cycle (drives the "cycle a desk" button, showing a
 /// single-node reactive repaint).
-fn next(state: SpaceState) -> SpaceState {
+fn next_floor_state(state: SpaceState) -> SpaceState {
     match state {
         SpaceState::Free => SpaceState::PartiallyFree,
         SpaceState::PartiallyFree => SpaceState::NotFree,
@@ -59,11 +59,11 @@ fn next(state: SpaceState) -> SpaceState {
     }
 }
 
-/// The `/ui/floor` showcase page.
+/// The read-only floor renderer over a sample scene, with a state legend.
 #[component]
 pub fn FloorPage() -> impl IntoView {
     let scene = samples::office();
-    let states = RwSignal::new(demo_states());
+    let states = RwSignal::new(demo_floor_states());
     let selected = RwSignal::new(Option::<String>::None);
     let on_select =
         Callback::new(move |id: SceneNodeId| selected.set(Some(id.as_str().to_owned())));
@@ -73,7 +73,7 @@ pub fn FloorPage() -> impl IntoView {
             let entry = map
                 .entry(SceneNodeId::new("desk-1"))
                 .or_insert(SpaceState::Free);
-            *entry = next(*entry);
+            *entry = next_floor_state(*entry);
         });
     };
 
@@ -112,7 +112,7 @@ pub fn FloorPage() -> impl IntoView {
                     <div class="bg-muted/20 aspect-[5/3] w-full overflow-hidden rounded-md border">
                         <FloorPlan scene=scene states=states on_select=on_select />
                     </div>
-                    <Legend />
+                    <FloorLegend />
                 </CardContent>
             </Card>
         </div>
@@ -121,10 +121,10 @@ pub fn FloorPage() -> impl IntoView {
 
 /// The state legend: each of the six states by icon and label.
 #[component]
-fn Legend() -> impl IntoView {
+fn FloorLegend() -> impl IntoView {
     view! {
         <ul class="flex flex-wrap gap-x-4 gap-y-2" aria-label="Floor state legend">
-            {LEGEND
+            {FLOOR_LEGEND
                 .iter()
                 .map(|&(state, icon, label)| {
                     view! {
