@@ -284,6 +284,13 @@
   stroke-width: 0.4;
 }
 
+/* Furniture: the shared desk surface a multi-seat desk's seats sit on. */
+.cn-floor-desk-block {
+  fill: var(--muted);
+  stroke: var(--border);
+  stroke-width: 0.3;
+}
+
 /* Zoning & annotation. */
 .cn-floor-zone-area {
   fill: var(--accent);

@@ -9,7 +9,7 @@
 use domain::SpaceState;
 use leptos::prelude::*;
 
-use crate::catalog::{annotation, bookable, structure, wayfinding, zoning};
+use crate::catalog::{annotation, bookable, furniture, structure, wayfinding, zoning};
 use crate::model::{CatalogKind, SceneNode, SceneNodeId};
 
 /// Palette grouping for a catalog component.
@@ -116,6 +116,16 @@ static CATALOG: &[CatalogEntry] = &[
         0.0,
         structure::room_enclosure
     ),
+    // Furniture (non-bookable surfaces).
+    entry!(
+        CatalogKind::DeskBlock,
+        Category::Furniture,
+        "Desk block",
+        icondata::LuSquare,
+        16.0,
+        10.0,
+        furniture::desk_block
+    ),
     // Bookable resources.
     entry!(
         CatalogKind::Desk,
@@ -125,15 +135,6 @@ static CATALOG: &[CatalogEntry] = &[
         8.0,
         6.0,
         bookable::desk
-    ),
-    entry!(
-        CatalogKind::DeskBench,
-        Category::Bookable,
-        "Bench desk",
-        icondata::LuSquare,
-        16.0,
-        6.0,
-        bookable::desk_bench
     ),
     entry!(
         CatalogKind::MeetingRoom,

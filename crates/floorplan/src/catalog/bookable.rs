@@ -110,22 +110,10 @@ fn footprint(ctx: &RenderCtx<'_>, w: f64, h: f64) -> AnyView {
     view! { <rect x=cx - w / 2.0 y=cy - h / 2.0 width=w height=h rx="0.5" /> }.into_any()
 }
 
-/// A single desk.
+/// A single desk (one bookable seat).
 pub(crate) fn desk(ctx: &RenderCtx<'_>) -> AnyView {
     let shape = footprint(ctx, 8.0, 6.0);
     bookable_group(ctx, "desk", "cn-floor-desk", "Desk", shape)
-}
-
-/// A bench desk (wider shared footprint).
-pub(crate) fn desk_bench(ctx: &RenderCtx<'_>) -> AnyView {
-    let shape = footprint(ctx, 16.0, 6.0);
-    bookable_group(
-        ctx,
-        "desk_bench",
-        "cn-floor-desk-bench",
-        "Bench desk",
-        shape,
-    )
 }
 
 /// A parking space.

@@ -8,6 +8,7 @@
 
 mod annotation;
 mod bookable;
+mod furniture;
 mod geometry;
 mod registry;
 mod structure;
