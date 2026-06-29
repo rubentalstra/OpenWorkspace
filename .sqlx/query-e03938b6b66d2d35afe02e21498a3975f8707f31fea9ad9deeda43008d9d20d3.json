@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT team_id AS \"team_id!\" FROM memberships WHERE user_id = $1 AND team_id IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "team_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "memberships",
+            "name": "team_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "e03938b6b66d2d35afe02e21498a3975f8707f31fea9ad9deeda43008d9d20d3"
+}

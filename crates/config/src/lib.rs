@@ -38,8 +38,14 @@ impl Default for ServerConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
 pub struct DatabaseConfig {
-    /// PostgreSQL connection string. A secret: redacted in `Debug`/logs.
+    /// Runtime connection string for the least-privilege `openworkspace_app` role
+    /// the app and worker serve under (DML only, governed by RLS, no DDL, no
+    /// audit-log mutation). A secret: redacted in `Debug`/logs.
     pub url: SecretString,
+    /// Owner/migrator connection string used once at startup to run migrations and
+    /// privileged setup (role seed, bootstrap admin, keyring). Superuser/owner, so
+    /// it bypasses RLS. A secret: redacted. Env: `APP_DATABASE__MIGRATOR_URL`.
+    pub migrator_url: SecretString,
     pub max_connections: u32,
 }
 
@@ -47,6 +53,7 @@ impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
             url: SecretString::from(String::new()),
+            migrator_url: SecretString::from(String::new()),
             max_connections: 5,
         }
     }

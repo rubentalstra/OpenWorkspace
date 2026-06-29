@@ -58,6 +58,29 @@ podman compose -f deploy/dev/compose.yaml down      # stop (add -v to wipe volum
 
 PostgreSQL: `postgres://openworkspace:dev@localhost:5432/openworkspace`.
 
+### Database roles (least privilege)
+
+Two roles are used (architecture plan, Appendix H):
+
+- **`openworkspace`** — owner/migrator (the dev superuser). Runs migrations and
+  privileged startup (role seed, bootstrap admin, keyring). Bypasses RLS. This is
+  the role `DATABASE_URL` must point at for `sqlx-cli`, `cargo sqlx prepare` and
+  the `#[sqlx::test]` integration tests.
+- **`openworkspace_app`** — the least-privilege runtime role the app and worker
+  serve under (config `dev.database.url`): DML only, no DDL, no `UPDATE`/`DELETE`
+  on `audit_log`, and governed by row-level security on `resources`. Its grants,
+  the audit REVOKE and RLS are applied by the `p8_access_enforcement` migration.
+
+`deploy/dev/postgres-init/10-runtime-role.sql` makes `openworkspace_app` loginnable
+on a fresh cluster. For an **existing** dev volume (the init script does not re-run),
+provision it once:
+
+```sh
+podman exec -i openworkspace-dev-postgres-1 psql -U openworkspace -d openworkspace \
+  -c "DO \$\$ BEGIN CREATE ROLE openworkspace_app LOGIN PASSWORD 'devapp' NOBYPASSRLS; \
+      EXCEPTION WHEN duplicate_object THEN ALTER ROLE openworkspace_app LOGIN PASSWORD 'devapp' NOBYPASSRLS; END \$\$;"
+```
+
 ## Database migrations (sqlx-cli)
 
 Migrations live in `crates/db/migrations/` (reversible `-r`: a `.up.sql` + `.down.sql`).

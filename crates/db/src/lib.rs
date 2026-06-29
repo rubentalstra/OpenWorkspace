@@ -1,8 +1,17 @@
 //! PostgreSQL access and migrations (sqlx), behind a thin facade.
 
+mod access;
 mod bookings;
 mod identity;
 
+pub use access::audit::{ActorKindRow, AuditOutcomeRow, NewAuditEntry, record_audit};
+pub use access::context::{set_system_context, set_viewer_context};
+pub use access::principal::{load_active_delegation, load_authz_context, load_viewer_segmentation};
+pub use access::roles::seed_system_roles;
+pub use access::segmentation::{
+    SegmentationModeRow, load_resource_segmentation, load_segmentation_mode,
+};
+pub use access::target::{load_location_target, load_resource_target};
 pub use bookings::{
     Booking, BookingSourceRow, BookingStatusRow, BookingVisibilityRow, CreatedBooking, NewBooking,
     OccurrenceKindRow, apply_transition, auto_release, cancel, check_in, check_out, create_booking,

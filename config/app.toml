@@ -6,7 +6,11 @@
 addr = "127.0.0.1:3000"
 
 [dev.database]
-url = "postgres://openworkspace:dev@localhost:5432/openworkspace"
+# Runtime: the least-privilege role (RLS-governed, DML-only). Made loginnable by
+# deploy/dev/postgres-init; grants + RLS come from the p8 migration. Dev-only password.
+url = "postgres://openworkspace_app:devapp@localhost:5432/openworkspace"
+# Owner/migrator: runs migrations and privileged startup setup (bypasses RLS).
+migrator_url = "postgres://openworkspace:dev@localhost:5432/openworkspace"
 max_connections = 5
 
 [dev.observability]
