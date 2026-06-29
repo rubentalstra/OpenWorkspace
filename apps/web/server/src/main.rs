@@ -200,10 +200,26 @@ async fn main() -> anyhow::Result<()> {
         .merge(mfa::routes())
         .merge(oidc::routes())
         .merge(upload::routes(cfg.storage.max_upload_bytes))
-        .leptos_routes_with_context(&state, routes, provide_csrf_context, {
-            let leptos_options = leptos_options.clone();
-            move || shell(leptos_options.clone())
-        })
+        .leptos_routes_with_context(
+            &state,
+            routes,
+            {
+                // Per-request context for SSR renders AND server functions: the
+                // CSRF token plus the `Db` and `AuthzBackend` (so app-side `#[server]`
+                // fns authorize without naming the server's `AppState`).
+                let db = state.db.clone();
+                let authz = state.authz.clone();
+                move || {
+                    provide_context(db.clone());
+                    provide_context(authz.clone());
+                    provide_csrf_context();
+                }
+            },
+            {
+                let leptos_options = leptos_options.clone();
+                move || shell(leptos_options.clone())
+            },
+        )
         .fallback(leptos_axum::file_and_error_handler::<AppState, _>(shell))
         .layer(axum::middleware::from_fn(auth::csrf_layer))
         .layer(auth_layer)
