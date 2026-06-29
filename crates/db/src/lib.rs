@@ -1,6 +1,7 @@
 //! PostgreSQL access and migrations (sqlx), behind a thin facade.
 
 mod access;
+mod assets;
 mod bookings;
 mod identity;
 
@@ -12,6 +13,10 @@ pub use access::segmentation::{
     SegmentationModeRow, load_resource_segmentation, load_segmentation_mode,
 };
 pub use access::target::{load_location_target, load_resource_target};
+pub use assets::{
+    AssetKindRow, AssetRow, NewAsset, delete_asset, insert_asset, insert_variant, load_asset,
+    load_variant,
+};
 pub use bookings::{
     Booking, BookingSourceRow, BookingStatusRow, BookingVisibilityRow, CreatedBooking, NewBooking,
     OccurrenceKindRow, apply_transition, auto_release, cancel, check_in, check_out, create_booking,

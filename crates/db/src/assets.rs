@@ -185,3 +185,90 @@ pub async fn delete_asset(pool: &Db, id: AssetId) -> Result<(), DbError> {
         .await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn logo<'a>(key: &'a str, content_type: &'a str) -> NewAsset<'a> {
+        NewAsset {
+            kind: AssetKindRow::Logo,
+            storage_key: key,
+            content_type,
+            byte_size: 123,
+            width: Some(64),
+            height: Some(64),
+            checksum: Some(&[7u8; 32]),
+            original_filename: Some("logo.png"),
+            alt_text: None,
+            uploaded_by: None,
+        }
+    }
+
+    #[sqlx::test]
+    async fn insert_and_load_round_trip(pool: Db) {
+        let id = insert_asset(&pool, &logo("assets/a", "image/png"))
+            .await
+            .unwrap();
+        let row = load_asset(&pool, id).await.unwrap().unwrap();
+        assert_eq!(row.id, id.as_uuid());
+        assert_eq!(row.kind, AssetKindRow::Logo);
+        assert_eq!(row.content_type, "image/png");
+        assert_eq!(row.byte_size, 123);
+        assert_eq!(row.width, Some(64));
+        assert_eq!(row.checksum.as_deref(), Some(&[7u8; 32][..]));
+        assert!(row.parent_asset_id.is_none());
+    }
+
+    #[sqlx::test]
+    async fn variant_loads_and_cascades_on_parent_delete(pool: Db) {
+        let parent = insert_asset(&pool, &logo("assets/p", "image/png"))
+            .await
+            .unwrap();
+        let thumb = NewAsset {
+            storage_key: "assets/p/thumb",
+            content_type: "image/webp",
+            byte_size: 10,
+            width: Some(32),
+            height: Some(32),
+            ..logo("assets/p/thumb", "image/webp")
+        };
+        let vid = insert_variant(&pool, parent, &thumb, "thumb")
+            .await
+            .unwrap();
+
+        let loaded = load_variant(&pool, parent, "thumb").await.unwrap().unwrap();
+        assert_eq!(loaded.id, vid.as_uuid());
+        assert_eq!(loaded.parent_asset_id, Some(parent.as_uuid()));
+        assert_eq!(loaded.variant.as_deref(), Some("thumb"));
+
+        delete_asset(&pool, parent).await.unwrap();
+        assert!(load_asset(&pool, parent).await.unwrap().is_none());
+        assert!(
+            load_variant(&pool, parent, "thumb")
+                .await
+                .unwrap()
+                .is_none(),
+            "deleting the parent must cascade to its variants"
+        );
+    }
+
+    #[sqlx::test]
+    async fn content_type_check_rejects_non_raster_image(pool: Db) {
+        assert!(
+            insert_asset(&pool, &logo("assets/svg", "image/svg+xml"))
+                .await
+                .is_err(),
+            "the CHECK must reject a non-raster type for an image kind"
+        );
+        let export = NewAsset {
+            kind: AssetKindRow::Export,
+            content_type: "application/json",
+            ..logo("assets/exp", "application/json")
+        };
+        assert!(
+            insert_asset(&pool, &export).await.is_ok(),
+            "the export kind is exempt from the raster constraint"
+        );
+    }
+}

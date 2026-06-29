@@ -1,0 +1,51 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO assets\n            (kind, storage_key, content_type, byte_size, width, height, checksum,\n             parent_asset_id, variant, uploaded_by)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "asset_kind",
+            "kind": {
+              "Enum": [
+                "reference_image",
+                "campus_map",
+                "floor_background",
+                "object_photo",
+                "logo",
+                "export"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Text",
+        "Int8",
+        "Int4",
+        "Int4",
+        "Bytea",
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c25e5158a78500a7dad02e59881909fd019ba548142cf86d127aca5f11add1fe"
+}
