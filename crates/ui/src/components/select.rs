@@ -204,14 +204,11 @@ pub fn SelectItem(
             });
         });
     }
-    let on_click = {
-        let item_value = item_value.clone();
-        move |_| {
-            ctx.value.set(item_value.clone());
-            ctx.open.set(false);
-            if let Some(cb) = ctx.on_change.get_value() {
-                cb.run(item_value.clone());
-            }
+    let on_click = move |_| {
+        ctx.value.set(item_value.clone());
+        ctx.open.set(false);
+        if let Some(cb) = ctx.on_change.get_value() {
+            cb.run(item_value.clone());
         }
     };
     view! {

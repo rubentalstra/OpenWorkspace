@@ -71,7 +71,7 @@ pub fn ShowcaseLayout() -> impl IntoView {
                             .map(|&(href, label)| {
                                 view! {
                                     <Button
-                                        href=href.to_string()
+                                        href=href.to_owned()
                                         variant=ButtonVariant::Ghost
                                         size=ButtonSize::Sm
                                     >
@@ -157,7 +157,7 @@ pub fn ShowcaseIndex() -> impl IntoView {
                                 <CardDescription>"Component demos."</CardDescription>
                             </CardHeader>
                             <CardFooter>
-                                <Button href=href.to_string() size=ButtonSize::Sm>
+                                <Button href=href.to_owned() size=ButtonSize::Sm>
                                     "Open"
                                 </Button>
                             </CardFooter>
@@ -173,7 +173,7 @@ pub fn ShowcaseIndex() -> impl IntoView {
 #[component]
 pub fn ButtonsPage() -> impl IntoView {
     let bold = RwSignal::new(false);
-    let marks = RwSignal::new(vec!["bold".to_string()]);
+    let marks = RwSignal::new(vec!["bold".to_owned()]);
     view! {
         <PageShell title="Buttons" subtitle="Actions, badges, toggles.">
             <Demo title="Variants">
@@ -236,7 +236,7 @@ pub fn InputsPage() -> impl IntoView {
     let checked = RwSignal::new(true);
     let switch_on = RwSignal::new(true);
     let vol = RwSignal::new(40.0);
-    let plan = RwSignal::new("map".to_string());
+    let plan = RwSignal::new("map".to_owned());
     view! {
         <PageShell title="Inputs" subtitle="Text, choice, and range controls.">
             <Demo title="Text field">
