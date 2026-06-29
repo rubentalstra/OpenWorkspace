@@ -6,7 +6,7 @@ use crate::catalog::geometry::anchor;
 use crate::catalog::registry::RenderCtx;
 
 /// A free text label anchored at its geometry.
-pub(crate) fn label(ctx: RenderCtx<'_>) -> AnyView {
+pub(crate) fn label(ctx: &RenderCtx<'_>) -> AnyView {
     let transform = ctx.node.transform.to_attr();
     let (x, y) = anchor(&ctx.node.geometry).unwrap_or((0.0, 0.0));
     let text = ctx.node.label.clone().unwrap_or_default();

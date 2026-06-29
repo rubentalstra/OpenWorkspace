@@ -6,10 +6,11 @@
 //! lockstep. The same table feeds both this renderer (`render_node`) and the P11
 //! builder palette (`entries`/`by_category`).
 
+use domain::SpaceState;
 use leptos::prelude::*;
 
 use crate::catalog::{annotation, bookable, structure, wayfinding, zoning};
-use crate::model::{CatalogKind, NodeState, SceneNode, SceneNodeId};
+use crate::model::{CatalogKind, SceneNode, SceneNodeId};
 
 /// Palette grouping for a catalog component.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -40,14 +41,14 @@ pub struct CatalogMeta {
 /// render inputs (theme, locale) are added in one place.
 pub struct RenderCtx<'a> {
     pub node: &'a SceneNode,
-    pub state: Signal<NodeState>,
+    pub state: Signal<SpaceState>,
     pub on_select: Option<Callback<SceneNodeId>>,
 }
 
 /// A registry row: metadata + the render fn producing the node's inline SVG.
 pub struct CatalogEntry {
     pub meta: CatalogMeta,
-    pub render: fn(RenderCtx<'_>) -> AnyView,
+    pub render: fn(&RenderCtx<'_>) -> AnyView,
 }
 
 /// Builds a [`CatalogEntry`]; `bookable` is derived from the kind so it can't drift.
@@ -226,7 +227,7 @@ pub fn by_category(category: Category) -> impl Iterator<Item = &'static CatalogE
 #[must_use]
 pub fn render_node(
     node: &SceneNode,
-    state: Signal<NodeState>,
+    state: Signal<SpaceState>,
     on_select: Option<Callback<SceneNodeId>>,
 ) -> AnyView {
     let ctx = RenderCtx {
@@ -235,12 +236,12 @@ pub fn render_node(
         on_select,
     };
     match lookup(node.kind) {
-        Some(entry) => (entry.render)(ctx),
-        None => placeholder(ctx),
+        Some(entry) => (entry.render)(&ctx),
+        None => placeholder(&ctx),
     }
 }
 
-fn placeholder(ctx: RenderCtx<'_>) -> AnyView {
+fn placeholder(ctx: &RenderCtx<'_>) -> AnyView {
     let transform = ctx.node.transform.to_attr();
     let (x, y) = super::geometry::anchor(&ctx.node.geometry).unwrap_or((0.0, 0.0));
     view! {

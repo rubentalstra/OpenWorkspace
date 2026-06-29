@@ -128,12 +128,7 @@ impl Transform {
     /// The SVG `transform` attribute string, or `None` for identity.
     #[must_use]
     pub fn to_attr(&self) -> Option<String> {
-        let identity = self.translate.x == 0.0
-            && self.translate.y == 0.0
-            && self.rotate_deg == 0.0
-            && self.scale.x == 1.0
-            && self.scale.y == 1.0;
-        if identity {
+        if *self == Self::default() {
             return None;
         }
         Some(format!(
@@ -222,5 +217,121 @@ impl Scene {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::samples;
+    use proptest::prelude::*;
+
+    fn desk(id: &str, geometry: Geometry) -> SceneNode {
+        SceneNode {
+            id: id.into(),
+            kind: CatalogKind::Desk,
+            geometry,
+            transform: Transform::default(),
+            style: Style::default(),
+            label: None,
+        }
+    }
+
+    #[test]
+    fn sample_scene_round_trips_via_string_and_value() {
+        let scene = samples::office();
+        let back: Scene = serde_json::from_str(&serde_json::to_string(&scene).unwrap()).unwrap();
+        assert_eq!(scene, back);
+        let back2: Scene = serde_json::from_value(serde_json::to_value(&scene).unwrap()).unwrap();
+        assert_eq!(scene, back2);
+    }
+
+    #[test]
+    fn sample_scene_validates() {
+        samples::office().validate().unwrap();
+    }
+
+    #[test]
+    fn missing_transform_and_style_default() {
+        let json = r#"{"view_box":{"min_x":0,"min_y":0,"width":10,"height":10},
+            "nodes":[{"id":"d1","kind":"desk","geometry":{"type":"point","x":1,"y":2}}]}"#;
+        let scene: Scene = serde_json::from_str(json).unwrap();
+        assert_eq!(scene.nodes[0].transform, Transform::default());
+        assert_eq!(scene.nodes[0].style, Style::default());
+        assert!(scene.nodes[0].transform.to_attr().is_none());
+    }
+
+    #[test]
+    fn rejects_duplicate_node_id() {
+        let scene = Scene {
+            schema_version: 1,
+            view_box: ViewBox::default(),
+            nodes: vec![
+                desk("a", Geometry::Point { x: 1.0, y: 1.0 }),
+                desk("a", Geometry::Point { x: 2.0, y: 2.0 }),
+            ],
+        };
+        assert!(matches!(
+            scene.validate(),
+            Err(SceneError::DuplicateNodeId(_))
+        ));
+    }
+
+    #[test]
+    fn rejects_degenerate_view_box_and_geometry() {
+        let bad_box = Scene {
+            schema_version: 1,
+            view_box: ViewBox {
+                min_x: 0.0,
+                min_y: 0.0,
+                width: 0.0,
+                height: 10.0,
+            },
+            nodes: vec![],
+        };
+        assert!(matches!(
+            bad_box.validate(),
+            Err(SceneError::InvalidViewBox)
+        ));
+
+        let bad_poly = Scene {
+            schema_version: 1,
+            view_box: ViewBox::default(),
+            nodes: vec![SceneNode {
+                id: "z".into(),
+                kind: CatalogKind::Zone,
+                geometry: Geometry::Polygon {
+                    points: vec![Point2 { x: 0.0, y: 0.0 }, Point2 { x: 1.0, y: 1.0 }],
+                },
+                transform: Transform::default(),
+                style: Style::default(),
+                label: None,
+            }],
+        };
+        assert!(matches!(
+            bad_poly.validate(),
+            Err(SceneError::InvalidGeometry(_))
+        ));
+    }
+
+    proptest! {
+        // Integer-valued coordinates (realistic grid units) round-trip f64↔JSON
+        // exactly; arbitrary fractional f64 can drift by a ULP through any JSON.
+        #[test]
+        fn round_trips_arbitrary_point_scene(
+            coords in proptest::collection::vec((-100_000i32..100_000, -100_000i32..100_000), 0..24)
+        ) {
+            let nodes = coords
+                .iter()
+                .enumerate()
+                .map(|(i, &(x, y))| {
+                    desk(&format!("n{i}"), Geometry::Point { x: f64::from(x), y: f64::from(y) })
+                })
+                .collect();
+            let scene = Scene { schema_version: 1, view_box: ViewBox::default(), nodes };
+            let back: Scene =
+                serde_json::from_str(&serde_json::to_string(&scene).unwrap()).unwrap();
+            prop_assert_eq!(scene, back);
+        }
     }
 }

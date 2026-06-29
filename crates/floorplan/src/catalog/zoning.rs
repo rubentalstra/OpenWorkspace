@@ -4,10 +4,10 @@ use leptos::prelude::*;
 
 use crate::catalog::geometry::{anchor, points_attr};
 use crate::catalog::registry::RenderCtx;
-use crate::model::scene::Geometry;
+use crate::model::Geometry;
 
 /// A zone: a filled polygon with an optional centred label.
-pub(crate) fn zone(ctx: RenderCtx<'_>) -> AnyView {
+pub(crate) fn zone(ctx: &RenderCtx<'_>) -> AnyView {
     let transform = ctx.node.transform.to_attr();
     let points = match &ctx.node.geometry {
         Geometry::Polygon { points } | Geometry::Line { points } => points_attr(points),

@@ -1,17 +1,14 @@
 //! Shared geometry → SVG helpers used by every catalog component.
 
-use crate::model::scene::{Geometry, Point2};
+use crate::model::{Geometry, Point2};
 
 /// `"x,y x,y …"` for an SVG `<polyline>`/`<polygon>` `points` attribute.
 pub(crate) fn points_attr(points: &[Point2]) -> String {
-    let mut out = String::with_capacity(points.len() * 8);
-    for (i, p) in points.iter().enumerate() {
-        if i > 0 {
-            out.push(' ');
-        }
-        out.push_str(&format!("{},{}", p.x, p.y));
-    }
-    out
+    points
+        .iter()
+        .map(|p| format!("{},{}", p.x, p.y))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// The anchor `(x, y)` of a geometry: a `Point` directly, else the centroid of a

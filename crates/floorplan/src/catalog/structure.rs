@@ -5,7 +5,7 @@ use leptos::prelude::*;
 
 use crate::catalog::geometry::{anchor, points_attr};
 use crate::catalog::registry::RenderCtx;
-use crate::model::scene::Geometry;
+use crate::model::Geometry;
 
 /// `points` for a line/polygon geometry, empty for anything else.
 fn line_points(geometry: &Geometry) -> String {
@@ -16,7 +16,7 @@ fn line_points(geometry: &Geometry) -> String {
 }
 
 /// A wall run (open polyline).
-pub(crate) fn wall(ctx: RenderCtx<'_>) -> AnyView {
+pub(crate) fn wall(ctx: &RenderCtx<'_>) -> AnyView {
     let transform = ctx.node.transform.to_attr();
     let points = line_points(&ctx.node.geometry);
     view! {
@@ -32,7 +32,7 @@ pub(crate) fn wall(ctx: RenderCtx<'_>) -> AnyView {
 }
 
 /// A door opening (polyline; the swing arc lands with P20 polish).
-pub(crate) fn door(ctx: RenderCtx<'_>) -> AnyView {
+pub(crate) fn door(ctx: &RenderCtx<'_>) -> AnyView {
     let transform = ctx.node.transform.to_attr();
     let points = line_points(&ctx.node.geometry);
     view! {
@@ -48,7 +48,7 @@ pub(crate) fn door(ctx: RenderCtx<'_>) -> AnyView {
 }
 
 /// A window run (polyline).
-pub(crate) fn window(ctx: RenderCtx<'_>) -> AnyView {
+pub(crate) fn window(ctx: &RenderCtx<'_>) -> AnyView {
     let transform = ctx.node.transform.to_attr();
     let points = line_points(&ctx.node.geometry);
     view! {
@@ -64,7 +64,7 @@ pub(crate) fn window(ctx: RenderCtx<'_>) -> AnyView {
 }
 
 /// A structural column (small disc at the geometry anchor).
-pub(crate) fn column(ctx: RenderCtx<'_>) -> AnyView {
+pub(crate) fn column(ctx: &RenderCtx<'_>) -> AnyView {
     let transform = ctx.node.transform.to_attr();
     let (cx, cy) = anchor(&ctx.node.geometry).unwrap_or((0.0, 0.0));
     view! {
@@ -82,7 +82,7 @@ pub(crate) fn column(ctx: RenderCtx<'_>) -> AnyView {
 }
 
 /// A room enclosure outline (closed polygon).
-pub(crate) fn room_enclosure(ctx: RenderCtx<'_>) -> AnyView {
+pub(crate) fn room_enclosure(ctx: &RenderCtx<'_>) -> AnyView {
     let transform = ctx.node.transform.to_attr();
     let points = line_points(&ctx.node.geometry);
     view! {

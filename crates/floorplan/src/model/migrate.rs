@@ -3,8 +3,8 @@
 //! `floor_plans.scene_schema_version` records the version a scene was written at.
 //! [`load_scene`] runs the forward-migration chain (`v_n → … → current`) on the raw
 //! JSON before the final typed deserialize, so a scene written by ANY past release
-//! always loads. Adding a future format change is one migration step (in [`step`])
-//! + a bump of [`CURRENT_SCENE_VERSION`] + a fixture test — "scene migrations are
+//! always loads. Adding a future format change is one migration step (in [`step`]),
+//! a bump of [`CURRENT_SCENE_VERSION`], and a fixture test — "scene migrations are
 //! mechanical" (schema comment m12).
 
 use serde_json::Value;

@@ -48,7 +48,7 @@ pub fn FloorPlan(
     #[prop(optional, into)]
     states: Signal<HashMap<SceneNodeId, SpaceState>>,
     /// Invoked when a bookable node is activated (click / Enter / Space).
-    #[prop(optional)]
+    #[prop(optional, into)]
     on_select: Option<Callback<SceneNodeId>>,
 ) -> impl IntoView {
     let initial = scene.view_box;
@@ -135,8 +135,8 @@ pub fn FloorPlan(
     view! {
         <svg
             node_ref=svg_ref
-            attr:viewBox=move || view_box.get().to_attr()
-            attr:preserveAspectRatio="xMidYMid meet"
+            viewBox=move || view_box.get().to_attr()
+            preserveAspectRatio="xMidYMid meet"
             role="group"
             aria-label="Floor plan"
             data-slot="floor-plan"
@@ -149,5 +149,43 @@ pub fn FloorPlan(
         >
             {rendered}
         </svg>
+    }
+}
+
+// Snapshot tests need `to_html`, which is `ssr`-only.
+#[cfg(test)]
+#[cfg(feature = "ssr")]
+mod tests {
+    use std::collections::HashMap;
+
+    use leptos::prelude::*;
+
+    use super::FloorPlan;
+    use crate::model::SceneNodeId;
+    use crate::{SpaceState, samples};
+
+    /// Renders the office sample to a static HTML string (SSR), so the snapshot
+    /// captures the structure + initial `viewBox` + per-node `data-state`.
+    fn render(states: HashMap<SceneNodeId, SpaceState>) -> String {
+        Owner::new().with(|| {
+            let scene = samples::office();
+            let states = RwSignal::new(states);
+            view! { <FloorPlan scene=scene states=states /> }.to_html()
+        })
+    }
+
+    #[test]
+    fn office_default_states_snapshot() {
+        insta::assert_snapshot!("office_default_states", render(HashMap::new()));
+    }
+
+    #[test]
+    fn office_mixed_states_snapshot() {
+        let states = HashMap::from([
+            (SceneNodeId::new("desk-1"), SpaceState::Free),
+            (SceneNodeId::new("desk-2"), SpaceState::NotFree),
+            (SceneNodeId::new("desk-3"), SpaceState::PartiallyFree),
+        ]);
+        insta::assert_snapshot!("office_mixed_states", render(states));
     }
 }
