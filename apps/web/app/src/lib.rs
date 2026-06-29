@@ -3,11 +3,12 @@ use leptos::prelude::*;
 use leptos_fluent::move_tr;
 use leptos_meta::{Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
-    StaticSegment,
+    ParamSegment, StaticSegment,
     components::{ParentRoute, Route, Router, Routes},
 };
 
 pub mod auth;
+pub mod build;
 mod csrf_client;
 pub mod dashboard;
 pub mod showcase;
@@ -80,6 +81,11 @@ pub fn App() -> impl IntoView {
                                 <Route path=StaticSegment("floor") view=showcase::FloorPage />
                             </ParentRoute>
                             <Route path=StaticSegment("dashboard") view=dashboard::Dashboard />
+                            <Route path=StaticSegment("build") view=build::page::BuildIndexPage />
+                            <Route
+                                path=(StaticSegment("build"), ParamSegment("floor_id"))
+                                view=build::page::BuildPage
+                            />
                             <Route path=StaticSegment("login") view=auth::LoginPage />
                             <Route path=StaticSegment("signup") view=auth::SignupPage />
                         </Routes>

@@ -200,6 +200,10 @@ fn editor_view(
 /// The inspector for the selected bookable node: its resource config, rules,
 /// equipment, and copy/paste.
 #[component]
+#[expect(
+    clippy::implicit_hasher,
+    reason = "a component prop cannot be generic over the map's BuildHasher"
+)]
 fn ResourcePanel(
     scene: RwSignal<Scene>,
     selected: RwSignal<Option<SceneNodeId>>,
@@ -288,15 +292,18 @@ fn ResourcePanel(
                 });
                 resources.update(|m| {
                     for (tid, tkind) in targets {
-                        let entry = m.entry(tid.clone()).or_insert_with(|| src.clone());
-                        // Apply copied config but keep identity + node-specific bits.
-                        entry.category_id = src.category_id.clone();
-                        entry.capacity = src.capacity;
-                        entry.requires_checkin = src.requires_checkin;
-                        entry.is_accessible = src.is_accessible;
-                        entry.rules = src.rules.clone();
-                        entry.equipment = src.equipment.clone();
-                        entry.kind = catalog_kind_token(tkind).to_owned();
+                        // Copy the shared config but keep each node's own identity.
+                        let (name, code, resource_id) = m.get(&tid).map_or_else(
+                            || (default_name(&tid), Some(default_name(&tid)), None),
+                            |e| (e.name.clone(), e.code.clone(), e.resource_id.clone()),
+                        );
+                        let mut cfg = src.clone();
+                        cfg.scene_node_id.clone_from(&tid);
+                        cfg.name = name;
+                        cfg.code = code;
+                        cfg.resource_id = resource_id;
+                        cfg.kind = catalog_kind_token(tkind).into();
+                        m.insert(tid, cfg);
                     }
                 });
             }
@@ -338,6 +345,10 @@ fn ResourcePanel(
 
 /// Assign catalog equipment (with quantity) to the selected resource.
 #[component]
+#[expect(
+    clippy::implicit_hasher,
+    reason = "a component prop cannot be generic over the map's BuildHasher"
+)]
 fn EquipmentEditor(
     node_id: String,
     resources: RwSignal<HashMap<String, ResourceDto>>,
@@ -351,7 +362,7 @@ fn EquipmentEditor(
                 .unwrap_or_default()
         })
     };
-    let id_add = node_id.clone();
+    let id_add = node_id;
     let add = move |item_id: String| {
         resources.update(|m| {
             if let Some(r) = m.get_mut(&id_add)

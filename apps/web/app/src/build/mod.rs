@@ -1,6 +1,6 @@
 //! The floor builder's server boundary: wasm-safe DTOs and the authz-gated
 //! `#[server]` functions that load, save and supply the builder. The ssr-only
-//! [`backend`] module authorizes (FloorBuild) and maps DTOs ↔ `db` types; the
+//! [`backend`] module authorizes (`FloorBuild`) and maps DTOs ↔ `db` types; the
 //! pages live in [`page`].
 
 pub mod page;
@@ -35,7 +35,7 @@ pub struct EquipAssignDto {
 }
 
 /// Booking-policy fields (optional limits = "no limit").
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct RulesDto {
     pub max_advance_days: Option<i32>,
     pub min_advance_minutes: Option<i32>,
@@ -166,7 +166,7 @@ mod backend {
             .ok_or_else(|| ServerFnError::new("not authenticated"))
     }
 
-    /// Authorizes FloorBuild on a floor and returns the actor.
+    /// Authorizes `FloorBuild` on a floor and returns the actor.
     async fn ensure_floor_build(floor: LocationId) -> Result<UserId, ServerFnError> {
         let user = current_user().await?;
         authz()
