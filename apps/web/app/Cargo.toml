@@ -19,6 +19,14 @@ ui = { path = "../../../crates/ui", version = "0.1.0", default-features = false 
 # (mirroring `ui`) so it emits identical server/client HTML.
 floorplan = { path = "../../../crates/floorplan", version = "0.1.0", default-features = false }
 
+# Server-only: the `#[server]` builder fns authorize + persist via these. Gated
+# behind `ssr` so the wasm build never pulls them (their bodies are ssr-only).
+db = { path = "../../../crates/db", version = "0.1.0", optional = true }
+auth = { path = "../../../crates/auth", version = "0.1.0", optional = true }
+domain = { path = "../../../crates/domain", version = "0.1.0", optional = true }
+serde_json = { workspace = true, optional = true }
+uuid = { version = "1", optional = true }
+
 i18n = { path = "../../../crates/i18n", version = "0.1.0", default-features = false }
 # `tr!`/`move_tr!` are imported here directly: leptos-fluent's compile-time
 # `check_translations` forbids re-exporting them, so the macros are the one vendor
@@ -88,6 +96,16 @@ ssr = [
     "ui/ssr",
     "floorplan/ssr",
     "dep:leptos_axum",
+    "dep:db",
+    "auth/ssr",
+    "dep:domain",
+    "dep:serde_json",
+    "dep:uuid",
+    "dep:bytes",
+    "dep:futures",
+    # Server-side server-fn client (satisfies the `CsrfClient` Client bound on ssr;
+    # never invoked — the server runs fn bodies directly).
+    "server_fn/reqwest",
 ]
 
 [lints]

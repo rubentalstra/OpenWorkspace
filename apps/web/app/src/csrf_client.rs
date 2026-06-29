@@ -37,6 +37,56 @@
 /// Use as `#[server(client = CsrfClient)]` on mutating server functions.
 pub struct CsrfClient;
 
+/// Server-side `Client` impl. The server never invokes the client (it runs the
+/// server-fn body directly), but `ServerFn::Client` is a required bound on every
+/// build, so we satisfy it by delegating to `server_fn`'s reqwest client. The
+/// browser CSRF behaviour lives in the `hydrate` impl below.
+#[cfg(all(feature = "ssr", not(feature = "hydrate")))]
+mod imp_ssr {
+    use std::future::Future;
+
+    use bytes::Bytes;
+    use futures::{Sink, Stream};
+    use leptos::server_fn::client::Client;
+    use leptos::server_fn::client::reqwest::ReqwestClient;
+    use leptos::server_fn::error::FromServerFnError;
+
+    use super::CsrfClient;
+
+    impl<E, InputStreamError, OutputStreamError> Client<E, InputStreamError, OutputStreamError>
+        for CsrfClient
+    where
+        E: FromServerFnError,
+        InputStreamError: FromServerFnError,
+        OutputStreamError: FromServerFnError,
+    {
+        type Request = <ReqwestClient as Client<E, InputStreamError, OutputStreamError>>::Request;
+        type Response = <ReqwestClient as Client<E, InputStreamError, OutputStreamError>>::Response;
+
+        fn send(req: Self::Request) -> impl Future<Output = Result<Self::Response, E>> + Send {
+            <ReqwestClient as Client<E, InputStreamError, OutputStreamError>>::send(req)
+        }
+
+        fn open_websocket(
+            path: &str,
+        ) -> impl Future<
+            Output = Result<
+                (
+                    impl Stream<Item = Result<Bytes, Bytes>> + Send + 'static,
+                    impl Sink<Bytes> + Send + 'static,
+                ),
+                E,
+            >,
+        > + Send {
+            <ReqwestClient as Client<E, InputStreamError, OutputStreamError>>::open_websocket(path)
+        }
+
+        fn spawn(future: impl Future<Output = ()> + Send + 'static) {
+            <ReqwestClient as Client<E, InputStreamError, OutputStreamError>>::spawn(future);
+        }
+    }
+}
+
 #[cfg(feature = "hydrate")]
 mod imp {
     use std::future::Future;
