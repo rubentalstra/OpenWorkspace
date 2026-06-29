@@ -9,6 +9,7 @@
 use domain::SpaceState;
 use leptos::prelude::*;
 use leptos::svg::Svg;
+use ui::{Button, ButtonSize, ButtonVariant};
 
 use super::ops::{self, History};
 use crate::catalog::render_node;
@@ -305,32 +306,39 @@ pub fn FloorBuilder(
     }
 }
 
-/// The palette + tool/undo toolbar.
+/// The palette + tool/undo toolbar. Tools are `ui::Button`s; the active tool shows
+/// the filled (Default) variant, the rest Outline.
 #[component]
 fn BuilderToolbar(
     tool: RwSignal<Tool>,
     on_undo: impl Fn(web_sys::MouseEvent) + 'static,
     on_redo: impl Fn(web_sys::MouseEvent) + 'static,
 ) -> impl IntoView {
-    let is_active = move |t: Tool| if tool.get() == t { "true" } else { "false" };
+    let variant_for = move |t: Tool| {
+        Signal::derive(move || {
+            if tool.get() == t {
+                ButtonVariant::Default
+            } else {
+                ButtonVariant::Outline
+            }
+        })
+    };
     view! {
         <div class="cn-floor-builder-toolbar" role="toolbar" aria-label="Builder tools">
-            <button
-                type="button"
-                class="cn-floor-builder-tool"
-                data-active=move || is_active(Tool::Select)
+            <Button
+                size=ButtonSize::Sm
+                variant=variant_for(Tool::Select)
                 on:click=move |_| tool.set(Tool::Select)
             >
                 "Select"
-            </button>
-            <button
-                type="button"
-                class="cn-floor-builder-tool"
-                data-active=move || is_active(Tool::PlacePod(4))
+            </Button>
+            <Button
+                size=ButtonSize::Sm
+                variant=variant_for(Tool::PlacePod(4))
                 on:click=move |_| tool.set(Tool::PlacePod(4))
             >
                 "Desk pod (4)"
-            </button>
+            </Button>
             {PALETTE_GROUPS
                 .iter()
                 .map(|&(category, label)| {
@@ -341,14 +349,13 @@ fn BuilderToolbar(
                                     let kind = entry.meta.kind;
                                     let name = entry.meta.label;
                                     view! {
-                                        <button
-                                            type="button"
-                                            class="cn-floor-builder-tool"
-                                            data-active=move || is_active(Tool::Place(kind))
+                                        <Button
+                                            size=ButtonSize::Sm
+                                            variant=variant_for(Tool::Place(kind))
                                             on:click=move |_| tool.set(Tool::Place(kind))
                                         >
                                             {name}
-                                        </button>
+                                        </Button>
                                     }
                                 })
                                 .collect_view()}
@@ -356,12 +363,12 @@ fn BuilderToolbar(
                     }
                 })
                 .collect_view()}
-            <button type="button" class="cn-floor-builder-tool" on:click=on_undo>
+            <Button size=ButtonSize::Sm variant=ButtonVariant::Outline on:click=on_undo>
                 "Undo"
-            </button>
-            <button type="button" class="cn-floor-builder-tool" on:click=on_redo>
+            </Button>
+            <Button size=ButtonSize::Sm variant=ButtonVariant::Outline on:click=on_redo>
                 "Redo"
-            </button>
+            </Button>
         </div>
     }
 }

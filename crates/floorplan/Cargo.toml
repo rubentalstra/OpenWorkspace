@@ -24,6 +24,8 @@ domain = { path = "../domain", version = "0.1.0" }
 leptos = { workspace = true, optional = true }
 leptos_icons = { workspace = true, optional = true }
 icondata = { workspace = true, optional = true }
+# The design-system kit: the builder uses `ui::Button` etc. (never raw HTML controls).
+ui = { path = "../ui", version = "0.1.0", optional = true, default-features = false }
 web-sys = { version = "0.3", optional = true, features = [
     "DomRect",
     "Element",
@@ -42,8 +44,15 @@ insta = "1.43.2"
 proptest = "1"
 
 [features]
-ssr = ["dep:leptos", "leptos/ssr", "dep:leptos_icons", "dep:icondata", "dep:web-sys"]
-hydrate = ["dep:leptos", "leptos/hydrate", "dep:leptos_icons", "dep:icondata", "dep:web-sys"]
+ssr = ["dep:leptos", "leptos/ssr", "dep:leptos_icons", "dep:icondata", "dep:web-sys", "ui/ssr"]
+hydrate = [
+    "dep:leptos",
+    "leptos/hydrate",
+    "dep:leptos_icons",
+    "dep:icondata",
+    "dep:web-sys",
+    "ui/hydrate",
+]
 
 [lints]
 workspace = true
