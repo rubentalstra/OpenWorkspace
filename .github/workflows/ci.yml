@@ -144,6 +144,22 @@ jobs:
       # Fail the build on a stale offline cache (the committed .sqlx must match
       # the live schema + queries).
       - run: cargo sqlx prepare --workspace --check
+      # SeaweedFS S3 gateway for the storage round-trip + presigned-URL tests. A
+      # `services:` block can't set the `server -s3` command, so run it directly;
+      # the s3 identity (matching the storage tests' defaults) comes from the
+      # committed dev config. The bucket is created via the admin shell (no signing).
+      - name: Start SeaweedFS (S3)
+        run: |
+          docker run -d --name seaweedfs -p 8333:8333 -p 9333:9333 \
+            -v "$PWD/deploy/dev/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro" \
+            docker.io/chrislusf/seaweedfs:4.36 \
+            server -s3 -dir=/data -s3.config=/etc/seaweedfs/s3.json
+          for _ in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8333/ || true)
+            if [ "$code" = "403" ] || [ "$code" = "200" ]; then break; fi
+            sleep 1
+          done
+          docker exec seaweedfs sh -c 'echo "s3.bucket.create -name openworkspace" | weed shell'
       - run: cargo nextest run --workspace
       - run: sccache --show-stats
 
