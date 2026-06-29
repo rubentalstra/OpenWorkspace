@@ -21,6 +21,23 @@ cargo install cargo-chef --locked         # cached container builds (deploy/cont
 Node (≥ 20) is required for the Playwright end-to-end tests in `end2end/`,
 including the `@axe-core/playwright` accessibility gate over the `/ui` showcase.
 
+## Local workflow hooks
+
+Committed git hooks enforce the commit conventions locally so a bad commit never
+reaches CI. Activate them once per clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+- `commit-msg` validates the message: Conventional Commits, no attribution
+  trailers, no trailing period (subject over 50 chars is a warning).
+- `pre-push` blocks pushing to `main`/`master` and runs the cheap fmt gates.
+
+Editor-agent automation lives under `.claude/` (hooks, a Rust reviewer, and
+commit / pre-pr / migration / crate skills) — see `.claude/README.md`. The rules
+themselves are defined in this repo's `CLAUDE.md` and `docs/rust-style.md`.
+
 ## UI design system (`crates/ui`)
 
 A first-party, **stable-Rust** component kit (no `leptos/nightly`) — 83 components + 18 hooks:
